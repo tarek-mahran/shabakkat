@@ -3,65 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard Report Builder – Modern Style</title>
+  <title>Modern Dashboard Report Builder</title>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <!-- Bootstrap CSS for UI -->
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-  <!-- Chart.js, Zoom Plugin, PapaParse, SheetJS (for Excel), and Candlestick Plugin -->
+  <!-- Chart.js, Chart Zoom Plugin, PapaParse, SheetJS, and Chart Financial Plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <!-- SheetJS (XLSX) library for Excel file parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
   <style>
-    /* CSS Variables for a consistent modern theme */
+    /* Modern Professional Dashboard Styles */
     :root {
-      --primary-color: #4A90E2;
-      --secondary-color: #50E3C2;
-      --bg-color: #F7F8FA;
-      --card-bg: #ffffff;
+      --primary-color: #1E88E5;
+      --secondary-color: #43A047;
+      --bg-color: #F4F6F8;
+      --card-bg: #FFFFFF;
       --text-color: #333;
       --shadow-color: rgba(0, 0, 0, 0.1);
       --border-radius: 8px;
       --transition-speed: 0.3s;
     }
-    /* Base Styles */
     body {
       font-family: 'Roboto', sans-serif;
       background: var(--bg-color);
       margin: 0;
+      padding-top: 70px; /* Space for fixed navbar */
     }
     /* Navbar */
     .navbar {
       box-shadow: 0 2px 4px var(--shadow-color);
-      position: relative;
-      display: none;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
     }
-    /* Center the navbar brand text */
     .navbar-brand {
       font-weight: 500;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
     }
     /* Card Styles */
     .card {
       background: var(--card-bg);
       border: none;
       border-radius: var(--border-radius);
-      box-shadow: 0 4px 8px var(--shadow-color);
+      box-shadow: 0 2px 4px var(--shadow-color);
       margin-bottom: 20px;
     }
     .card-header {
-      background: linear-gradient(135deg, var(--primary-color), #357ABD);
+      background: linear-gradient(135deg, var(--primary-color), #1565C0);
       color: #fff;
       border-bottom: none;
       border-top-left-radius: var(--border-radius);
       border-top-right-radius: var(--border-radius);
+      padding: 12px 16px;
+      cursor: pointer;
       font-weight: 500;
     }
     .card-footer {
@@ -69,6 +68,7 @@
       border-top: 1px solid #e9ecef;
       border-bottom-left-radius: var(--border-radius);
       border-bottom-right-radius: var(--border-radius);
+      padding: 10px 16px;
     }
     /* Panels */
     #fieldsPanel, #slicersPanel {
@@ -81,8 +81,9 @@
       padding: 15px;
       border-radius: var(--border-radius);
       background: var(--card-bg);
-      box-shadow: 0 4px 8px var(--shadow-color);
+      box-shadow: 0 2px 4px var(--shadow-color);
       transition: transform var(--transition-speed);
+      margin-bottom: 20px;
     }
     .chart-wrapper:hover {
       transform: translateY(-3px);
@@ -105,21 +106,20 @@
       border-radius: var(--border-radius);
       padding: 16px;
       margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: transform var(--transition-speed), box-shadow var(--transition-speed);
       display: flex;
       flex-direction: column;
       gap: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     }
     .chart-slicer:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
     }
     .chart-slicer label {
       font-weight: 600;
       font-size: 1rem;
       color: var(--text-color);
-      margin-bottom: 4px;
     }
     .chart-slicer select, .chart-slicer button {
       border-radius: var(--border-radius);
@@ -128,27 +128,27 @@
       width: 100%;
       padding: 10px 14px;
       border: 1px solid #c3cfe2;
-      background-color: #f8f9fa;
+      background: #f8f9fa;
       font-size: 0.95rem;
       transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
     }
     .chart-slicer select:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25);
+      box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.25);
     }
     .chart-slicer button {
       align-self: flex-start;
       padding: 8px 16px;
       border: none;
-      background-color: var(--primary-color);
+      background: var(--primary-color);
       color: #fff;
       font-size: 0.95rem;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: background 0.3s;
     }
     .chart-slicer button:hover {
-      background-color: #357ABD;
+      background: #1565C0;
     }
     /* Zoom Bar */
     .zoom-bar-container {
@@ -159,7 +159,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 2px 6px var(--shadow-color);
+      box-shadow: 0 2px 4px var(--shadow-color);
     }
     .zoom-bar-container .input-group {
       flex: 1;
@@ -197,19 +197,19 @@
     .zoom-bar-container button {
       padding: 6px 12px;
       border: none;
-      background-color: var(--primary-color);
+      background: var(--primary-color);
       color: #fff;
       cursor: pointer;
       border-radius: 4px;
-      transition: background-color 0.2s;
+      transition: background 0.2s;
     }
     .zoom-bar-container button:hover {
-      background-color: #357ABD;
+      background: #1565C0;
     }
-    /* Report Canvas Grid */
+    /* Report Dashboard Grid: 2 charts per row */
     #reportCanvasContainer {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 20px;
     }
     .canvas-container {
@@ -221,15 +221,15 @@
       width: 100% !important;
       height: 100% !important;
     }
-    /* Slicer Button Active State */
+    /* Active Slicer Button */
     .slicer-btn.active {
-      background-color: var(--secondary-color) !important;
+      background: var(--secondary-color) !important;
       border-color: var(--primary-color) !important;
       color: #fff !important;
     }
   </style>
   <script>
-    // Custom Chart.js plugin for chart area background
+    // Custom Chart.js plugin to set a background color in the chart area
     const chartAreaBgPlugin = {
       id: 'chartAreaBgPlugin',
       beforeDraw: (chart, args, options) => {
@@ -241,8 +241,8 @@
       }
     };
     Chart.register(chartAreaBgPlugin);
-
-    // Generates an array of default colors from a preset palette.
+    
+    // Generate default colors from a preset palette
     function generateDefaultColors(n) {
       const palette = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#66FF66", "#FF66CC"];
       let colors = [];
@@ -255,7 +255,7 @@
 </head>
 <body>
   <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Dashboard Report Builder</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
@@ -268,27 +268,35 @@
 
   <!-- Main Container -->
   <div class="container-fluid">
-    <!-- Top Row: Controls -->
     <div class="row mb-3">
-      <!-- Left Panel: Fields and Global Slicers -->
+      <!-- Left Sidebar: Fields and Global Slicers -->
       <div class="col-md-3">
+        <!-- Fields Card (file upload always visible) -->
         <div class="card mb-3">
-          <div class="card-header">Fields</div>
-          <div class="card-body" id="fieldsPanel">
-            <p>No file loaded.</p>
+          <div class="card-header" data-bs-toggle="collapse" data-bs-target="#fieldsCollapse" aria-expanded="false" aria-controls="fieldsCollapse">
+            Fields
+          </div>
+          <div id="fieldsCollapse" class="collapse">
+            <div class="card-body" id="fieldsPanel">
+              <p>No file loaded.</p>
+            </div>
           </div>
           <div class="card-footer">
-            <!-- Accept both CSV and Excel files -->
             <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="form-control">
           </div>
         </div>
+        <!-- Global Slicers Card (expanded by default) -->
         <div class="card">
-          <div class="card-header">Global Slicers</div>
-          <div class="card-body" id="slicersPanel">
-            <p>No slicers added.</p>
+          <div class="card-header" data-bs-toggle="collapse" data-bs-target="#slicersCollapse" aria-expanded="true" aria-controls="slicersCollapse">
+            Global Slicers
           </div>
-          <div class="card-footer">
-            <button class="btn btn-secondary btn-sm" onclick="addSlicer()">Add Slicer</button>
+          <div id="slicersCollapse" class="collapse show">
+            <div class="card-body" id="slicersPanel">
+              <p>No slicers added.</p>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-secondary btn-sm" onclick="addSlicer()">Add Slicer</button>
+            </div>
           </div>
         </div>
       </div>
@@ -299,9 +307,8 @@
             <h5 class="mb-0">Chart Settings</h5>
           </div>
           <div class="card-body">
-            <!-- Accordion for Settings -->
             <div class="accordion" id="vizAccordion">
-              <!-- General Section -->
+              <!-- General Settings -->
               <div class="accordion-item">
                 <h2 class="accordion-header" id="headingGeneral">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeneral" aria-expanded="false" aria-controls="collapseGeneral">
@@ -337,7 +344,7 @@
                   </div>
                 </div>
               </div>
-              <!-- Data Section -->
+              <!-- Data Settings -->
               <div class="accordion-item">
                 <h2 class="accordion-header" id="headingData">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseData" aria-expanded="false" aria-controls="collapseData">
@@ -406,7 +413,7 @@
                   </div>
                 </div>
               </div>
-              <!-- Format Section -->
+              <!-- Format Settings -->
               <div class="accordion-item">
                 <h2 class="accordion-header" id="headingFormat">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFormat" aria-expanded="false" aria-controls="collapseFormat">
@@ -502,19 +509,18 @@
         </div>
       </div>
     </div>
-    <!-- Report Canvas -->
+    <!-- Report Dashboard -->
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header">Report Dashboard</div>
           <div class="card-body" id="reportCanvasContainer">
-            <p>No visualizations added yet.</p>
+            <p>No Charts added yet.</p>
           </div>
         </div>
       </div>
     </div>
   </div>
-  
   <!-- Modal for Customizing Colors -->
   <div class="modal fade" id="customColorModal" tabindex="-1" aria-labelledby="customColorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -533,7 +539,6 @@
       </div>
     </div>
   </div>
-  
   <!-- Scripts -->
   <script>
     let csvData = [];
@@ -546,15 +551,12 @@
       return !isNaN(parseFloat(n)) && isFinite(n);
     }
 
-    // File Upload Handler: Supports both CSV and Excel files.
+    // File Upload Handler
     document.getElementById('fileInput').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
-      
       const fileExtension = file.name.split('.').pop().toLowerCase();
-      
       if (fileExtension === 'csv') {
-        // Use PapaParse for CSV files
         Papa.parse(file, {
           complete: function(results) {
             csvData = results.data;
@@ -565,28 +567,19 @@
           header: true
         });
       } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-        // Use SheetJS to parse Excel files
         const reader = new FileReader();
         reader.onload = function(e) {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
-          // Use the first sheet
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          // Convert the sheet to JSON array (header row is the first row)
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
-          // Assume first row contains column names
           fields = jsonData[0];
-          // Convert remaining rows to objects
           csvData = jsonData.slice(1).map(row => {
             const rowObj = {};
-            fields.forEach((field, i) => {
-              rowObj[field] = row[i];
-            });
+            fields.forEach((field, i) => { rowObj[field] = row[i]; });
             return rowObj;
           });
-          
           populateFields();
           populateDropdowns();
         };
@@ -1047,8 +1040,6 @@
 
     function addVisualization() {
       if (csvData.length === 0) { alert('Please upload a CSV or Excel file first.'); return; }
-      
-      // Get chart title (if left blank, no title will be shown)
       const chartTitle = document.getElementById('chartTitle').value;
       const chartType = document.getElementById('chartType').value;
       const xField = document.getElementById('xAxisField').value;
@@ -1058,12 +1049,9 @@
       const aggFunc = document.getElementById('aggFunction').value;
       const sortOrder = document.getElementById('sortOrder').value;
       const sortField = document.getElementById('sortField').value;
-      
       const chartAreaBgColor = document.getElementById('chartAreaBgColor').value;
-      
       const datasetColor = document.getElementById('datasetColor').value;
       const legendPosition = document.getElementById('legendPosition').value;
-      
       const borderWidth = parseInt(document.getElementById('borderWidth').value) || 1;
       const pointRadius = parseInt(document.getElementById('pointRadius').value) || 3;
       const legendFontSize = parseInt(document.getElementById('legendFontSize').value) || 12;
@@ -1077,7 +1065,6 @@
       const titleFontSize = parseInt(document.getElementById('titleFontSize').value) || 16;
       const titleFontColor = document.getElementById('titleFontColor').value;
       const titleFontFamily = document.getElementById('titleFontFamily').value;
-      
       let filteredData = csvData;
       const localFilterField = document.getElementById('filterField').value;
       const localFilterValue = document.getElementById('filterValue').value;
@@ -1097,10 +1084,8 @@
           filteredData = filteredData.filter(row => selectedValues.includes(row[slicerField]));
         }
       });
-      
       let baseData = filteredData.slice();
       let config = {};
-      
       if (chartType === 'scatter' || chartType === 'bubble') {
         let dataPoints = [];
         filteredData.forEach(row => {
@@ -1250,35 +1235,28 @@
           config.options.scales = { x: { stacked: false }, y: { stacked: false } };
         }
       }
-      
       const container = document.getElementById('reportCanvasContainer');
       if (container.querySelector('p')) { container.innerHTML = ''; }
       const chartWrapper = document.createElement('div');
       chartWrapper.className = "chart-wrapper";
-      
-      // Remove Chart button
       const removeBtn = document.createElement('button');
       removeBtn.innerText = "Remove Chart";
       removeBtn.className = "btn btn-danger btn-sm remove-btn";
       removeBtn.onclick = function() { chartWrapper.remove(); delete chartConfigs[chartWrapper.id]; };
       chartWrapper.appendChild(removeBtn);
-      
       if (chartType !== 'scatter' && chartType !== 'bubble') {
         const customizeColorsBtn = document.createElement('button');
         customizeColorsBtn.innerText = "Customize Colors";
         customizeColorsBtn.className = "btn btn-secondary btn-sm customize-colors-btn";
         customizeColorsBtn.onclick = function() { openCustomColorModal(chartWrapper.id); };
         chartWrapper.appendChild(customizeColorsBtn);
-
         let uniqueId = Date.now();
         const slicerDiv = document.createElement('div');
         slicerDiv.className = "chart-slicer";
         slicerDiv.style.display = "none";
-
         const slicerFieldLabel = document.createElement('label');
         slicerFieldLabel.innerText = "Chart Filter Field:";
         slicerDiv.appendChild(slicerFieldLabel);
-
         const slicerFieldSelect = document.createElement('select');
         slicerFieldSelect.className = "form-select form-select-sm";
         slicerFieldSelect.id = "chartSlicerField_" + uniqueId;
@@ -1293,24 +1271,20 @@
           slicerFieldSelect.appendChild(opt);
         });
         slicerDiv.appendChild(slicerFieldSelect);
-
         const slicerButtonContainer = document.createElement('div');
         slicerButtonContainer.id = "chartSlicerButtonContainer_" + uniqueId;
         slicerButtonContainer.style.display = "none";
         slicerDiv.appendChild(slicerButtonContainer);
-
         slicerFieldSelect.onchange = function() {
           let selField = slicerFieldSelect.value;
           updateSlicerButtons(uniqueId, chartConfigs[chartWrapper.id].params.baseData, selField, chartWrapper.id);
         };
-
         const applySlicerBtn = document.createElement('button');
         applySlicerBtn.type = "button";
         applySlicerBtn.className = "btn btn-secondary btn-sm mt-1";
         applySlicerBtn.innerText = "Apply Chart Filter";
         applySlicerBtn.onclick = function() { applyChartSlicer(chartWrapper.id); };
         slicerDiv.appendChild(applySlicerBtn);
-
         const hideFilterBtn = document.createElement('button');
         hideFilterBtn.type = "button";
         hideFilterBtn.className = "btn btn-secondary btn-sm mt-1";
@@ -1320,7 +1294,6 @@
           showFilterBtn.style.display = "inline-block";
         };
         slicerDiv.appendChild(hideFilterBtn);
-
         const showFilterBtn = document.createElement('button');
         showFilterBtn.innerText = "Show Chart Filter Field";
         showFilterBtn.className = "btn btn-secondary btn-sm";
@@ -1332,14 +1305,12 @@
         };
         chartWrapper.appendChild(showFilterBtn);
       }
-      
       const chartContentContainer = document.createElement('div');
       chartContentContainer.className = "chart-content-container";
       const canvasContainer = document.createElement('div');
       canvasContainer.className = "canvas-container";
       const canvas = document.createElement('canvas');
       canvasContainer.appendChild(canvas);
-      
       if (["bar", "pie", "doughnut", "stacked-bar", "mixed", "radar", "polarArea", "candlestick"].includes(chartType)) {
         let zoomBarDiv = document.createElement('div');
         zoomBarDiv.className = "zoom-bar-container";
@@ -1382,11 +1353,9 @@
       } else {
         chartContentContainer.appendChild(canvasContainer);
       }
-      
       chartWrapper.appendChild(chartContentContainer);
       container.appendChild(chartWrapper);
       chartWrapper.id = "chartWrapper_" + Date.now();
-      
       let chartInstance = new Chart(canvas, {
         ...config,
         options: {
@@ -1399,7 +1368,6 @@
           }
         }
       });
-      
       let params = {
         chartType: chartType,
         xField: xField,
@@ -1448,7 +1416,6 @@
         params.aggregatedLabels = aggregatedLabels;
         params.aggregatedColors = generateDefaultColors(aggregatedLabels.length);
       }
-      
       chartConfigs[chartWrapper.id] = {
         instance: chartInstance,
         params: params
