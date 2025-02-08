@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Excel Data Explorer</title>
+<!-- Include XLSX library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Inline CSS Styles -->
+<style>
+/* Enhanced Modern CSS Styles with Adjusted Sizes */
+body {
+  font-family: 'Inter', sans-serif;
+  /*background: linear-gradient(135deg, #f0f4f8, #d9e2ec);*/
+  color: #1F2937;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /*padding-top: 40px;*/
+  /* Removed max-height to allow dynamic content height */
+  overflow: auto;
+}
+
+h2 {
+  color: #3498db;
+  font-size: 24px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* New styles for the rows */
+.row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 90%;
+  max-width: 1000px;
+}
+
+#fileInput,
+#searchBox,
+#columnSelect,
+#fileSelect,
+#sheetSelect {
+  padding: 8px 16px;
+  margin: 6px 0;
+  border-radius: 25px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  flex: 1;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: #ffffff;
+  max-width: 300px;
+}
+
+#fileInput:hover,
+#searchBox:hover,
+#columnSelect:hover,
+#fileSelect:hover,
+#sheetSelect:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+}
+
+#fileInput:focus,
+#searchBox:focus,
+#columnSelect:focus,
+#fileSelect:focus,
+#sheetSelect:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5);
+}
+
+#resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+  width: 90%;
+  max-width: 1000px;
+  position: relative;
+  overflow-y: auto;
+  height: 600px; /* Set a fixed height for the grid */
+  padding-bottom: 20px;
+  padding-right: 15px; /* Added padding to create space */
+}
+
+/* Adjust #resultsGrid and .card height when in detail view */
+#resultsGrid.detail-view {
+  height: auto;
+  overflow-y: visible;
+}
+
+#resultsGrid.detail-view .card {
+  height: auto;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow:
+    0 6px 10px -3px rgba(0, 0, 0, 0.1),
+    0 3px 5px -2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s ease-in-out;
+  position: relative;
+  top: 5px;
+  border: 1px solid #7dd3fc;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 8px 14px -3px rgba(0, 0, 0, 0.1),
+    0 5px 7px -2px rgba(0, 0, 0, 0.05);
+}
+
+.card-content {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.card-content strong {
+  color: #1d4ed8;
+}
+
+.card-content p {
+  margin: 6px 0;
+}
+
+.back-button {
+  background: #3b82f6;
+  color: #ffffff;
+  padding: 8px 16px;
+  font-size: 13px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background 0.3s;
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  display: none;
+}
+
+.back-button:hover {
+  background: #2563eb;
+}
+
+/* Dropdown (ellipsis) menu */
+.dropdown {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+  font-size: 22px;
+  color: #94a3b8;
+  transition: color 0.3s;
+}
+
+.dropdown:hover {
+  color: #1e293b;
+}
+
+/* Dropdown content */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 35px;
+  right: -5px;
+  background: #ffffff;
+  box-shadow:
+    0 6px 10px -3px rgba(0, 0, 0, 0.1),
+    0 3px 5px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  min-width: 180px;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Display dropdown when clicked */
+.show-dropdown .dropdown-content {
+  display: block;
+}
+
+/* Dropdown items */
+.dropdown-content button {
+  background: none;
+  border: none;
+  padding: 8px 14px;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  color: #1F2937;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-content button:hover {
+  background-color: #f0f4f8;
+}
+
+.dropdown-content button+button {
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Copied message styles */
+#copiedMessage {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3b82f6;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 25px;
+  font-size: 13px;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 1000;
+}
+
+/* Custom Scrollbar Styles */
+/* For WebKit browsers (Chrome, Safari, Edge) */
+#resultsGrid::-webkit-scrollbar {
+  width: 12px;
+}
+
+#resultsGrid::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+#resultsGrid::-webkit-scrollbar-thumb {
+  background-color: #3b82f6;
+  border-radius: 10px;
+  border: 3px solid #e5e7eb;
+}
+
+#resultsGrid:hover::-webkit-scrollbar-thumb {
+  background-color: #2563eb;
+}
+
+/* For Firefox */
+#resultsGrid {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #e5e7eb;
+}
+
+/* Ensure hidden elements stay hidden when scrolling */
+.card[style*="display: none;"] {
+  display: none !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #resultsGrid {
+    width: 95%;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #fileInput,
+  #searchBox,
+  #columnSelect,
+  #fileSelect,
+  #sheetSelect {
+    width: 80%;
+    max-width: none;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .card-content {
+    font-size: 12px;
+  }
+
+  .back-button {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+</style>
+</head>
+<body>
+<h2>🔍 Data Explorer</h2>
+<!-- Row 1: Upload and Search -->
+<div class="row">
+  <input type="file" id="fileInput" accept=".xlsx, .xls" multiple>
+  <input type="text" id="searchBox" placeholder="Search..." disabled>
+</div>
+<!-- Row 2: Select File and Select Column -->
+<div class="row">
+  <select id="fileSelect" disabled style="display: none;">
+    <option value="">Select a Data Group</option>
+  </select>
+  <select id="sheetSelect" disabled style="display: none;">
+    <option value="">Select a Sheet</option>
+  </select>
+  <select id="columnSelect" disabled>
+    <option value="">Search All Columns</option>
+  </select>
+</div>
+<div id="resultsGrid"></div>
+<button id="backButton" class="back-button" style="display: none;">← Back to Results</button>
+<!-- Copied message -->
+<div id="copiedMessage">Copied to clipboard!</div>
+
+<!-- JavaScript -->
+<script>
+(function () {
+  let dataGroups = []; // Array to hold groups of data
+  let currentGroupIndex = null; // Index of the currently selected group
+  let filteredData = [];
+  let totalFilesUploaded = 0; // Variable to track the number of files uploaded
+  let startIndex = 0; // For virtual scrolling
+  const itemsPerPage = 20; // Number of items to render at a time
+  let headers = []; // Store headers globally for access in scroll handler
+  let isDetailView = false; // Track if we're in detail view
+
+  const fileInput = document.getElementById('fileInput');
+  const fileSelect = document.getElementById('fileSelect');
+  const sheetSelect = document.getElementById('sheetSelect');
+  const searchBox = document.getElementById('searchBox');
+  const columnSelect = document.getElementById('columnSelect');
+  const resultsGrid = document.getElementById('resultsGrid');
+  const backButton = document.getElementById('backButton');
+  const copiedMessage = document.getElementById('copiedMessage');
+
+  // File input event listener to handle multiple files
+  fileInput.addEventListener('change', function (event) {
+    const files = event.target.files;
+    if (!files.length) return;
+    dataGroups = []; // Reset data groups array
+    totalFilesUploaded = files.length; // Update the total number of files uploaded
+    fileSelect.innerHTML = '<option value="">Select a Data Group</option>';
+    sheetSelect.innerHTML = '<option value="">Select a Sheet</option>';
+    columnSelect.innerHTML = '<option value="">Search All Columns</option>';
+    searchBox.value = '';
+    searchBox.disabled = true;
+    columnSelect.disabled = true;
+    fileSelect.disabled = true;
+    sheetSelect.disabled = true;
+    resultsGrid.innerHTML = '';
+    backButton.style.display = 'none';
+    fileSelect.style.display = 'none';
+    sheetSelect.style.display = 'none';
+    let filesProcessed = 0;
+    let headerMap = {}; // Map to track headers and associated files
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const arrayBuffer = e.target.result;
+        const dataArray = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(dataArray, { type: 'array' });
+        const sheetNames = workbook.SheetNames;
+        const sheetsData = {};
+
+        sheetNames.forEach(sheetName => {
+          const sheet = workbook.Sheets[sheetName];
+          let fileData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+          if (fileData.length > 0) {
+            const headers = fileData.shift();
+            // Include file name and sheet name with each row
+            const mappedData = fileData.map(row => ({ rowData: row, fileName: file.name, sheetName: sheetName }));
+            sheetsData[sheetName] = {
+              headers: headers,
+              data: mappedData
+            };
+          }
+        });
+
+        dataGroups.push({
+          groupId: `file-${file.name}`,
+          groupName: `File: ${file.name}`,
+          fileName: file.name,
+          sheetsData: sheetsData, // Store all sheets data
+          isCombined: false
+        });
+
+        // Track headers and associated files for combined groups
+        const headerKey = JSON.stringify(Object.keys(sheetsData).map(sheetName => sheetsData[sheetName].headers));
+        if (headerMap[headerKey]) {
+          headerMap[headerKey].files.push(file.name);
+          // Merge sheets data
+          for (let sheetName in sheetsData) {
+            if (headerMap[headerKey].sheetsData[sheetName]) {
+              headerMap[headerKey].sheetsData[sheetName].data = headerMap[headerKey].sheetsData[sheetName].data.concat(sheetsData[sheetName].data);
+            } else {
+              headerMap[headerKey].sheetsData[sheetName] = sheetsData[sheetName];
+            }
+          }
+        } else {
+          headerMap[headerKey] = {
+            headers: sheetsData[Object.keys(sheetsData)[0]].headers,
+            files: [file.name],
+            sheetsData: JSON.parse(JSON.stringify(sheetsData)) // Deep copy
+          };
+        }
+
+        filesProcessed++;
+        checkAllFilesProcessed(filesProcessed, files.length);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function checkAllFilesProcessed(processed, total) {
+      if (processed === total) {
+        if (dataGroups.length === 0) {
+          alert('No data found in the selected files.');
+          return;
+        }
+
+        // Create combined groups for headers that have more than one file
+        for (let key in headerMap) {
+          if (headerMap[key].files.length > 1) {
+            dataGroups.push({
+              groupId: `combined-${dataGroups.length}`,
+              groupName: `Combined`,
+              fileNames: headerMap[key].files,
+              sheetsData: headerMap[key].sheetsData,
+              isCombined: true
+            });
+          }
+        }
+
+        // Populate the fileSelect dropdown if more than one group exists
+        if (dataGroups.length > 1) {
+          // Clear existing options
+          fileSelect.innerHTML = '<option value="">Select a Data Group</option>';
+          dataGroups.forEach((group, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = group.groupName;
+            fileSelect.appendChild(option);
+          });
+
+          // Show and enable the file select dropdown
+          fileSelect.style.display = '';
+          fileSelect.disabled = false;
+          fileSelect.removeEventListener('change', handleFileSelectChange);
+          fileSelect.addEventListener('change', handleFileSelectChange);
+        } else {
+          // Only one data group, select it automatically
+          currentGroupIndex = 0;
+          initializeForSelectedGroup();
+          // Hide the file select dropdown since there's only one group
+          fileSelect.style.display = 'none';
+        }
+      }
+    }
+
+    function handleFileSelectChange() {
+      currentGroupIndex = this.value !== "" ? parseInt(this.value) : null;
+      if (currentGroupIndex !== null) {
+        initializeForSelectedGroup();
+      } else {
+        // Disable search, column select, and sheet select if no group is selected
+        searchBox.disabled = true;
+        columnSelect.disabled = true;
+        sheetSelect.disabled = true;
+        searchBox.value = '';
+        columnSelect.innerHTML = '<option value="">Search All Columns</option>';
+        sheetSelect.innerHTML = '<option value="">Select a Sheet</option>';
+        resultsGrid.innerHTML = '';
+        backButton.style.display = 'none';
+      }
+    }
+
+    function initializeForSelectedGroup() {
+      const currentGroup = dataGroups[currentGroupIndex];
+
+      // Populate the sheet select dropdown
+      sheetSelect.innerHTML = '<option value="">Select a Sheet</option>';
+      const sheetNames = Object.keys(currentGroup.sheetsData);
+
+      if (sheetNames.length > 1) {
+        // Multiple sheets, show the sheetSelect dropdown
+        sheetNames.forEach(sheetName => {
+          const option = document.createElement('option');
+          option.value = sheetName;
+          option.textContent = sheetName;
+          sheetSelect.appendChild(option);
+        });
+
+        // Show and enable the sheet select dropdown
+        sheetSelect.style.display = '';
+        sheetSelect.disabled = false;
+        sheetSelect.removeEventListener('change', handleSheetSelectChange);
+        sheetSelect.addEventListener('change', handleSheetSelectChange);
+
+        // Disable search and column select until a sheet is selected
+        searchBox.disabled = true;
+        columnSelect.disabled = true;
+        searchBox.value = '';
+        columnSelect.innerHTML = '<option value="">Search All Columns</option>';
+        resultsGrid.innerHTML = '';
+        backButton.style.display = 'none';
+      } else if (sheetNames.length === 1) {
+        // Only one sheet, automatically select it
+        sheetSelect.style.display = 'none';
+        initializeForSelectedSheet(sheetNames[0]);
+      } else {
+        // No sheets found
+        alert('No sheets with data found in the selected file.');
+      }
+    }
+
+    function handleSheetSelectChange() {
+      const selectedSheetName = this.value;
+      if (selectedSheetName !== "") {
+        initializeForSelectedSheet(selectedSheetName);
+      } else {
+        // Disable search and column select if no sheet is selected
+        searchBox.disabled = true;
+        columnSelect.disabled = true;
+        searchBox.value = '';
+        columnSelect.innerHTML = '<option value="">Search All Columns</option>';
+        resultsGrid.innerHTML = '';
+        backButton.style.display = 'none';
+      }
+    }
+
+    function initializeForSelectedSheet(sheetName) {
+      const currentGroup = dataGroups[currentGroupIndex];
+      const sheetData = currentGroup.sheetsData[sheetName];
+
+      // Populate the column select dropdown
+      columnSelect.innerHTML = '<option value="">Search All Columns</option>';
+      sheetData.headers.forEach((header, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = header;
+        columnSelect.appendChild(option);
+      });
+
+      // Enable the search box and column select
+      searchBox.disabled = false;
+      columnSelect.disabled = false;
+      searchBox.placeholder = "Type to search...";
+      searchBox.value = '';
+      columnSelect.selectedIndex = 0;
+      // Clear previous results
+      resultsGrid.innerHTML = '';
+      backButton.style.display = 'none';
+
+      // Attach event listeners
+      searchBox.removeEventListener('input', searchTable);
+      searchBox.addEventListener('input', debounce(searchTable, 300));
+      columnSelect.removeEventListener('change', searchTable);
+      columnSelect.addEventListener('change', searchTable);
+
+      // Store the selected sheet name
+      sheetSelect.value = sheetName;
+
+      // Store headers globally
+      headers = sheetData.headers;
+    }
+  });
+
+  // Debounce function to optimize search
+  function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+  }
+
+  // Search function
+  function searchTable() {
+    const query = searchBox.value.toLowerCase();
+    const selectedColumnIndex = columnSelect.value;
+    if (currentGroupIndex === null || query === '') {
+      resultsGrid.style.display = 'none';
+      return;
+    }
+    const currentGroup = dataGroups[currentGroupIndex];
+    const selectedSheetName = sheetSelect.value || Object.keys(currentGroup.sheetsData)[0];
+    const sheetData = currentGroup.sheetsData[selectedSheetName];
+    const data = sheetData.data;
+    headers = sheetData.headers; // Update headers globally
+    filteredData = data.filter(item => {
+      const row = item.rowData;
+      if (selectedColumnIndex !== "") {
+        // Search in the selected column
+        const cell = row[selectedColumnIndex] || "";
+        return cell.toString().toLowerCase().includes(query);
+      } else {
+        // Search in all columns
+        return row.some(cell => cell.toString().toLowerCase().includes(query));
+      }
+    });
+
+    startIndex = 0; // Reset start index
+    displayResultsTable(filteredData, headers); // Display filtered data
+  }
+
+  // Display results with virtual scrolling
+  function displayResultsTable(dataArray, headers) {
+    isDetailView = false; // Ensure we're not in detail view
+    resultsGrid.innerHTML = '';
+    resultsGrid.classList.remove('detail-view'); // Remove detail-view class
+    resultsGrid.style.display = dataArray.length > 0 ? 'grid' : 'none';
+
+    // Render the initial set of items
+    renderItems(dataArray, headers, startIndex, itemsPerPage);
+
+    // Attach scroll event listener to load more items on scroll
+    resultsGrid.removeEventListener('scroll', handleScroll);
+    resultsGrid.addEventListener('scroll', handleScroll);
+  }
+
+  // Helper function to render items
+  function renderItems(dataArray, headers, start, count) {
+    const currentGroup = dataGroups[currentGroupIndex];
+    const showFileName = totalFilesUploaded > 1 && currentGroup.isCombined;
+
+    const fragment = document.createDocumentFragment();
+
+    for (let i = start; i < Math.min(start + count, dataArray.length); i++) {
+      const item = dataArray[i];
+      const { rowData, fileName } = item;
+
+      const card = document.createElement('div');
+      card.classList.add('card');
+      card.addEventListener('click', function () {
+        showSelectedRow(item, headers);
+      });
+
+      const cardContent = document.createElement('div');
+      cardContent.classList.add('card-content');
+
+      // Conditionally display the file name
+      if (showFileName) {
+        const fileNameElement = document.createElement('p');
+        fileNameElement.innerHTML = `<strong>File:</strong> ${fileName}`;
+        cardContent.appendChild(fileNameElement);
+      }
+
+      // Display up to the first four pieces of data
+      headers.slice(0, 4).forEach((header, index) => {
+        const p = document.createElement('p');
+        p.innerHTML = `<strong>${header}:</strong> ${rowData[index] !== undefined ? rowData[index] : ""}`;
+        cardContent.appendChild(p);
+      });
+
+      card.appendChild(cardContent);
+      fragment.appendChild(card);
+    }
+
+    resultsGrid.appendChild(fragment);
+  }
+
+  // Handle scroll event for virtual scrolling
+  function handleScroll() {
+    if (isDetailView) return; // Do nothing if in detail view
+
+    const { scrollTop, scrollHeight, clientHeight } = resultsGrid;
+    if (scrollTop + clientHeight >= scrollHeight - 100) {
+      // User is near the bottom of the grid
+      startIndex += itemsPerPage;
+      if (startIndex < filteredData.length) {
+        renderItems(filteredData, headers, startIndex, itemsPerPage);
+      }
+    }
+  }
+
+  // Show selected row details
+  function showSelectedRow(item, headers) {
+    isDetailView = true; // We're entering detail view
+
+    // Clear the results grid and hide other results
+    resultsGrid.innerHTML = '';
+    resultsGrid.style.display = 'grid';
+    resultsGrid.classList.add('detail-view'); // Add detail-view class
+
+    const { rowData, fileName } = item;
+    const card = document.createElement('div');
+    card.classList.add('card');
+    const cardContent = document.createElement('div');
+    cardContent.classList.add('card-content');
+    const currentGroup = dataGroups[currentGroupIndex];
+    const showFileName = totalFilesUploaded > 1 && currentGroup.isCombined;
+
+    // Conditionally display the file name
+    if (showFileName) {
+      const fileNameElement = document.createElement('p');
+      fileNameElement.innerHTML = `<strong>File:</strong> ${fileName}`;
+      cardContent.appendChild(fileNameElement);
+    }
+
+    // Display all data
+    headers.forEach((header, index) => {
+      const p = document.createElement('p');
+      p.innerHTML = `<strong>${header}:</strong> ${rowData[index] !== undefined ? rowData[index] : ""}`;
+      cardContent.appendChild(p);
+    });
+
+    // Add the dropdown menu
+    const dropdown = document.createElement('div');
+    dropdown.classList.add('dropdown');
+    dropdown.innerHTML = '⋮';
+    dropdown.addEventListener('click', function (event) {
+      event.stopPropagation();
+      toggleDropdown(dropdown);
+    });
+
+    const dropdownContent = document.createElement('div');
+    dropdownContent.classList.add('dropdown-content');
+
+    // Copy button
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'Copy';
+    copyButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      copyCardData(rowData, headers, fileName);
+      dropdown.classList.remove('show-dropdown');
+    });
+    dropdownContent.appendChild(copyButton);
+
+    // Share via Email button
+    const emailButton = document.createElement('button');
+    emailButton.textContent = 'Share via Email';
+    emailButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      shareViaEmail(rowData, headers, fileName);
+      dropdown.classList.remove('show-dropdown');
+    });
+    dropdownContent.appendChild(emailButton);
+
+    // Share via WhatsApp
+    const whatsappButton = document.createElement('button');
+    whatsappButton.textContent = 'Share via WhatsApp';
+    whatsappButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      shareViaWhatsApp(rowData, headers, fileName);
+      dropdown.classList.remove('show-dropdown');
+    });
+    dropdownContent.appendChild(whatsappButton);
+
+    // Share via Telegram
+    const telegramButton = document.createElement('button');
+    telegramButton.textContent = 'Share via Telegram';
+    telegramButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      shareViaTelegram(rowData, headers, fileName);
+      dropdown.classList.remove('show-dropdown');
+    });
+    dropdownContent.appendChild(telegramButton);
+
+    dropdown.appendChild(dropdownContent);
+    card.appendChild(dropdown);
+    card.appendChild(cardContent);
+    backButton.style.display = 'block';
+    resultsGrid.appendChild(card);
+    resultsGrid.style.display = 'grid';
+  }
+
+  // Toggle dropdown menu
+  function toggleDropdown(dropdown) {
+    const allDropdowns = document.querySelectorAll('.dropdown');
+    allDropdowns.forEach(d => {
+      if (d !== dropdown) {
+        d.classList.remove('show-dropdown');
+      }
+    });
+    dropdown.classList.toggle('show-dropdown');
+  }
+
+  // Copy card data to clipboard
+  function copyCardData(rowData, headers, fileName) {
+    const currentGroup = dataGroups[currentGroupIndex];
+    const showFileName = totalFilesUploaded > 1 && currentGroup.isCombined;
+    let textToCopy = '';
+    if (showFileName) {
+      textToCopy += `File: ${fileName}\n`;
+    }
+    textToCopy += headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          showCopiedMessage();
+        })
+        .catch(err => {
+          console.error('Clipboard API failed:', err);
+          useFallbackCopy(textToCopy);
+        });
+    } else {
+      useFallbackCopy(textToCopy);
+    }
+  }
+
+  // Fallback method for copying text
+  function useFallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      showCopiedMessage();
+    } catch (err) {
+      alert('Copy to clipboard failed. Please copy manually.');
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
+  // Show the "Copied" message
+  function showCopiedMessage() {
+    copiedMessage.style.display = 'block';
+    copiedMessage.style.opacity = 1;
+    copiedMessage.style.transform = 'translateY(0)';
+    setTimeout(() => {
+      copiedMessage.style.opacity = 0;
+      copiedMessage.style.transform = 'translateY(-20px)';
+      setTimeout(() => {
+        copiedMessage.style.display = 'none';
+      }, 300);
+    }, 2000);
+  }
+
+  // Share via Email
+  function shareViaEmail(rowData, headers, fileName) {
+    const currentGroup = dataGroups[currentGroupIndex];
+    const showFileName = totalFilesUploaded > 1 && currentGroup.isCombined;
+    let body = '';
+    if (showFileName) {
+      body += `File: ${fileName}\n`;
+    }
+    body += headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+    const subject = encodeURIComponent('Shared Excel Data');
+    const emailBody = encodeURIComponent(body);
+    window.location.href = `mailto:?subject=${subject}&body=${emailBody}`;
+  }
+
+  // Share via WhatsApp
+  function shareViaWhatsApp(rowData, headers, fileName) {
+    const currentGroup = dataGroups[currentGroupIndex];
+    const showFileName = totalFilesUploaded > 1 && currentGroup.isCombined;
+    let textToShare = '';
+    if (showFileName) {
+      textToShare += `File: ${fileName}\n`;
+    }
+    textToShare += headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+    const url = `https://wa.me/?text=${encodeURIComponent(textToShare)}`;
+    window.open(url, '_blank');
+  }
+
+  // Share via Telegram
+  function shareViaTelegram(rowData, headers, fileName) {
+    const currentGroup = dataGroups[currentGroupIndex];
+    const showFileName = totalFilesUploaded > 1 && currentGroup.isCombined;
+    let textToShare = '';
+    if (showFileName) {
+      textToShare += `File: ${fileName}\n`;
+    }
+    textToShare += headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+    const url = `https://t.me/share/url?url=&text=${encodeURIComponent(textToShare)}`;
+    window.open(url, '_blank');
+  }
+
+  // Show search results after clicking "Back"
+  backButton.addEventListener('click', function () {
+    backButton.style.display = 'none';
+    isDetailView = false; // Reset detail view flag
+    resultsGrid.classList.remove('detail-view'); // Remove detail-view class
+    const currentGroup = dataGroups[currentGroupIndex];
+    const sheetName = sheetSelect.value || Object.keys(currentGroup.sheetsData)[0];
+    headers = currentGroup.sheetsData[sheetName].headers;
+    startIndex = 0; // Reset start index
+    displayResultsTable(filteredData, headers);
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function (event) {
+    const isDropdown = event.target.matches('.dropdown, .dropdown *');
+    if (!isDropdown) {
+      document.querySelectorAll('.dropdown').forEach(dropdown => {
+        dropdown.classList.remove('show-dropdown');
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

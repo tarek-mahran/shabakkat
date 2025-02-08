@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Data Explorer</title>
+    <!-- Include XLSX library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f2f5 0%, #cfd6e6 100%);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            **max-height: 1000px;** /* Added max-height */
+            overflow: auto; /* Allows scrolling if content exceeds max-height */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 40px;
+            text-align: center;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #fileInput,
+        #searchBox {
+            padding: 14px 22px;
+            margin: 10px 0;
+            border-radius: 30px;
+            border: none;
+            font-size: 16px;
+            width: 350px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            box-shadow: inset 4px 4px 10px rgba(0,0,0,0.1),
+                        inset -4px -4px 10px rgba(255,255,255,0.7);
+        }
+
+        #fileInput:hover,
+        #searchBox:hover {
+            box-shadow: inset 6px 6px 12px rgba(0,0,0,0.1),
+                        inset -6px -6px 12px rgba(255,255,255,0.8);
+        }
+
+        #fileInput:focus,
+        #searchBox:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1),
+                        inset -2px -2px 5px rgba(255,255,255,0.8);
+        }
+
+        #resultsGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+            width: 90%;
+            transition: all 0.3s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 8px 8px 15px rgba(0,0,0,0.1),
+                        -8px -8px 15px rgba(255,255,255,0.7);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s ease-in-out;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 12px 12px 20px rgba(0,0,0,0.15),
+                        -12px -12px 20px rgba(255,255,255,0.8);
+        }
+
+        .card-content {
+            font-size: 15px;
+            color: #34495e;
+            line-height: 1.6;
+        }
+
+        .card-content strong {
+            color: #2980b9;
+        }
+
+        .card-content p {
+            margin: 10px 0;
+        }
+
+        .back-button {
+            background: linear-gradient(145deg, #e6e6e6, #ffffff);
+            color: #2c3e50;
+            padding: 14px 28px;
+            font-size: 16px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: none;
+            z-index: 10;
+            box-shadow: 6px 6px 12px rgba(0,0,0,0.1),
+                        -6px -6px 12px rgba(255,255,255,0.7);
+        }
+
+        .back-button:hover {
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.1),
+                        -4px -4px 10px rgba(255,255,255,0.8);
+        }
+
+        /* Pagination Styles */
+        .pagination {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            margin-top: 40px;
+            gap: 15px;
+        }
+
+        .pagination button {
+            padding: 12px 20px;
+            border: none;
+            background: #2980b9;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s, transform 0.3s;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.1),
+                        -4px -4px 10px rgba(255,255,255,0.7);
+        }
+
+        .pagination button:hover {
+            background: #1f6391;
+            transform: translateY(-3px);
+        }
+
+        .pagination button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .pagination span {
+            font-size: 16px;
+            color: #2c3e50;
+        }
+
+        /* Dropdown (ellipsis) menu */
+        .dropdown {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 26px;
+            color: #7f8c8d;
+            transition: color 0.3s;
+        }
+
+        .dropdown:hover {
+            color: #2c3e50;
+        }
+
+        /* Dropdown content */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 40px;
+            right: -10px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 6px 6px 12px rgba(0,0,0,0.1),
+                        -6px -6px 12px rgba(255,255,255,0.8);
+            border-radius: 15px;
+            min-width: 200px;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Display dropdown when clicked */
+        .show-dropdown .dropdown-content {
+            display: block;
+        }
+
+        /* Dropdown items */
+        .dropdown-content button {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            width: 100%;
+            text-align: left;
+            font-size: 16px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .dropdown-content button:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .dropdown-content button:last-child {
+            border-bottom: none;
+        }
+
+        /* Copied message styles */
+        #copiedMessage {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2980b9;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 16px;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 1000;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.1),
+                        -4px -4px 10px rgba(255,255,255,0.7);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #resultsGrid {
+                width: 95%;
+            }
+
+            #fileInput,
+            #searchBox {
+                width: 80%;
+                padding: 12px 18px;
+            }
+
+            .pagination {
+                gap: 10px;
+            }
+
+            .pagination button {
+                font-size: 14px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .card-content {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>Excel Data Explorer</h2>
+    <input type="file" id="fileInput" accept=".xlsx, .xls">
+    <input type="text" id="searchBox" placeholder="Search..." oninput="searchTable()" disabled>
+    <div id="resultsGrid"></div> <!-- Grid for displaying results -->
+    <button id="backButton" class="back-button" onclick="showSearchResults()">← Back to Results</button>
+
+    <!-- Copied message -->
+    <div id="copiedMessage">Copied to clipboard!</div>
+
+    <!-- Pagination controls -->
+    <div class="pagination">
+        <button id="prevPage" onclick="changePage(-1)" disabled>Previous</button>
+        <span id="pageNumbers"></span>
+        <button id="nextPage" onclick="changePage(1)" disabled>Next</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let headers = [];
+            let filteredData = [];
+            let currentPage = 1;
+            const itemsPerPage = 12;
+
+            // File input event listener
+            document.getElementById('fileInput').addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    const data = new Uint8Array(arrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+
+                    window.data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    headers = window.data.shift();
+
+                    // Enable the search box now that data is loaded
+                    const searchBox = document.getElementById('searchBox');
+                    searchBox.disabled = false;
+                    searchBox.placeholder = "Type to search...";
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            // Search function
+            window.searchTable = function() {
+                const query = document.getElementById('searchBox').value.toLowerCase();
+
+                if (!query) {
+                    document.getElementById('resultsGrid').style.display = 'none';
+                    document.querySelector('.pagination').style.display = 'none';
+                    return;
+                }
+
+                filteredData = window.data
+                    .map((row, index) => ({ rowData: row, originalIndex: index }))
+                    .filter(item => item.rowData.some(cell => cell.toString().toLowerCase().includes(query)));
+
+                currentPage = 1;
+                displayResultsTable(paginateData(filteredData, currentPage));
+
+                document.querySelector('.pagination').style.display = filteredData.length > itemsPerPage ? 'flex' : 'none';
+            };
+
+            // Display results
+            function displayResultsTable(pageData) {
+                const grid = document.getElementById('resultsGrid');
+                grid.innerHTML = '';
+
+                pageData.forEach((item) => {
+                    const row = item.rowData;
+                    const card = document.createElement('div');
+                    card.classList.add('card');
+                    card.addEventListener('click', () => showSelectedRow(item.originalIndex));
+
+                    const cardContent = document.createElement('div');
+                    cardContent.classList.add('card-content');
+
+                    cardContent.innerHTML = headers.slice(0, 4).map((header, index) =>
+                        `<p><strong>${header}:</strong> ${row[index] !== undefined ? row[index] : ""}</p>`
+                    ).join('');
+
+                    card.appendChild(cardContent);
+                    grid.appendChild(card);
+                });
+
+                grid.style.display = pageData.length > 0 ? 'grid' : 'none';
+                updatePaginationControls();
+            }
+
+            // Show selected row details
+            function showSelectedRow(originalIndex) {
+                const grid = document.getElementById('resultsGrid');
+                grid.innerHTML = '';
+
+                const card = document.createElement('div');
+                card.classList.add('card');
+
+                const cardContent = document.createElement('div');
+                cardContent.classList.add('card-content');
+
+                cardContent.innerHTML = headers.map((header, index) =>
+                    `<p><strong>${header}:</strong> ${window.data[originalIndex][index] !== undefined ? window.data[originalIndex][index] : ""}</p>`
+                ).join('');
+
+                // Add the dropdown menu
+                const dropdown = document.createElement('div');
+                dropdown.classList.add('dropdown');
+                dropdown.innerHTML = '⋮';
+                dropdown.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    toggleDropdown(dropdown);
+                });
+
+                const dropdownContent = document.createElement('div');
+                dropdownContent.classList.add('dropdown-content');
+
+                // Copy button
+                const copyButton = document.createElement('button');
+                copyButton.textContent = 'Copy';
+                copyButton.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    copyCardData(window.data[originalIndex]);
+                    dropdown.classList.remove('show-dropdown');
+                });
+                dropdownContent.appendChild(copyButton);
+
+                // Share via Email button
+                const emailButton = document.createElement('button');
+                emailButton.textContent = 'Share via Email';
+                emailButton.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    shareViaEmail(window.data[originalIndex]);
+                    dropdown.classList.remove('show-dropdown');
+                });
+                dropdownContent.appendChild(emailButton);
+
+                // Share via WhatsApp
+                const whatsappButton = document.createElement('button');
+                whatsappButton.textContent = 'Share via WhatsApp';
+                whatsappButton.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    shareViaWhatsApp(window.data[originalIndex]);
+                    dropdown.classList.remove('show-dropdown');
+                });
+                dropdownContent.appendChild(whatsappButton);
+
+                // Share via Telegram
+                const telegramButton = document.createElement('button');
+                telegramButton.textContent = 'Share via Telegram';
+                telegramButton.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    shareViaTelegram(window.data[originalIndex]);
+                    dropdown.classList.remove('show-dropdown');
+                });
+                dropdownContent.appendChild(telegramButton);
+
+                dropdown.appendChild(dropdownContent);
+                card.appendChild(dropdown);
+                card.appendChild(cardContent);
+
+                document.getElementById('backButton').style.display = 'block';
+                document.querySelector('.pagination').style.display = 'none';
+
+                grid.appendChild(card);
+                grid.style.display = 'grid';
+            }
+
+            // Toggle dropdown menu
+            function toggleDropdown(dropdown) {
+                const allDropdowns = document.querySelectorAll('.dropdown');
+                allDropdowns.forEach(d => {
+                    if (d !== dropdown) {
+                        d.classList.remove('show-dropdown');
+                    }
+                });
+                dropdown.classList.toggle('show-dropdown');
+            }
+
+            // Copy card data to clipboard
+            function copyCardData(rowData) {
+                const textToCopy = headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(textToCopy)
+                        .then(() => {
+                            showCopiedMessage();
+                        })
+                        .catch(err => {
+                            console.error('Clipboard API failed:', err);
+                            useFallbackCopy(textToCopy);
+                        });
+                } else {
+                    useFallbackCopy(textToCopy);
+                }
+            }
+
+            // Fallback method for copying text
+            function useFallbackCopy(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                document.body.appendChild(textarea);
+                textarea.select();
+
+                try {
+                    document.execCommand('copy');
+                    showCopiedMessage();
+                } catch (err) {
+                    alert('Copy to clipboard failed. Please copy manually.');
+                } finally {
+                    document.body.removeChild(textarea);
+                }
+            }
+
+            // Show the "Copied" message
+            function showCopiedMessage() {
+                const copiedMessage = document.getElementById('copiedMessage');
+                copiedMessage.style.display = 'block';
+                copiedMessage.style.opacity = 1;
+                copiedMessage.style.transform = 'translateY(0)';
+
+                setTimeout(() => {
+                    copiedMessage.style.opacity = 0;
+                    copiedMessage.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        copiedMessage.style.display = 'none';
+                    }, 300);
+                }, 2000);
+            }
+
+            // Share via Email
+            function shareViaEmail(rowData) {
+                const subject = encodeURIComponent('Shared Excel Data');
+                const body = encodeURIComponent(headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n'));
+                window.location.href = `mailto:?subject=${subject}&body=${body}`;
+            }
+
+            // Share via WhatsApp
+            function shareViaWhatsApp(rowData) {
+                const textToShare = headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+                const url = `https://wa.me/?text=${encodeURIComponent(textToShare)}`;
+                window.open(url, '_blank');
+            }
+
+            // Share via Telegram
+            function shareViaTelegram(rowData) {
+                const textToShare = headers.map((header, index) => `${header}: ${rowData[index] || ''}`).join('\n');
+                const url = `https://t.me/share/url?url=&text=${encodeURIComponent(textToShare)}`;
+                window.open(url, '_blank');
+            }
+
+            // Show search results after clicking "Back"
+            window.showSearchResults = function() {
+                document.getElementById('backButton').style.display = 'none';
+                document.querySelector('.pagination').style.display = filteredData.length > itemsPerPage ? 'flex' : 'none';
+                displayResultsTable(paginateData(filteredData, currentPage));
+            };
+
+            // Pagination functions
+            function paginateData(data, page) {
+                const start = (page - 1) * itemsPerPage;
+                return data.slice(start, start + itemsPerPage);
+            }
+
+            function updatePaginationControls() {
+                const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+                const prevPageButton = document.getElementById('prevPage');
+                const nextPageButton = document.getElementById('nextPage');
+                const pageNumbers = document.getElementById('pageNumbers');
+
+                pageNumbers.innerHTML = `Page ${currentPage} of ${totalPages}`;
+
+                prevPageButton.disabled = currentPage === 1;
+                nextPageButton.disabled = currentPage === totalPages || totalPages === 0;
+
+                document.querySelector('.pagination').style.display = totalPages > 1 ? 'flex' : 'none';
+            }
+
+            window.changePage = function(direction) {
+                currentPage += direction;
+                displayResultsTable(paginateData(filteredData, currentPage));
+            };
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                const isDropdown = event.target.matches('.dropdown, .dropdown *');
+                if (!isDropdown) {
+                    document.querySelectorAll('.dropdown').forEach(dropdown => {
+                        dropdown.classList.remove('show-dropdown');
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

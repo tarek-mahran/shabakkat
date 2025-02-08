@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Animated Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Global Styling */
+        body {
+            font-family: 'Poppins', sans-serif;
+            /*background-color: #2c3e50;*/
+            color: #ecf0f1;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            overflow-x: hidden;
+        }
+
+        h2 {
+            color: #3498db;
+            font-size: 32px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Upload Section */
+        .upload-section {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 10px;
+        }
+
+        input, button {
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            border: none;
+            outline: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        input {
+            width: 250px;
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        input::placeholder {
+            color: #bdc3c7;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+
+        /* Dashboard Grid */
+        #dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            max-width: 1300px;
+            margin: auto;
+        }
+
+        /* Chart Card Styling */
+        .chart {
+            background: #34495e;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #16a085;
+        }
+
+        .chart:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Enhanced Pie/Bar Chart Legends */
+        .chart .plotly-legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* Customize Plotly Tooltip */
+        .chart .plotly-tooltip {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>📊 Shabakkat Dashboard</h2>
+
+    <div class="upload-section">
+        <input type="file" id="fileUpload" accept=".xlsx">
+        <input type="text" id="fileUrl" placeholder="Enter XLSX file URL">
+        <button onclick="loadFile()">Load Data</button>
+    </div>
+
+    <div id="dashboard">
+        <div id="statusPie" class="chart"></div>
+        <div id="regionPie" class="chart"></div>
+        <div id="faultLevelBar" class="chart"></div>
+        <div id="priorityPie" class="chart"></div>
+        <div id="powerTypePie" class="chart"></div>
+        <div id="siteImpactBar" class="chart"></div>
+    </div>
+
+    <script>
+        function loadFile() {
+            const fileInput = document.getElementById('fileUpload').files[0];
+            const fileUrl = document.getElementById('fileUrl').value;
+
+            if (fileInput) {
+                readFile(fileInput);
+            } else if (fileUrl) {
+                fetch(fileUrl)
+                    .then(response => response.blob())
+                    .then(blob => readFile(blob));
+            } else {
+                alert("Please upload a file or enter a valid URL!");
+            }
+        }
+
+        function readFile(file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                generateDashboard(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function generateDashboard(data) {
+            let statusCounts = { "Resolved": 0, "Running": 0, "Cancelled/Escalated": 0 };
+            let regionCounts = {};
+            let faultLevelCounts = {};
+            let priorityCounts = {};
+            let powerTypeCounts = {};
+            let impactCounts = {};
+
+            data.forEach(row => {
+                let status = row["Status"];
+                let region = row["Region"];
+                let faultLevel = row["Fault Level"];
+                let priority = row["Priority"];
+                let powerType = row["Power Type"];
+                let impact = row["Impact"];
+
+                if (["Escalated", "Cancel_API"].includes(status)) {
+                    statusCounts["Cancelled/Escalated"]++;
+                } else if (["NOC_Resolved", "Confirmed_Resolved", "Request_Resolved"].includes(status)) {
+                    statusCounts["Resolved"]++;
+                } else {
+                    statusCounts["Running"]++;
+                }
+
+                regionCounts[region] = (regionCounts[region] || 0) + 1;
+                faultLevelCounts[faultLevel] = (faultLevelCounts[faultLevel] || 0) + 1;
+                priorityCounts[priority] = (priorityCounts[priority] || 0) + 1;
+                powerTypeCounts[powerType] = (powerTypeCounts[powerType] || 0) + 1;
+                impactCounts[impact] = (impactCounts[impact] || 0) + 1;
+            });
+
+            let layout = {
+                height: 350,
+                paper_bgcolor: '#34495e',
+                plot_bgcolor: '#34495e',
+                font: { color: "#ecf0f1", size: 12 },
+                margin: { l: 50, r: 30, t: 50, b: 50 }
+            };
+
+            let animationConfig = {
+                transition: { duration: 500 },
+                frame: { duration: 500 }
+            };
+
+            Plotly.newPlot("statusPie", [{
+                labels: Object.keys(statusCounts),
+                values: Object.values(statusCounts),
+                type: "pie",
+                hole: 0.4,
+                marker: { colors: ['#28a745', '#ffc107', '#dc3545'] },
+            }], { ...layout, title: "Status Distribution" }, animationConfig);
+
+            Plotly.newPlot("regionPie", [{
+                labels: Object.keys(regionCounts),
+                values: Object.values(regionCounts),
+                type: "pie",
+                hole: 0.4,
+                marker: { colors: ['#ff5733', '#33ff57', '#3357ff', '#ff33a8'] },
+            }], { ...layout, title: "PCM ID Distribution per Region" }, animationConfig);
+
+            Plotly.newPlot("faultLevelBar", [{
+                x: Object.keys(faultLevelCounts),
+                y: Object.values(faultLevelCounts),
+                type: "bar",
+                marker: { color: '#007bff', line: { width: 2 } },
+                text: Object.values(faultLevelCounts),
+                textposition: "auto",
+            }], { ...layout, title: "PCM ID Distribution per Fault Level" }, animationConfig);
+
+            Plotly.newPlot("priorityPie", [{
+                labels: Object.keys(priorityCounts),
+                values: Object.values(priorityCounts),
+                type: "pie",
+                hole: 0.4,
+                marker: { colors: ['#ffcc00', '#ff6666', '#33ff57'] },
+            }], { ...layout, title: "Priority Distribution" }, animationConfig);
+
+            Plotly.newPlot("powerTypePie", [{
+                labels: Object.keys(powerTypeCounts),
+                values: Object.values(powerTypeCounts),
+                type: "pie",
+                hole: 0.4,
+                marker: { colors: ['#007acc', '#ff5733', '#33ff57'] },
+            }], { ...layout, title: "Power Type Distribution" }, animationConfig);
+
+            Plotly.newPlot("siteImpactBar", [{
+                x: Object.keys(impactCounts),
+                y: Object.values(impactCounts),
+                type: "bar",
+                marker: { color: '#dc3545', line: { width: 2 } }
+            }], { ...layout, title: "Impact per Site" }, animationConfig);
+        }
+    </script>
+
+</body>
+</html>

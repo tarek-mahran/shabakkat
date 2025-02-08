@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Report Builder – Modern Style</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap CSS for UI -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- Chart.js, Zoom Plugin, PapaParse, SheetJS (for Excel), and Candlestick Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- SheetJS (XLSX) library for Excel file parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+  <style>
+    /* CSS Variables for a consistent modern theme */
+    :root {
+      --primary-color: #4A90E2;
+      --secondary-color: #50E3C2;
+      --bg-color: #F7F8FA;
+      --card-bg: #ffffff;
+      --text-color: #333;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+      --border-radius: 8px;
+      --transition-speed: 0.3s;
+    }
+    /* Base Styles */
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg-color);
+      margin: 0;
+    }
+    /* Navbar */
+    .navbar {
+      box-shadow: 0 2px 4px var(--shadow-color);
+      position: relative;
+      display: none;
+    }
+    /* Center the navbar brand text */
+    .navbar-brand {
+      font-weight: 500;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    /* Card Styles */
+    .card {
+      background: var(--card-bg);
+      border: none;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 8px var(--shadow-color);
+      margin-bottom: 20px;
+    }
+    .card-header {
+      background: linear-gradient(135deg, var(--primary-color), #357ABD);
+      color: #fff;
+      border-bottom: none;
+      border-top-left-radius: var(--border-radius);
+      border-top-right-radius: var(--border-radius);
+      font-weight: 500;
+    }
+    .card-footer {
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      border-bottom-left-radius: var(--border-radius);
+      border-bottom-right-radius: var(--border-radius);
+    }
+    /* Panels */
+    #fieldsPanel, #slicersPanel {
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    /* Chart Wrapper */
+    .chart-wrapper {
+      position: relative;
+      padding: 15px;
+      border-radius: var(--border-radius);
+      background: var(--card-bg);
+      box-shadow: 0 4px 8px var(--shadow-color);
+      transition: transform var(--transition-speed);
+    }
+    .chart-wrapper:hover {
+      transform: translateY(-3px);
+    }
+    .remove-btn, .customize-colors-btn {
+      position: absolute;
+      top: 10px;
+      z-index: 10;
+    }
+    .remove-btn {
+      right: 10px;
+    }
+    .customize-colors-btn {
+      right: 110px;
+    }
+    /* Modern Slicer Styles */
+    .chart-slicer {
+      background: #fff;
+      border: 1px solid #d1d9e6;
+      border-radius: var(--border-radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+    }
+    .chart-slicer:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+    .chart-slicer label {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-color);
+      margin-bottom: 4px;
+    }
+    .chart-slicer select, .chart-slicer button {
+      border-radius: var(--border-radius);
+    }
+    .chart-slicer select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #c3cfe2;
+      background-color: #f8f9fa;
+      font-size: 0.95rem;
+      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+    }
+    .chart-slicer select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25);
+    }
+    .chart-slicer button {
+      align-self: flex-start;
+      padding: 8px 16px;
+      border: none;
+      background-color: var(--primary-color);
+      color: #fff;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .chart-slicer button:hover {
+      background-color: #357ABD;
+    }
+    /* Zoom Bar */
+    .zoom-bar-container {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: var(--border-radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 6px var(--shadow-color);
+    }
+    .zoom-bar-container .input-group {
+      flex: 1;
+      align-items: center;
+    }
+    .zoom-bar-container input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      background: linear-gradient(to right, var(--primary-color), #66b2ff);
+      border-radius: 4px;
+      outline: none;
+      transition: background 0.3s;
+    }
+    .zoom-bar-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #fff;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .zoom-bar-container input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 8px var(--shadow-color);
+    }
+    .zoom-bar-container .input-group-text {
+      background: transparent;
+      border: none;
+      font-weight: bold;
+      color: var(--text-color);
+    }
+    .zoom-bar-container button {
+      padding: 6px 12px;
+      border: none;
+      background-color: var(--primary-color);
+      color: #fff;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .zoom-bar-container button:hover {
+      background-color: #357ABD;
+    }
+    /* Report Canvas Grid */
+    #reportCanvasContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 300px;
+    }
+    .canvas-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* Slicer Button Active State */
+    .slicer-btn.active {
+      background-color: var(--secondary-color) !important;
+      border-color: var(--primary-color) !important;
+      color: #fff !important;
+    }
+  </style>
+  <script>
+    // Custom Chart.js plugin for chart area background
+    const chartAreaBgPlugin = {
+      id: 'chartAreaBgPlugin',
+      beforeDraw: (chart, args, options) => {
+        const { ctx, chartArea: { left, top, width, height } } = chart;
+        ctx.save();
+        ctx.fillStyle = options.color || 'transparent';
+        ctx.fillRect(left, top, width, height);
+        ctx.restore();
+      }
+    };
+    Chart.register(chartAreaBgPlugin);
+
+    // Generates an array of default colors from a preset palette.
+    function generateDefaultColors(n) {
+      const palette = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#66FF66", "#FF66CC"];
+      let colors = [];
+      for (let i = 0; i < n; i++) {
+        colors.push(palette[i % palette.length]);
+      }
+      return colors;
+    }
+  </script>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Dashboard Report Builder</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+              data-bs-target="#navbarContent" aria-controls="navbarContent" 
+              aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container-fluid">
+    <!-- Top Row: Controls -->
+    <div class="row mb-3">
+      <!-- Left Panel: Fields and Global Slicers -->
+      <div class="col-md-3">
+        <div class="card mb-3">
+          <div class="card-header">Fields</div>
+          <div class="card-body" id="fieldsPanel">
+            <p>No file loaded.</p>
+          </div>
+          <div class="card-footer">
+            <!-- Accept both CSV and Excel files -->
+            <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" class="form-control">
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">Global Slicers</div>
+          <div class="card-body" id="slicersPanel">
+            <p>No slicers added.</p>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-secondary btn-sm" onclick="addSlicer()">Add Slicer</button>
+          </div>
+        </div>
+      </div>
+      <!-- Right Panel: Visualization Settings -->
+      <div class="col-md-9">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Chart Settings</h5>
+          </div>
+          <div class="card-body">
+            <!-- Accordion for Settings -->
+            <div class="accordion" id="vizAccordion">
+              <!-- General Section -->
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingGeneral">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeneral" aria-expanded="false" aria-controls="collapseGeneral">
+                    <i class="bi bi-sliders me-2"></i> General
+                  </button>
+                </h2>
+                <div id="collapseGeneral" class="accordion-collapse collapse" aria-labelledby="headingGeneral" data-bs-parent="#vizAccordion">
+                  <div class="accordion-body">
+                    <div class="mb-3">
+                      <label for="chartType" class="form-label">Chart Type</label>
+                      <select class="form-select" id="chartType">
+                        <option value="bar">Bar</option>
+                        <option value="line">Line</option>
+                        <option value="pie">Pie</option>
+                        <option value="doughnut">Doughnut</option>
+                        <option value="radar">Radar</option>
+                        <option value="polarArea">Polar Area</option>
+                        <option value="bubble">Bubble</option>
+                        <option value="scatter">Scatter</option>
+                        <option value="stacked-bar">Stacked Bar</option>
+                        <option value="mixed">Mixed</option>
+                        <option value="candlestick">Candlestick</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="chartTitle" class="form-label">Chart Title</label>
+                      <input type="text" class="form-control" id="chartTitle" placeholder="Enter chart title (optional)">
+                    </div>
+                    <div class="mb-3">
+                      <label for="chartAreaBgColor" class="form-label">Chart Area Background Color</label>
+                      <input type="color" class="form-control form-control-color" id="chartAreaBgColor" value="#ffffff">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Data Section -->
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingData">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseData" aria-expanded="false" aria-controls="collapseData">
+                    <i class="bi bi-bar-chart me-2"></i> Data
+                  </button>
+                </h2>
+                <div id="collapseData" class="accordion-collapse collapse" aria-labelledby="headingData" data-bs-parent="#vizAccordion">
+                  <div class="accordion-body">
+                    <div class="mb-3">
+                      <label for="xAxisField" class="form-label">X-Axis Field</label>
+                      <select class="form-select" id="xAxisField"></select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="yAxisField" class="form-label">Y-Axis Field</label>
+                      <select class="form-select" id="yAxisField"></select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="legendField" class="form-label">Legend Field (Optional)</label>
+                      <select class="form-select" id="legendField"></select>
+                    </div>
+                    <div class="mb-3" id="bubbleSizeContainer" style="display: none;">
+                      <label for="bubbleSizeField" class="form-label">Bubble Size Field (Optional)</label>
+                      <select class="form-select" id="bubbleSizeField"></select>
+                    </div>
+                    <div class="mb-3" id="lineValueContainer" style="display: none;">
+                      <label for="lineValueField" class="form-label">Line Value Field (Optional)</label>
+                      <select class="form-select" id="lineValueField"></select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="aggFunction" class="form-label">Aggregation Function</label>
+                      <select class="form-select" id="aggFunction">
+                        <option value="count">Count</option>
+                        <option value="sum">Sum</option>
+                        <option value="average">Average</option>
+                        <option value="min">Minimum</option>
+                        <option value="max">Maximum</option>
+                      </select>
+                      <div class="form-text">For aggregated charts (non‑scatter/bubble charts)</div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="sortOrder" class="form-label">Sort Order</label>
+                      <select class="form-select" id="sortOrder">
+                        <option value="None" selected>None</option>
+                        <option value="Ascending">Ascending</option>
+                        <option value="Descending">Descending</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="sortField" class="form-label">Sort By Field</label>
+                      <select class="form-select" id="sortField">
+                        <option value="aggregatedValue" selected>Aggregated Value</option>
+                        <option value="xAxis">X-Axis (Label)</option>
+                      </select>
+                    </div>
+                    <div class="mb-3 border-top pt-3">
+                      <h6>Local Filter Options (Optional)</h6>
+                      <div class="mb-3">
+                        <label for="filterField" class="form-label">Filter Field</label>
+                        <select class="form-select" id="filterField" onchange="populateFilterValuesLocal()"></select>
+                      </div>
+                      <div class="mb-3" id="filterValueContainerLocal" style="display: none;">
+                        <label for="filterValue" class="form-label">Filter Value</label>
+                        <select class="form-select" id="filterValue"></select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Format Section -->
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFormat">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFormat" aria-expanded="false" aria-controls="collapseFormat">
+                    <i class="bi bi-palette me-2"></i> Format
+                  </button>
+                </h2>
+                <div id="collapseFormat" class="accordion-collapse collapse" aria-labelledby="headingFormat" data-bs-parent="#vizAccordion">
+                  <div class="accordion-body">
+                    <div class="mb-3">
+                      <label for="datasetColor" class="form-label">Dataset Color</label>
+                      <input type="color" class="form-control form-control-color" id="datasetColor" value="#36a2eb">
+                    </div>
+                    <div class="mb-3">
+                      <label for="legendPosition" class="form-label">Legend Position</label>
+                      <select class="form-select" id="legendPosition">
+                        <option value="top" selected>Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </div>
+                    <hr>
+                    <h6>Dataset Settings</h6>
+                    <div class="mb-3">
+                      <label for="borderWidth" class="form-label">Border Width</label>
+                      <input type="number" class="form-control" id="borderWidth" value="1" min="0">
+                    </div>
+                    <div class="mb-3">
+                      <label for="pointRadius" class="form-label">Point Radius</label>
+                      <input type="number" class="form-control" id="pointRadius" value="3" min="0">
+                    </div>
+                    <hr>
+                    <h6>Legend Settings</h6>
+                    <div class="mb-3">
+                      <label for="legendFontSize" class="form-label">Legend Font Size</label>
+                      <input type="number" class="form-control" id="legendFontSize" value="12" min="0">
+                    </div>
+                    <div class="mb-3">
+                      <label for="legendFontColor" class="form-label">Legend Font Color</label>
+                      <input type="color" class="form-control form-control-color" id="legendFontColor" value="#000000">
+                    </div>
+                    <hr>
+                    <h6>Axis Settings</h6>
+                    <div class="mb-3">
+                      <label for="xAxisFontColor" class="form-label">X-Axis Font Color</label>
+                      <input type="color" class="form-control form-control-color" id="xAxisFontColor" value="#000000">
+                    </div>
+                    <div class="mb-3">
+                      <label for="xAxisFontSize" class="form-label">X-Axis Font Size</label>
+                      <input type="number" class="form-control" id="xAxisFontSize" value="12" min="0">
+                    </div>
+                    <div class="mb-3">
+                      <label for="yAxisFontColor" class="form-label">Y-Axis Font Color</label>
+                      <input type="color" class="form-control form-control-color" id="yAxisFontColor" value="#000000">
+                    </div>
+                    <div class="mb-3">
+                      <label for="yAxisFontSize" class="form-label">Y-Axis Font Size</label>
+                      <input type="number" class="form-control" id="yAxisFontSize" value="12" min="0">
+                    </div>
+                    <div class="mb-3 form-check">
+                      <input class="form-check-input" type="checkbox" id="showGridlines" checked>
+                      <label class="form-check-label" for="showGridlines">Show Gridlines</label>
+                    </div>
+                    <div class="mb-3">
+                      <label for="gridlineColor" class="form-label">Gridline Color</label>
+                      <input type="color" class="form-control form-control-color" id="gridlineColor" value="#e0e0e0">
+                    </div>
+                    <hr>
+                    <h6>Title Settings</h6>
+                    <div class="mb-3">
+                      <label for="titleFontSize" class="form-label">Title Font Size</label>
+                      <input type="number" class="form-control" id="titleFontSize" value="16" min="0">
+                    </div>
+                    <div class="mb-3">
+                      <label for="titleFontColor" class="form-label">Title Font Color</label>
+                      <input type="color" class="form-control form-control-color" id="titleFontColor" value="#000000">
+                    </div>
+                    <div class="mb-3">
+                      <label for="titleFontFamily" class="form-label">Title Font Family</label>
+                      <select class="form-select" id="titleFontFamily">
+                        <option value="'Roboto', sans-serif" selected>Roboto</option>
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                        <option value="'Courier New', Courier, monospace">Courier New</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary mt-3" onclick="addVisualization()">Add Visualization</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Report Canvas -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">Report Dashboard</div>
+          <div class="card-body" id="reportCanvasContainer">
+            <p>No visualizations added yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal for Customizing Colors -->
+  <div class="modal fade" id="customColorModal" tabindex="-1" aria-labelledby="customColorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customColorModalLabel">Customize Value Colors</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="customColorModalBody">
+          <!-- Dynamically populated color inputs -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="applyCustomColorsBtn">Apply Colors</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script>
+    let csvData = [];
+    let fields = [];
+    let slicerCount = 0;
+    let chartConfigs = {};
+    let currentChartWrapperIdForCustomColors = null;
+
+    function isNumeric(n) {
+      return !isNaN(parseFloat(n)) && isFinite(n);
+    }
+
+    // File Upload Handler: Supports both CSV and Excel files.
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      
+      if (fileExtension === 'csv') {
+        // Use PapaParse for CSV files
+        Papa.parse(file, {
+          complete: function(results) {
+            csvData = results.data;
+            fields = results.meta.fields || [];
+            populateFields();
+            populateDropdowns();
+          },
+          header: true
+        });
+      } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+        // Use SheetJS to parse Excel files
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          // Use the first sheet
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          // Convert the sheet to JSON array (header row is the first row)
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          // Assume first row contains column names
+          fields = jsonData[0];
+          // Convert remaining rows to objects
+          csvData = jsonData.slice(1).map(row => {
+            const rowObj = {};
+            fields.forEach((field, i) => {
+              rowObj[field] = row[i];
+            });
+            return rowObj;
+          });
+          
+          populateFields();
+          populateDropdowns();
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        alert("Unsupported file type. Please upload a CSV or Excel file.");
+      }
+    });
+
+    function populateFields() {
+      const panel = document.getElementById('fieldsPanel');
+      panel.innerHTML = '';
+      if (fields.length === 0) {
+        panel.innerHTML = '<p>No fields detected.</p>';
+      } else {
+        const listGroup = document.createElement('ul');
+        listGroup.className = 'list-group';
+        fields.forEach(field => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item';
+          li.textContent = field;
+          listGroup.appendChild(li);
+        });
+        panel.appendChild(listGroup);
+      }
+    }
+
+    function populateDropdowns() {
+      const dropdownIds = ['xAxisField', 'yAxisField', 'legendField', 'bubbleSizeField', 'filterField', 'lineValueField'];
+      dropdownIds.forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '';
+        const noneOption = document.createElement('option');
+        noneOption.value = '';
+        noneOption.textContent = 'None';
+        select.appendChild(noneOption);
+        fields.forEach(field => {
+          const option = document.createElement('option');
+          option.value = field;
+          option.textContent = field;
+          select.appendChild(option.cloneNode(true));
+        });
+      });
+    }
+
+    function populateFilterValuesLocal() {
+      const filterField = document.getElementById('filterField').value;
+      const container = document.getElementById('filterValueContainerLocal');
+      const filterValueSelect = document.getElementById('filterValue');
+      filterValueSelect.innerHTML = '';
+      if (!filterField) { container.style.display = 'none'; return; }
+      const uniqueValues = new Set();
+      csvData.forEach(row => {
+        if (row[filterField] !== undefined && row[filterField] !== null) {
+          uniqueValues.add(row[filterField]);
+        }
+      });
+      const noneOption = document.createElement('option');
+      noneOption.value = '';
+      noneOption.textContent = 'None';
+      filterValueSelect.appendChild(noneOption);
+      uniqueValues.forEach(val => {
+        const option = document.createElement('option');
+        option.value = val;
+        option.textContent = val;
+        filterValueSelect.appendChild(option);
+      });
+      container.style.display = 'block';
+    }
+
+    // Global Slicers
+    function addSlicer() {
+      slicerCount++;
+      const slicersPanel = document.getElementById('slicersPanel');
+      if (slicersPanel.querySelector('p')) { slicersPanel.innerHTML = ''; }
+      const slicerRow = document.createElement('div');
+      slicerRow.className = "slicer-row mb-2";
+      slicerRow.id = "slicer_" + slicerCount;
+      const fieldSelect = document.createElement('select');
+      fieldSelect.className = "form-select form-select-sm mb-1";
+      fieldSelect.id = "slicerField_" + slicerCount;
+      const noneOption = document.createElement('option');
+      noneOption.value = '';
+      noneOption.textContent = 'None';
+      fieldSelect.appendChild(noneOption);
+      fields.forEach(field => {
+        const opt = document.createElement('option');
+        opt.value = field;
+        opt.textContent = field;
+        fieldSelect.appendChild(opt);
+      });
+      fieldSelect.onchange = function() { updateSlicerValues(slicerRow.id); };
+      slicerRow.appendChild(fieldSelect);
+      const valueSelect = document.createElement('select');
+      valueSelect.className = "form-select form-select-sm";
+      valueSelect.id = "slicerValues_" + slicerCount;
+      valueSelect.multiple = true;
+      valueSelect.style.display = "none";
+      slicerRow.appendChild(valueSelect);
+      const removeBtn = document.createElement('button');
+      removeBtn.type = "button";
+      removeBtn.className = "btn btn-danger btn-sm ms-1";
+      removeBtn.innerText = "Remove";
+      removeBtn.onclick = function() { slicerRow.remove(); };
+      slicerRow.appendChild(removeBtn);
+      slicersPanel.appendChild(slicerRow);
+    }
+
+    function updateSlicerValues(slicerId) {
+      const idNum = slicerId.split("_")[1];
+      const fieldSelect = document.getElementById("slicerField_" + idNum);
+      const valueSelect = document.getElementById("slicerValues_" + idNum);
+      valueSelect.innerHTML = '';
+      if (!fieldSelect.value) { valueSelect.style.display = "none"; return; }
+      const uniqueValues = new Set();
+      csvData.forEach(row => {
+        if (row[fieldSelect.value] !== undefined && row[fieldSelect.value] !== null) {
+          uniqueValues.add(row[fieldSelect.value]);
+        }
+      });
+      uniqueValues.forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        valueSelect.appendChild(opt);
+      });
+      valueSelect.style.display = "block";
+    }
+
+    // Chart-Specific Slicers
+    function updateSlicerButtons(uniqueId, baseData, selectedField, wrapperId) {
+      const container = document.getElementById("chartSlicerButtonContainer_" + uniqueId);
+      container.innerHTML = '';
+      if (!selectedField) { container.style.display = "none"; return; }
+      let uniqueVals = new Set();
+      baseData.forEach(row => {
+        if (row[selectedField] !== undefined && row[selectedField] !== null) {
+          uniqueVals.add(row[selectedField]);
+        }
+      });
+      uniqueVals.forEach(val => {
+        let btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = "btn btn-outline-primary btn-sm slicer-btn";
+        btn.innerText = val;
+        btn.dataset.value = val;
+        btn.onclick = function() { btn.classList.toggle("active"); };
+        container.appendChild(btn);
+      });
+      container.style.display = "block";
+    }
+
+    function applyChartSlicer(wrapperId) {
+      let uniqueId = wrapperId.split("_")[1];
+      const slicerFieldSelect = document.getElementById("chartSlicerField_" + uniqueId);
+      const buttonContainer = document.getElementById("chartSlicerButtonContainer_" + uniqueId);
+      let selectedValues = [];
+      if (buttonContainer) {
+        const buttons = buttonContainer.querySelectorAll("button.active");
+        buttons.forEach(btn => { selectedValues.push(btn.dataset.value); });
+      }
+      let chartConf = chartConfigs[wrapperId];
+      if (!chartConf) return;
+      let params = chartConf.params;
+      let newFilteredData = params.baseData;
+      if (slicerFieldSelect.value && selectedValues.length > 0) {
+        newFilteredData = newFilteredData.filter(row => selectedValues.includes(row[slicerFieldSelect.value]));
+      }
+      let newConfig = rebuildChartConfig(params, newFilteredData);
+      chartConf.instance.destroy();
+      const canvas = document.querySelector("#" + wrapperId + " canvas");
+      let newInstance = new Chart(canvas, newConfig);
+      chartConf.instance = newInstance;
+      chartConf.params.currentData = newFilteredData;
+    }
+
+    function rebuildChartConfig(params, newData) {
+      let newConfig = {};
+      if (params.chartType === 'scatter' || params.chartType === 'bubble') {
+        let dataPoints = [];
+        newData.forEach(row => {
+          const xVal = parseFloat(row[params.xField]);
+          const yVal = parseFloat(row[params.yField]);
+          if (isNumeric(xVal) && isNumeric(yVal)) {
+            if (params.chartType === 'bubble') {
+              let rVal = 5;
+              if (params.bubbleSizeField && row[params.bubbleSizeField] && isNumeric(row[params.bubbleSizeField])) {
+                rVal = parseFloat(row[params.bubbleSizeField]);
+              }
+              dataPoints.push({ x: xVal, y: yVal, r: rVal });
+            } else {
+              dataPoints.push({ x: xVal, y: yVal });
+            }
+          }
+        });
+        newConfig = {
+          type: params.chartType,
+          data: { datasets: [{
+              label: params.chartTitle,
+              data: dataPoints,
+              backgroundColor: params.datasetColor,
+              borderColor: params.datasetColor,
+              borderWidth: params.borderWidth,
+              pointRadius: params.pointRadius
+            }] },
+          options: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              chartAreaBgPlugin: { color: params.chartAreaBgColor },
+              title: params.chartTitle ? {
+                display: true,
+                text: params.chartTitle,
+                font: { size: params.titleFontSize, family: params.titleFontFamily },
+                color: params.titleFontColor
+              } : { display: false },
+              legend: { 
+                position: params.legendPosition,
+                labels: { font: { size: params.legendFontSize }, color: params.legendFontColor }
+              }
+            }
+          }
+        };
+      } else {
+        let aggregatedData = {};
+        if (params.aggFunc === 'count') {
+          newData.forEach(row => {
+            const key = row[params.xField] || 'Unknown';
+            if (!aggregatedData[key]) aggregatedData[key] = 0;
+            aggregatedData[key]++;
+          });
+        } else {
+          newData.forEach(row => {
+            const key = row[params.xField] || 'Unknown';
+            const yVal = parseFloat(row[params.yField]);
+            if (isNumeric(yVal)) {
+              if (!aggregatedData[key]) aggregatedData[key] = [];
+              aggregatedData[key].push(yVal);
+            }
+          });
+        }
+        let labels = Object.keys(aggregatedData);
+        let aggregatedValues = labels.map(label => {
+          if (params.aggFunc === 'count') return aggregatedData[label];
+          else if (params.aggFunc === 'sum') return aggregatedData[label].reduce((a, b) => a + b, 0);
+          else if (params.aggFunc === 'average') { const arr = aggregatedData[label]; return arr.reduce((a, b) => a + b, 0) / arr.length; }
+          else if (params.aggFunc === 'min') return Math.min(...aggregatedData[label]);
+          else if (params.aggFunc === 'max') return Math.max(...aggregatedData[label]);
+          else return aggregatedData[label];
+        });
+        if (params.sortOrder && params.sortOrder !== "None") {
+          let combined = labels.map((label, index) => ({ label: label, value: aggregatedValues[index] }));
+          if (params.sortField === "aggregatedValue") {
+            combined.sort((a, b) => params.sortOrder === "Ascending" ? a.value - b.value : b.value - a.value);
+          } else if (params.sortField === "xAxis") {
+            combined.sort((a, b) => params.sortOrder === "Ascending" ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label));
+          }
+          labels = combined.map(item => item.label);
+          aggregatedValues = combined.map(item => item.value);
+          params.aggregatedColors = generateDefaultColors(labels.length);
+        } else {
+          params.aggregatedColors = generateDefaultColors(labels.length);
+        }
+        newConfig = {
+          type: (params.chartType === 'mixed') ? 'bar' : params.chartType,
+          data: { labels: labels, datasets: [{
+              label: params.xField + ' (' + params.aggFunc + ')',
+              data: aggregatedValues,
+              backgroundColor: params.aggregatedColors,
+              borderColor: params.aggregatedColors,
+              borderWidth: params.borderWidth,
+              pointRadius: params.pointRadius
+            }] },
+          options: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              chartAreaBgPlugin: { color: params.chartAreaBgColor },
+              title: params.chartTitle ? {
+                display: true,
+                text: params.chartTitle,
+                font: { size: params.titleFontSize, family: params.titleFontFamily },
+                color: params.titleFontColor
+              } : { display: false },
+              legend: { 
+                position: params.legendPosition,
+                labels: { font: { size: params.legendFontSize }, color: params.legendFontColor }
+              }
+            }
+          }
+        };
+        if (params.chartType === 'mixed') {
+          const lineValueField = document.getElementById('lineValueField').value;
+          let lineData = [];
+          if (lineValueField) {
+            let aggregatedLineData = {};
+            filteredData.forEach(row => {
+              const key = row[params.xField] || 'Unknown';
+              const lineVal = parseFloat(row[lineValueField]);
+              if (isNumeric(lineVal)) {
+                if (!aggregatedLineData[key]) aggregatedLineData[key] = [];
+                aggregatedLineData[key].push(lineVal);
+              }
+            });
+            let lineLabels = Object.keys(aggregatedLineData);
+            lineData = lineLabels.map(label => {
+              if (params.aggFunc === 'count') return aggregatedLineData[label].length;
+              else if (params.aggFunc === 'sum') return aggregatedLineData[label].reduce((a, b) => a + b, 0);
+              else if (params.aggFunc === 'average') { const arr = aggregatedLineData[label]; return arr.reduce((a, b) => a + b, 0) / arr.length; }
+              else if (params.aggFunc === 'min') return Math.min(...aggregatedLineData[label]);
+              else if (params.aggFunc === 'max') return Math.max(...aggregatedLineData[label]);
+              else return aggregatedLineData[label];
+            });
+          } else {
+            lineData = aggregatedValues;
+          }
+          newConfig.data.datasets.push({ 
+            type: 'line', 
+            label: (lineValueField ? lineValueField : (params.xField + ' (Line)')), 
+            data: lineData, 
+            borderColor: '#000000', 
+            fill: false,
+            borderWidth: params.borderWidth,
+            pointRadius: params.pointRadius
+          });
+          newConfig.options.scales = { x: { stacked: false }, y: { stacked: false } };
+        }
+      }
+      if (!["pie", "doughnut", "polarArea", "radar"].includes(params.chartType)) {
+        newConfig.options.scales = {
+          ...newConfig.options.scales,
+          x: { 
+            ticks: { color: params.xAxisFontColor, font: { size: params.xAxisFontSize } },
+            grid: { display: params.showGridlines, color: params.gridlineColor }
+          },
+          y: { 
+            ticks: { color: params.yAxisFontColor, font: { size: params.yAxisFontSize } },
+            grid: { display: params.showGridlines, color: params.gridlineColor }
+          }
+        };
+      }
+      return newConfig;
+    }
+
+    function updateZoom(wrapperId, zoomPercent) {
+      let chartConf = chartConfigs[wrapperId];
+      if (!chartConf) return;
+      let params = chartConf.params;
+      let aggregatedData = {};
+      if (params.aggFunc === 'count') {
+        params.baseData.forEach(row => {
+          const key = row[params.xField] || 'Unknown';
+          if (!aggregatedData[key]) aggregatedData[key] = 0;
+          aggregatedData[key]++;
+        });
+      } else {
+        params.baseData.forEach(row => {
+          const key = row[params.xField] || 'Unknown';
+          const yVal = parseFloat(row[params.yField]);
+          if (isNumeric(yVal)) {
+            if (!aggregatedData[key]) aggregatedData[key] = [];
+            aggregatedData[key].push(yVal);
+          }
+        });
+      }
+      let fullLabels = Object.keys(aggregatedData);
+      let fullValues = fullLabels.map(label => {
+        if (params.aggFunc === 'count') return aggregatedData[label];
+        else if (params.aggFunc === 'sum') return aggregatedData[label].reduce((a, b) => a + b, 0);
+        else if (params.aggFunc === 'average') { const arr = aggregatedData[label]; return arr.reduce((a, b) => a + b, 0) / arr.length; }
+        else if (params.aggFunc === 'min') return Math.min(...aggregatedData[label]);
+        else if (params.aggFunc === 'max') return Math.max(...aggregatedData[label]);
+        else return aggregatedData[label];
+      });
+      if (params.sortOrder && params.sortOrder !== "None") {
+        let combined = fullLabels.map((label, index) => ({ label: label, value: fullValues[index] }));
+        if (params.sortField === "aggregatedValue") {
+          combined.sort((a, b) => params.sortOrder === "Ascending" ? a.value - b.value : b.value - a.value);
+        } else if (params.sortField === "xAxis") {
+          combined.sort((a, b) => params.sortOrder === "Ascending" ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label));
+        }
+        fullLabels = combined.map(item => item.label);
+        fullValues = combined.map(item => item.value);
+      }
+      let windowSize = Math.ceil(fullLabels.length * zoomPercent / 100);
+      windowSize = windowSize < 1 ? 1 : windowSize;
+      let newLabels = fullLabels.slice(0, windowSize);
+      let newValues = fullValues.slice(0, windowSize);
+      let chartInstance = chartConfigs[wrapperId].instance;
+      chartInstance.data.labels = newLabels;
+      if (chartInstance.data.datasets && chartInstance.data.datasets.length > 0) {
+        chartInstance.data.datasets[0].data = newValues;
+        if (chartConfigs[wrapperId].params.aggregatedColors) {
+          chartInstance.data.datasets[0].backgroundColor = chartConfigs[wrapperId].params.aggregatedColors.slice(0, windowSize);
+          chartInstance.data.datasets[0].borderColor = chartConfigs[wrapperId].params.aggregatedColors.slice(0, windowSize);
+        }
+      }
+      chartInstance.update();
+    }
+
+    document.getElementById('chartType').addEventListener('change', function() {
+      const type = this.value;
+      document.getElementById('bubbleSizeContainer').style.display = (type === 'bubble') ? 'block' : 'none';
+      document.getElementById('lineValueContainer').style.display = (type === 'mixed') ? 'block' : 'none';
+    });
+
+    function openCustomColorModal(chartWrapperId) {
+      currentChartWrapperIdForCustomColors = chartWrapperId;
+      const params = chartConfigs[chartWrapperId].params;
+      if (!params.aggregatedLabels || !params.aggregatedColors) {
+        alert("This chart type does not support individual value color customization.");
+        return;
+      }
+      const modalBody = document.getElementById("customColorModalBody");
+      modalBody.innerHTML = "";
+      params.aggregatedLabels.forEach((label, index) => {
+        const div = document.createElement("div");
+        div.className = "mb-3";
+        const labelEl = document.createElement("label");
+        labelEl.className = "form-label";
+        labelEl.innerText = label;
+        labelEl.htmlFor = "colorInput_" + index;
+        const inputEl = document.createElement("input");
+        inputEl.type = "color";
+        inputEl.className = "form-control form-control-color";
+        inputEl.id = "colorInput_" + index;
+        inputEl.value = params.aggregatedColors[index] || "#000000";
+        div.appendChild(labelEl);
+        div.appendChild(inputEl);
+        modalBody.appendChild(div);
+      });
+      const modalElement = document.getElementById("customColorModal");
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+
+    document.getElementById("applyCustomColorsBtn").addEventListener("click", function() {
+      if (!currentChartWrapperIdForCustomColors) return;
+      const params = chartConfigs[currentChartWrapperIdForCustomColors].params;
+      const newColors = [];
+      params.aggregatedLabels.forEach((label, index) => {
+        const colorInput = document.getElementById("colorInput_" + index);
+        if (colorInput) {
+          newColors.push(colorInput.value);
+        }
+      });
+      params.aggregatedColors = newColors;
+      const chartInstance = chartConfigs[currentChartWrapperIdForCustomColors].instance;
+      if (chartInstance.data.datasets && chartInstance.data.datasets.length > 0) {
+        chartInstance.data.datasets[0].backgroundColor = newColors;
+        chartInstance.data.datasets[0].borderColor = newColors;
+      }
+      chartInstance.update();
+      const modalElement = document.getElementById("customColorModal");
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      modal.hide();
+    });
+
+    function addVisualization() {
+      if (csvData.length === 0) { alert('Please upload a CSV or Excel file first.'); return; }
+      
+      // Get chart title (if left blank, no title will be shown)
+      const chartTitle = document.getElementById('chartTitle').value;
+      const chartType = document.getElementById('chartType').value;
+      const xField = document.getElementById('xAxisField').value;
+      const yField = document.getElementById('yAxisField').value;
+      if (!xField || !yField) { alert("Please select valid X and Y fields."); return; }
+      const bubbleSizeField = document.getElementById('bubbleSizeField').value;
+      const aggFunc = document.getElementById('aggFunction').value;
+      const sortOrder = document.getElementById('sortOrder').value;
+      const sortField = document.getElementById('sortField').value;
+      
+      const chartAreaBgColor = document.getElementById('chartAreaBgColor').value;
+      
+      const datasetColor = document.getElementById('datasetColor').value;
+      const legendPosition = document.getElementById('legendPosition').value;
+      
+      const borderWidth = parseInt(document.getElementById('borderWidth').value) || 1;
+      const pointRadius = parseInt(document.getElementById('pointRadius').value) || 3;
+      const legendFontSize = parseInt(document.getElementById('legendFontSize').value) || 12;
+      const legendFontColor = document.getElementById('legendFontColor').value;
+      const xAxisFontColor = document.getElementById('xAxisFontColor').value;
+      const xAxisFontSize = parseInt(document.getElementById('xAxisFontSize').value) || 12;
+      const yAxisFontColor = document.getElementById('yAxisFontColor').value;
+      const yAxisFontSize = parseInt(document.getElementById('yAxisFontSize').value) || 12;
+      const showGridlines = document.getElementById('showGridlines').checked;
+      const gridlineColor = document.getElementById('gridlineColor').value;
+      const titleFontSize = parseInt(document.getElementById('titleFontSize').value) || 16;
+      const titleFontColor = document.getElementById('titleFontColor').value;
+      const titleFontFamily = document.getElementById('titleFontFamily').value;
+      
+      let filteredData = csvData;
+      const localFilterField = document.getElementById('filterField').value;
+      const localFilterValue = document.getElementById('filterValue').value;
+      if (localFilterField && localFilterValue) {
+        filteredData = filteredData.filter(row => row[localFilterField] == localFilterValue);
+      }
+      const slicersPanel = document.getElementById('slicersPanel');
+      const slicerRows = slicersPanel.querySelectorAll('.slicer-row');
+      slicerRows.forEach(row => {
+        const slicerField = row.querySelector('select[id^="slicerField_"]').value;
+        const slicerValuesSelect = row.querySelector('select[id^="slicerValues_"]');
+        if (slicerField && slicerValuesSelect.selectedOptions.length > 0) {
+          let selectedValues = [];
+          for (let option of slicerValuesSelect.selectedOptions) {
+            selectedValues.push(option.value);
+          }
+          filteredData = filteredData.filter(row => selectedValues.includes(row[slicerField]));
+        }
+      });
+      
+      let baseData = filteredData.slice();
+      let config = {};
+      
+      if (chartType === 'scatter' || chartType === 'bubble') {
+        let dataPoints = [];
+        filteredData.forEach(row => {
+          const xVal = parseFloat(row[xField]);
+          const yVal = parseFloat(row[yField]);
+          if (isNumeric(xVal) && isNumeric(yVal)) {
+            if (chartType === 'bubble') {
+              let rVal = 5;
+              if (bubbleSizeField && row[bubbleSizeField] && isNumeric(row[bubbleSizeField])) {
+                rVal = parseFloat(row[bubbleSizeField]);
+              }
+              dataPoints.push({ x: xVal, y: yVal, r: rVal });
+            } else {
+              dataPoints.push({ x: xVal, y: yVal });
+            }
+          }
+        });
+        if (dataPoints.length === 0) { alert("No valid numeric data found for the selected fields."); return; }
+        config = {
+          type: chartType,
+          data: { datasets: [{
+              label: chartTitle,
+              data: dataPoints,
+              backgroundColor: datasetColor,
+              borderColor: datasetColor,
+              borderWidth: borderWidth,
+              pointRadius: pointRadius
+            }] },
+          options: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              chartAreaBgPlugin: { color: chartAreaBgColor },
+              title: chartTitle ? {
+                display: true,
+                text: chartTitle,
+                font: { size: titleFontSize, family: titleFontFamily },
+                color: titleFontColor
+              } : { display: false },
+              legend: { 
+                position: legendPosition,
+                labels: { font: { size: legendFontSize }, color: legendFontColor }
+              }
+            }
+          }
+        };
+      } else {
+        let aggregatedData = {};
+        if (aggFunc === 'count') {
+          filteredData.forEach(row => {
+            const key = row[xField] || 'Unknown';
+            if (!aggregatedData[key]) aggregatedData[key] = 0;
+            aggregatedData[key]++;
+          });
+        } else {
+          filteredData.forEach(row => {
+            const key = row[xField] || 'Unknown';
+            const yVal = parseFloat(row[yField]);
+            if (isNumeric(yVal)) {
+              if (!aggregatedData[key]) aggregatedData[key] = [];
+              aggregatedData[key].push(yVal);
+            }
+          });
+        }
+        let labels = Object.keys(aggregatedData);
+        let aggregatedValues = labels.map(label => {
+          if (aggFunc === 'count') return aggregatedData[label];
+          else if (aggFunc === 'sum') return aggregatedData[label].reduce((a, b) => a + b, 0);
+          else if (aggFunc === 'average') { const arr = aggregatedData[label]; return arr.reduce((a, b) => a + b, 0) / arr.length; }
+          else if (aggFunc === 'min') return Math.min(...aggregatedData[label]);
+          else if (aggFunc === 'max') return Math.max(...aggregatedData[label]);
+          else return aggregatedData[label];
+        });
+        if (sortOrder && sortOrder !== "None") {
+          let combined = labels.map((label, index) => ({ label: label, value: aggregatedValues[index] }));
+          if (sortField === "aggregatedValue") {
+            combined.sort((a, b) => sortOrder === "Ascending" ? a.value - b.value : b.value - a.value);
+          } else if (sortField === "xAxis") {
+            combined.sort((a, b) => sortOrder === "Ascending" ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label));
+          }
+          labels = combined.map(item => item.label);
+          aggregatedValues = combined.map(item => item.value);
+        }
+        let aggregatedColors = generateDefaultColors(labels.length);
+        config = {
+          type: (chartType === 'mixed') ? 'bar' : chartType,
+          data: { labels: labels, datasets: [{
+              label: xField + ' (' + aggFunc + ')',
+              data: aggregatedValues,
+              backgroundColor: aggregatedColors,
+              borderColor: aggregatedColors,
+              borderWidth: borderWidth,
+              pointRadius: pointRadius
+            }] },
+          options: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              chartAreaBgPlugin: { color: chartAreaBgColor },
+              title: chartTitle ? {
+                display: true,
+                text: chartTitle,
+                font: { size: titleFontSize, family: titleFontFamily },
+                color: titleFontColor
+              } : { display: false },
+              legend: { 
+                position: legendPosition,
+                labels: { font: { size: legendFontSize }, color: legendFontColor }
+              }
+            }
+          }
+        };
+        if (chartType === 'mixed') {
+          const lineValueField = document.getElementById('lineValueField').value;
+          let lineData = [];
+          if (lineValueField) {
+            let aggregatedLineData = {};
+            filteredData.forEach(row => {
+              const key = row[xField] || 'Unknown';
+              const lineVal = parseFloat(row[lineValueField]);
+              if (isNumeric(lineVal)) {
+                if (!aggregatedLineData[key]) aggregatedLineData[key] = [];
+                aggregatedLineData[key].push(lineVal);
+              }
+            });
+            let lineLabels = Object.keys(aggregatedLineData);
+            lineData = lineLabels.map(label => {
+              if (aggFunc === 'count') return aggregatedLineData[label].length;
+              else if (aggFunc === 'sum') return aggregatedLineData[label].reduce((a, b) => a + b, 0);
+              else if (aggFunc === 'average') { const arr = aggregatedLineData[label]; return arr.reduce((a, b) => a + b, 0) / arr.length; }
+              else if (aggFunc === 'min') return Math.min(...aggregatedLineData[label]);
+              else if (aggFunc === 'max') return Math.max(...aggregatedLineData[label]);
+              else return aggregatedLineData[label];
+            });
+          } else {
+            lineData = aggregatedValues;
+          }
+          config.data.datasets.push({ 
+            type: 'line', 
+            label: (lineValueField ? lineValueField : (xField + ' (Line)')), 
+            data: lineData, 
+            borderColor: '#000000', 
+            fill: false,
+            borderWidth: borderWidth,
+            pointRadius: pointRadius
+          });
+          config.options.scales = { x: { stacked: false }, y: { stacked: false } };
+        }
+      }
+      
+      const container = document.getElementById('reportCanvasContainer');
+      if (container.querySelector('p')) { container.innerHTML = ''; }
+      const chartWrapper = document.createElement('div');
+      chartWrapper.className = "chart-wrapper";
+      
+      // Remove Chart button
+      const removeBtn = document.createElement('button');
+      removeBtn.innerText = "Remove Chart";
+      removeBtn.className = "btn btn-danger btn-sm remove-btn";
+      removeBtn.onclick = function() { chartWrapper.remove(); delete chartConfigs[chartWrapper.id]; };
+      chartWrapper.appendChild(removeBtn);
+      
+      if (chartType !== 'scatter' && chartType !== 'bubble') {
+        const customizeColorsBtn = document.createElement('button');
+        customizeColorsBtn.innerText = "Customize Colors";
+        customizeColorsBtn.className = "btn btn-secondary btn-sm customize-colors-btn";
+        customizeColorsBtn.onclick = function() { openCustomColorModal(chartWrapper.id); };
+        chartWrapper.appendChild(customizeColorsBtn);
+
+        let uniqueId = Date.now();
+        const slicerDiv = document.createElement('div');
+        slicerDiv.className = "chart-slicer";
+        slicerDiv.style.display = "none";
+
+        const slicerFieldLabel = document.createElement('label');
+        slicerFieldLabel.innerText = "Chart Filter Field:";
+        slicerDiv.appendChild(slicerFieldLabel);
+
+        const slicerFieldSelect = document.createElement('select');
+        slicerFieldSelect.className = "form-select form-select-sm";
+        slicerFieldSelect.id = "chartSlicerField_" + uniqueId;
+        const sfNone = document.createElement('option');
+        sfNone.value = '';
+        sfNone.textContent = 'None';
+        slicerFieldSelect.appendChild(sfNone);
+        fields.forEach(field => {
+          const opt = document.createElement('option');
+          opt.value = field;
+          opt.textContent = field;
+          slicerFieldSelect.appendChild(opt);
+        });
+        slicerDiv.appendChild(slicerFieldSelect);
+
+        const slicerButtonContainer = document.createElement('div');
+        slicerButtonContainer.id = "chartSlicerButtonContainer_" + uniqueId;
+        slicerButtonContainer.style.display = "none";
+        slicerDiv.appendChild(slicerButtonContainer);
+
+        slicerFieldSelect.onchange = function() {
+          let selField = slicerFieldSelect.value;
+          updateSlicerButtons(uniqueId, chartConfigs[chartWrapper.id].params.baseData, selField, chartWrapper.id);
+        };
+
+        const applySlicerBtn = document.createElement('button');
+        applySlicerBtn.type = "button";
+        applySlicerBtn.className = "btn btn-secondary btn-sm mt-1";
+        applySlicerBtn.innerText = "Apply Chart Filter";
+        applySlicerBtn.onclick = function() { applyChartSlicer(chartWrapper.id); };
+        slicerDiv.appendChild(applySlicerBtn);
+
+        const hideFilterBtn = document.createElement('button');
+        hideFilterBtn.type = "button";
+        hideFilterBtn.className = "btn btn-secondary btn-sm mt-1";
+        hideFilterBtn.innerText = "Hide Filter Field";
+        hideFilterBtn.onclick = function() {
+          slicerDiv.style.display = "none";
+          showFilterBtn.style.display = "inline-block";
+        };
+        slicerDiv.appendChild(hideFilterBtn);
+
+        const showFilterBtn = document.createElement('button');
+        showFilterBtn.innerText = "Show Chart Filter Field";
+        showFilterBtn.className = "btn btn-secondary btn-sm";
+        showFilterBtn.style.marginLeft = "5px";
+        showFilterBtn.onclick = function() {
+          slicerDiv.style.display = "block";
+          showFilterBtn.style.display = "none";
+          chartWrapper.prepend(slicerDiv);
+        };
+        chartWrapper.appendChild(showFilterBtn);
+      }
+      
+      const chartContentContainer = document.createElement('div');
+      chartContentContainer.className = "chart-content-container";
+      const canvasContainer = document.createElement('div');
+      canvasContainer.className = "canvas-container";
+      const canvas = document.createElement('canvas');
+      canvasContainer.appendChild(canvas);
+      
+      if (["bar", "pie", "doughnut", "stacked-bar", "mixed", "radar", "polarArea", "candlestick"].includes(chartType)) {
+        let zoomBarDiv = document.createElement('div');
+        zoomBarDiv.className = "zoom-bar-container";
+        const inputGroupDiv = document.createElement('div');
+        inputGroupDiv.className = "input-group";
+        const zoomLabel = document.createElement('span');
+        zoomLabel.className = "input-group-text";
+        zoomLabel.innerText = "Zoom:";
+        inputGroupDiv.appendChild(zoomLabel);
+        const zoomSlider = document.createElement('input');
+        zoomSlider.type = "range";
+        zoomSlider.min = "1";
+        zoomSlider.max = "100";
+        zoomSlider.value = "100";
+        zoomSlider.className = "form-range";
+        zoomSlider.style.flex = "1";
+        const zoomValueSpan = document.createElement('span');
+        zoomValueSpan.className = "input-group-text";
+        zoomValueSpan.innerText = "100%";
+        zoomSlider.oninput = function() {
+          let val = parseInt(zoomSlider.value);
+          zoomValueSpan.innerText = val + "%";
+          updateZoom(chartWrapper.id, val);
+        };
+        inputGroupDiv.appendChild(zoomSlider);
+        inputGroupDiv.appendChild(zoomValueSpan);
+        zoomBarDiv.appendChild(inputGroupDiv);
+        const resetZoomBtn = document.createElement('button');
+        resetZoomBtn.type = "button";
+        resetZoomBtn.className = "btn btn-secondary btn-sm";
+        resetZoomBtn.innerText = "Reset";
+        resetZoomBtn.onclick = function() {
+          zoomSlider.value = "100";
+          zoomValueSpan.innerText = "100%";
+          updateZoom(chartWrapper.id, 100);
+        };
+        zoomBarDiv.appendChild(resetZoomBtn);
+        chartContentContainer.appendChild(canvasContainer);
+        chartContentContainer.appendChild(zoomBarDiv);
+      } else {
+        chartContentContainer.appendChild(canvasContainer);
+      }
+      
+      chartWrapper.appendChild(chartContentContainer);
+      container.appendChild(chartWrapper);
+      chartWrapper.id = "chartWrapper_" + Date.now();
+      
+      let chartInstance = new Chart(canvas, {
+        ...config,
+        options: {
+          ...config.options,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            ...config.options.plugins,
+            chartAreaBgPlugin: { color: chartAreaBgColor }
+          }
+        }
+      });
+      
+      let params = {
+        chartType: chartType,
+        xField: xField,
+        yField: yField,
+        aggFunc: aggFunc,
+        bubbleSizeField: bubbleSizeField,
+        chartTitle: chartTitle,
+        chartAreaBgColor: chartAreaBgColor,
+        baseData: filteredData,
+        currentData: filteredData,
+        datasetColor: datasetColor,
+        legendPosition: legendPosition,
+        borderWidth: borderWidth,
+        pointRadius: pointRadius,
+        legendFontSize: legendFontSize,
+        legendFontColor: legendFontColor,
+        xAxisFontColor: xAxisFontColor,
+        xAxisFontSize: xAxisFontSize,
+        yAxisFontColor: yAxisFontColor,
+        yAxisFontSize: yAxisFontSize,
+        showGridlines: showGridlines,
+        gridlineColor: gridlineColor,
+        titleFontSize: titleFontSize,
+        titleFontColor: titleFontColor,
+        titleFontFamily: titleFontFamily
+      };
+      if (chartType !== 'scatter' && chartType !== 'bubble') {
+        let aggregatedData = {};
+        if (aggFunc === 'count') {
+          filteredData.forEach(row => {
+            const key = row[xField] || 'Unknown';
+            if (!aggregatedData[key]) aggregatedData[key] = 0;
+            aggregatedData[key]++;
+          });
+        } else {
+          filteredData.forEach(row => {
+            const key = row[xField] || 'Unknown';
+            const yVal = parseFloat(row[yField]);
+            if (isNumeric(yVal)) {
+              if (!aggregatedData[key]) aggregatedData[key] = [];
+              aggregatedData[key].push(yVal);
+            }
+          });
+        }
+        let aggregatedLabels = Object.keys(aggregatedData);
+        params.aggregatedLabels = aggregatedLabels;
+        params.aggregatedColors = generateDefaultColors(aggregatedLabels.length);
+      }
+      
+      chartConfigs[chartWrapper.id] = {
+        instance: chartInstance,
+        params: params
+      };
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
