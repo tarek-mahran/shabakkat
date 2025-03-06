@@ -13,41 +13,40 @@
     body {
       margin: 0;
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      overflow: hidden;
+      /*background: linear-gradient(135deg, #667eea, #764ba2);*/
+      padding: 20px 0;
     }
     .container {
-      background: rgba(255, 255, 255, 0.2);
+      background: linear-gradient(135deg, #667eea, #764ba2);
       border-radius: 16px;
-      padding: 40px;
+      padding: 20px;
       width: 90%;
       max-width: 500px;
+      margin: 0 auto;
       box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      /*border: 1px solid rgba(255, 255, 255, 0.18);*/
       color: #fff;
+      padding-left: 30px;
+      padding-right: 50px;
     }
     h2 {
       text-align: center;
-      font-size: 26px;
-      margin-bottom: 30px;
+      font-size: 22px;
+      margin-bottom: 20px;
       font-weight: 600;
     }
     label {
       display: block;
-      font-size: 14px;
+      font-size: 12px;
       margin-bottom: 5px;
       color: #e0e0e0;
     }
     input[type="text"] {
       width: 100%;
-      padding: 12px 15px;
-      margin-bottom: 20px;
+      padding: 10px 12px;
+      margin-bottom: 15px;
       border: none;
       border-radius: 8px;
       font-size: 14px;
@@ -61,31 +60,34 @@
       background: #fff;
     }
     .info {
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 12px;
+      padding: 6px 10px;
       background: rgba(0, 0, 0, 0.2);
       border-radius: 8px;
     }
     .info span:first-child {
       font-weight: 500;
       color: #f1f1f1;
+      font-size: 13px;
     }
     .info span:last-child {
       font-weight: 600;
       color: #fff;
+      font-size: 13px;
     }
     button {
       background-color: #ff6b6b;
       color: #fff;
       border: none;
-      padding: 15px;
+      padding: 12px;
       border-radius: 8px;
       cursor: pointer;
       font-size: 16px;
-      width: 100%;
+      width: 40%;
+      margin-left: 32%;
       transition: background-color 0.3s ease, transform 0.2s ease;
     }
     button:hover {
@@ -94,16 +96,16 @@
     }
     #copiedMessage {
       display: none;
-      margin-top: 15px;
+      margin-top: 10px;
       text-align: center;
       color: #2ed573;
       font-weight: 500;
-      font-size: 16px;
+      font-size: 14px;
       opacity: 0;
       transition: opacity 0.5s ease;
     }
     .section {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
   </style>
 </head>
@@ -201,15 +203,10 @@
       navigator.clipboard.writeText(text).then(() => {
         const copiedMessage = document.getElementById('copiedMessage');
         copiedMessage.style.display = 'block';
-        // Use a slight delay to trigger the transition
-        setTimeout(() => {
-          copiedMessage.style.opacity = 1;
-        }, 50);
+        setTimeout(() => { copiedMessage.style.opacity = 1; }, 50);
         setTimeout(() => {
           copiedMessage.style.opacity = 0;
-          setTimeout(() => {
-            copiedMessage.style.display = 'none';
-          }, 500);
+          setTimeout(() => { copiedMessage.style.display = 'none'; }, 500);
         }, 2000);
       }).catch(err => {
         alert('Failed to copy text');
