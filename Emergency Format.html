@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Emergency Format</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- XLSX Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 40px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+    h2 {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 30px;
+      font-weight: 600;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 5px;
+      color: #e0e0e0;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      background: rgba(255, 255, 255, 0.8);
+      color: #333;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    input[type="text"]:focus {
+      transform: scale(1.02);
+      background: #fff;
+    }
+    .info {
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    .info span:first-child {
+      font-weight: 500;
+      color: #f1f1f1;
+    }
+    .info span:last-child {
+      font-weight: 600;
+      color: #fff;
+    }
+    button {
+      background-color: #ff6b6b;
+      color: #fff;
+      border: none;
+      padding: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    button:hover {
+      background-color: #ff4757;
+      transform: scale(1.02);
+    }
+    #copiedMessage {
+      display: none;
+      margin-top: 15px;
+      text-align: center;
+      color: #2ed573;
+      font-weight: 500;
+      font-size: 16px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Emergency Format</h2>
+    
+    <label for="siteId">Enter Site ID:</label>
+    <input type="text" id="siteId" placeholder="Type Site ID here..." oninput="searchSite()">
+    
+    <div class="section">
+      <div class="info"><span>Hub Site:</span> <span id="hubSite">-</span></div>
+      <div class="info"><span>Owner:</span> <span id="owner">-</span></div>
+      <div class="info"><span>Power Type:</span> <span id="powerType">-</span></div>
+      <div class="info"><span>BB Status:</span> <span id="bbStatus">-</span></div>
+    </div>
+    
+    <div class="section">
+      <label for="outageTime">Outage time:</label>
+      <input type="text" id="outageTime" placeholder="HH:MM">
+    </div>
+    <div class="section">
+      <label for="powerTime">Power time:</label>
+      <input type="text" id="powerTime" placeholder="HH:MM">
+    </div>
+    <div class="section">
+      <label for="eta">ETA:</label>
+      <input type="text" id="eta" placeholder="HH:MM">
+    </div>
+    
+    <button onclick="copyFullFormat()">Copy Format</button>
+    <div id="copiedMessage">Copied!</div>
+  </div>
+  
+  <script>
+    // Fetch and parse Excel file from GitHub
+    let siteData = [];
+    async function loadExcel() {
+      const url = 'https://tarek-mahran.github.io/shabakkat/Zain%20%26%20LATIS%20Data%20Base.xlsx';
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+  
+      // Save only needed columns
+      siteData = json.map(row => ({
+        'Site ID Code': row['Site ID Code'],
+        'Site Owner': row['Site Owner'],
+        'Power Type': row['Power Type'],
+        'BB Status': row['BB Status']
+      }));
+    }
+  
+    // Search and display data
+    function searchSite() {
+      const siteId = document.getElementById('siteId').value.trim().toUpperCase();
+      document.getElementById('hubSite').innerText = siteId;
+  
+      const site = siteData.find(s => s['Site ID Code'] === siteId);
+      if (site) {
+        document.getElementById('owner').innerText = site['Site Owner'] || '-';
+        document.getElementById('powerType').innerText = site['Power Type'] || '-';
+        document.getElementById('bbStatus').innerText = site['BB Status'] || '-';
+      } else {
+        document.getElementById('owner').innerText = '-';
+        document.getElementById('powerType').innerText = '-';
+        document.getElementById('bbStatus').innerText = '-';
+      }
+      // Hide "Copied!" message when input changes
+      const copiedMessage = document.getElementById('copiedMessage');
+      copiedMessage.style.opacity = 0;
+      copiedMessage.style.display = 'none';
+    }
+  
+    // Copy full format to clipboard and show "Copied!" message
+    function copyFullFormat() {
+      const siteId = document.getElementById('siteId').value.trim().toUpperCase();
+      const hubSite = siteId;
+      const owner = document.getElementById('owner').innerText || 'N/A';
+      const powerType = document.getElementById('powerType').innerText || 'N/A';
+      const bbStatus = document.getElementById('bbStatus').innerText || 'N/A';
+      const outageTime = document.getElementById('outageTime').value.trim() || 'N/A';
+      const powerTime = document.getElementById('powerTime').value.trim() || 'N/A';
+      const eta = document.getElementById('eta').value.trim() || 'N/A';
+  
+      const text = `*Hub Site*: ${hubSite}
+*Owner*: ${owner}
+*Power Type*: ${powerType}
+*BB Status​*: ${bbStatus}
+*Outage time*: ${outageTime}
+*Power time*: ${powerTime}
+*ETA*: ${eta}`;
+  
+      navigator.clipboard.writeText(text).then(() => {
+        const copiedMessage = document.getElementById('copiedMessage');
+        copiedMessage.style.display = 'block';
+        // Use a slight delay to trigger the transition
+        setTimeout(() => {
+          copiedMessage.style.opacity = 1;
+        }, 50);
+        setTimeout(() => {
+          copiedMessage.style.opacity = 0;
+          setTimeout(() => {
+            copiedMessage.style.display = 'none';
+          }, 500);
+        }, 2000);
+      }).catch(err => {
+        alert('Failed to copy text');
+        console.error('Clipboard error:', err);
+      });
+    }
+  
+    // Load data when page opens
+    loadExcel();
+  </script>
+</body>
+</html>
