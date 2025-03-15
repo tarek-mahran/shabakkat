@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PCM RCA Shared Format</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Google Fonts - Modern sans-serif options -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      /* Modern color palette */
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --primary-light: #60a5fa;
+      --secondary: #1e293b;
+      --accent: #ef4444;
+      --accent-light: #fee2e2;
+      --success: #22c55e;
+      --warning: #eab308;
+      --bg-gradient-start: #0f172a;
+      --bg-gradient-end: #1e293b;
+      --card-bg: rgba(30, 41, 59, 0.8);
+      --input-bg: rgba(30, 41, 59, 0.95);
+      --border-color: rgba(148, 163, 184, 0.2);
+      --text-color: #f8fafc;
+      --text-muted: #94a3b8;
+      --shadow: rgba(0, 0, 0, 0.25);
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Modern Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    
+    /* Modern Container with Subtle Glass Effect */
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1200px;
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px var(--shadow);
+      animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Header with modern typography */
+    .header {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    
+    .header h2 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 8px;
+    }
+    
+    /* Card Sections */
+    .input-section, .output-section {
+      background: var(--card-bg);
+      padding: 28px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border: 1px solid var(--border-color);
+      transition: transform var(--transition), box-shadow var(--transition);
+      position: relative;
+    }
+    
+    .input-section:hover, .output-section:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title i {
+      color: var(--primary);
+    }
+    
+    /* Modern Form Elements */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .form-group label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    
+    textarea, input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      resize: vertical;
+      transition: border var(--transition), box-shadow var(--transition);
+    }
+    
+    textarea:focus, input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+      outline: none;
+    }
+    
+    /* Increased textarea height */
+    textarea {
+      min-height: 300px;
+    }
+    
+    .timestamp-input {
+      position: relative;
+    }
+    
+    .timestamp-input i {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    
+    /* Modern Button Styling */
+    button {
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 500;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+    
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+    
+    /* Button group */
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    
+    /* Modern Output styling */
+    .output-container {
+      position: relative;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .output {
+      background: var(--input-bg);
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-family: 'Inter', monospace;
+      white-space: pre-wrap;
+      line-height: 1.7;
+      font-size: 15px;
+      min-height: 380px;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+    
+    /* Enhanced Priority Badge */
+    .priority-badge {
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    /* Timeline indicator for duration */
+    .timeline {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 4px 0 12px 0;
+      position: relative;
+    }
+    
+    .timeline-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 3px;
+      width: 0;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Copy functionality */
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+    }
+    
+    .copy-message {
+      font-size: 14px;
+      color: var(--success);
+      opacity: 0;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .copy-message.show {
+      opacity: 1;
+      animation: pulse 1s ease;
+    }
+    
+    /* Status indicator */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      padding: 6px 12px;
+      border-radius: 100px;
+      background: rgba(0,0,0,0.2);
+    }
+    
+    .status-indicator.loading {
+      color: var(--warning);
+    }
+    
+    .status-indicator.success {
+      color: var(--success);
+    }
+    
+    .status-indicator.error {
+      color: var(--accent);
+    }
+    
+    .status-indicator i {
+      font-size: 0.75rem;
+    }
+    
+    /* Info tooltip */
+    .info-tooltip {
+      position: relative;
+      display: inline-block;
+      margin-left: 6px;
+      color: var(--text-muted);
+    }
+    
+    .info-tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .tooltip-text {
+      visibility: hidden;
+      width: 200px;
+      background: var(--secondary);
+      color: var(--text-color);
+      text-align: center;
+      border-radius: 6px;
+      padding: 8px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -100px;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translateY(10px);
+      font-size: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      pointer-events: none;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 24px;
+      }
+    }
+    
+    @media (max-width: 500px) {
+      .button-group {
+        flex-direction: column;
+      }
+    
+      .action-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>PCM RCA Shared Format</h2>
+    </div>
+    
+    <div class="input-section">
+      <div class="section-title">
+        <i class="fas fa-file-import"></i> Input Data
+      </div>
+      
+      <div class="form-group">
+        <label for="input">Original Ticket Format</label>
+        <textarea id="input" placeholder="Paste original ticket format here..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="restoredTime">Restored Time</label>
+        <div class="timestamp-input">
+          <input type="text" id="restoredTime" placeholder="Enter Restored Time (yyyy-mm-dd hh:mm:ss)" oninput="updateDuration()" />
+          <i class="far fa-clock"></i>
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button class="btn-primary" onclick="convertTicket()">
+          <i class="fas fa-sync-alt"></i> Convert Format
+        </button>
+        <button class="btn-outline" onclick="resetForm()">
+          <i class="fas fa-undo"></i> Reset
+        </button>
+      </div>
+      
+      <div id="dataStatus" class="status-indicator loading" style="display:none;">
+        <i class="fas fa-spinner fa-spin"></i> Loading site data...
+      </div>
+    </div>
+    
+    <div class="output-section">
+      <div class="section-title">
+        <i class="fas fa-file-export"></i> Formatted Output
+      </div>
+      
+      <div class="output-container">
+        <div id="output" class="output"></div>
+      </div>
+      
+      <div class="action-bar">
+        <button class="btn-primary" onclick="copyOutput()">
+          <i class="far fa-copy"></i> Copy to Clipboard
+        </button>
+        <div id="copyMessage" class="copy-message">
+          <i class="fas fa-check-circle"></i> Copied successfully!
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let siteData = {};
+    let globalFaultLevel = "";
+    let alarmTime = '';
+    
+    async function loadSiteData() {
+      const dataStatus = document.getElementById('dataStatus');
+      dataStatus.style.display = 'flex';
+      const url = 'https://tarek-mahran.github.io/shabakkat/Zain%20%26%20LATIS%20Data%20Base.xlsx';
+      try {
+        const response = await fetch(url);
+        const data = await response.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        
+        jsonData.forEach(row => {
+          if (row['Site ID Code']) {
+            siteData[row['Site ID Code']] = {
+              powerSource: row['Power Type'] || '',
+              bbStatus: row['BB Status'] || '',
+              eol: row['EOL Gen'] || ''
+            };
+          }
+        });
+        dataStatus.style.display = 'none';
+      } catch (error) {
+        console.error("Error loading site data:", error);
+        dataStatus.classList.remove('loading');
+        dataStatus.classList.add('error');
+        dataStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error loading site data`;
+      }
+    }
+    
+    function convertTicket() {
+      // Ensure site data is loaded
+      if (Object.keys(siteData).length === 0) {
+        loadSiteData();
+      }
+      
+      const input = document.getElementById('input').value;
+      const pcmId = input.match(/PCM ID:\s*(.*)/)?.[1] || '';
+      const ttId = input.match(/TT ID:\s*(.*)/)?.[1] || '';
+      
+      const titleRaw = input.match(/Title:\s*(.*)/)?.[1] || '';
+      const title = titleRaw.split("Alarm Name:")[0].trim();
+      
+      const faultLevelRaw = input.match(/Fault Level:\s*(.*)/)?.[1] || '';
+      const faultLevel = faultLevelRaw.split("Fault First Occur Time:")[0].trim();
+      globalFaultLevel = faultLevel;
+      
+      alarmTime = input.match(/Fault First Occur Time:\s*(.*)/)?.[1] || '';
+      
+      const siteId = input.match(/Site ID:\s*(.*)/)?.[1] || '';
+      const region = input.match(/Region:\s*(.*)/)?.[1] || '';
+      const impactedSites = input.match(/Impacted Site List:\s*(.*)/)?.[1] || '';
+      
+      const techMatch = title.match(/(\d+)\(2G\).*(\d+)\(3G\).*(\d+)\(LTE\).*(\d+)\(5G\)/) ||
+                        title.match(/(\d+)\(2G\).*(\d+)\(3G\).*(\d+)\(LTE\)/) ||
+                        title.match(/(\d+)\(2G\).*(\d+)\(3G\)/) ||
+                        title.match(/(\d+)\(2G\)/) || [];
+      const [ , num2G = 0, num3G = 0, numLTE = 0, num5G = 0] = techMatch.map(Number);
+      
+      const physicalSites = impactedSites ? impactedSites.split(',').length : 0;
+      const hubSiteId = siteId;
+      const priorityMatch = title.match(new RegExp(`${hubSiteId}-P(\\d+)`));
+      const priority = priorityMatch ? `P${priorityMatch[1]}` : '';
+      
+      const powerSource = siteData[hubSiteId]?.powerSource || 'N/A';
+      const bbStatus = siteData[hubSiteId]?.bbStatus || 'N/A';
+      const eol = siteData[hubSiteId]?.eol || 'N/A';
+      
+      // Build header with asterisks and generate a separator line whose length exactly matches the header text (excluding the asterisks)
+      let headerLine = `*Escalation - ${faultLevel} - ${region}*`;
+      let separatorLine = '='.repeat(headerLine.slice(1, -1).length);
+      
+      let outputText = 
+          headerLine + "<br>" +
+          separatorLine + "<br>" +
+          `PCM ID: ${pcmId}<br>` +
+          `TT ID.: ${ttId}<br>` +
+          `Title: ${title}<br>` +
+          `Alarm Time: ${alarmTime}<br>` +
+          `Restored Time: <span id="restoredTimeDisplay"></span><br>` +
+          `Duration: <span id="durationDisplay"></span><br>` +
+          `Region: ${region}<br>` +
+          `HUB Site ID: ${hubSiteId}<br>` +
+          `Severity: ${faultLevel}<br>` +
+          `Sites Technology: ${num2G + num3G + numLTE + num5G} (2G=${num2G}/3G=${num3G}/LTE=${numLTE}/5G=${num5G})<br>` +
+          `Physical Sites: ${physicalSites}<br>` +
+          `Priority: <span class="priority-badge">${priority}</span><br>` +
+          `Power Source: ${powerSource}<br>` +
+          `BB status: ${bbStatus}<br>` +
+          `EOL: ${eol}`;
+      
+      document.getElementById('output').innerHTML = outputText;
+    }
+    
+    function updateDuration() {
+      const restoredTime = document.getElementById('restoredTime').value;
+      document.getElementById('restoredTimeDisplay').innerText = restoredTime;
+      
+      if (alarmTime && restoredTime) {
+        const start = new Date(alarmTime);
+        const end = new Date(restoredTime);
+        let diffMs = end - start;
+        const isNegative = diffMs < 0;
+        if (isNegative) diffMs = Math.abs(diffMs);
+        
+        const hours = String(Math.floor(diffMs / (1000 * 60 * 60))).padStart(2, '0');
+        const minutes = String(Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+        const seconds = String(Math.floor((diffMs % (1000 * 60)) / 1000)).padStart(2, '0');
+        const durationText = `${isNegative ? '-' : ''}${hours}:${minutes}:${seconds}`;
+        
+        const thresholds = {
+          emergency: 7199000,
+          critical: 14399000,
+          major: 28799000,
+          minor: 43199000
+        };
+        
+        let exceedsThreshold = false;
+        const level = globalFaultLevel.toLowerCase();
+        let thresholdMs = 0;
+        if (!isNegative) {
+          if (level === "emergency") {
+            thresholdMs = thresholds.emergency;
+            if (diffMs > thresholds.emergency) exceedsThreshold = true;
+          } else if (level === "critical") {
+            thresholdMs = thresholds.critical;
+            if (diffMs > thresholds.critical) exceedsThreshold = true;
+          } else if (level === "major") {
+            thresholdMs = thresholds.major;
+            if (diffMs > thresholds.major) exceedsThreshold = true;
+          } else if (level === "minor") {
+            thresholdMs = thresholds.minor;
+            if (diffMs > thresholds.minor) exceedsThreshold = true;
+          }
+        }
+        
+        const durationElement = document.getElementById('durationDisplay');
+        durationElement.innerText = durationText;
+        durationElement.className = (isNegative || exceedsThreshold) ? 'negative' : '';
+      }
+    }
+    
+    function copyOutput() {
+      const outputText = document.getElementById('output').innerText;
+      navigator.clipboard.writeText(outputText).then(() => {
+        const copyMessage = document.getElementById('copyMessage');
+        copyMessage.classList.add('show');
+        setTimeout(() => { copyMessage.classList.remove('show'); }, 2000);
+      }).catch(err => {
+        console.error("Error copying text: ", err);
+      });
+    }
+    
+    function resetForm() {
+      document.getElementById('input').value = "";
+      document.getElementById('restoredTime').value = "";
+      document.getElementById('output').innerHTML = "";
+      const copyMessage = document.getElementById('copyMessage');
+      copyMessage.classList.remove('show');
+    }
+    
+    // Load site data on page load
+    window.addEventListener('load', loadSiteData);
+  </script>
+</body>
+</html>
