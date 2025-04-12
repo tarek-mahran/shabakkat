@@ -1,0 +1,38 @@
+[
+    {
+        "Region": "Region_1",
+        "To": "Ahmed Tohamy <Ahmed.tohamy@latis.com.sa>",
+        "Cc": "Hesham Goda <Hesham.goda@shabakkatksa.com>; Muhib Jan <muhib.jan@shabakkatksa.com>; Mahmoud Abo EL Ela <Mahmoud.Aboelela@Shabakkatksa.com>; Islam Adel Mosa <Islam.Mosa@shabakkatksa.com>; Mustafa Odeh <Mustafa.Odeh@shabakkatksa.com>; Yasser Yousri <yasser.yousri@Shabakkatksa.com>; Mohammad Sultan <Mohammad.Sultan@shabakkatksa.com>; Sameer Mansour <sameer.mansour@shabakkatksa.com>; Ali Saleh <Ali.Saleh@Shabakkatksa.com>; Salah Ghannam <Salah.Ghannam@shabakkatksa.com>; Ali Abdullah <ali.abdullah@shabakkatksa.com>; Mohamed Mahmoud <Mohamed.Mahmoud@Shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@shabakkatksa.com>; Mostafa Ahmed Mohamed Badawy <Mostafa.Badawy@shabakkatksa.com>; Tarek Abdelnaser Mahran <Tarek.Mahran@shabakkatksa.com>; TOC.Shift.Lead <TOC.Shift.Lead@latis.com.sa>; Anas moshabab ali alraqae <Anas.alraqae@latis.com.sa>; mohammed.alkhatatbeh <mohammed.alkhatatbeh@latis.com.sa>",
+        "Subject": "Need Approval For SLA Exceeded R1"
+    },
+    {
+        "Region": "Region_2",
+        "To": "Mohamed Sayed Salem <Mohamed.Salem@latis.com.sa>; Mohammed Almutairi <mohammed.almutairi@latis.com.sa>",
+        "Cc": "Osama Ghanem <Osama.Ghanem@Shabakkatksa.com>; Mohamed Magdy <Mohamed.Magdy@Shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@Shabakkatksa.com>; Ahmed Osman <Ahmed.Othman@shabakkatksa.com>; Mohamed Abdelfattah <Mohamed.Ahmed@Shabakkatksa.com>; Aysar AlZughul <Aysar.Alzghoul@shabakkatksa.com>; Mohamed Abd EL Ghany Ebeid Ahmed <Mohamed.A.Ebeid@shabakkatksa.com>; Sameer Mansour <sameer.mansour@shabakkatksa.com>; Yasser Yousri <yasser.yousri@Shabakkatksa.com>; Mohammad Sultan <Mohammad.Sultan@shabakkatksa.com>; Ali Saleh <Ali.Saleh@Shabakkatksa.com>; Salah Ghannam <Salah.Ghannam@shabakkatksa.com>; Ali Abdullah <ali.abdullah@shabakkatksa.com>; Mohamed Mahmoud <Mohamed.Mahmoud@Shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@shabakkatksa.com>; Mostafa Ahmed Mohamed Badawy <Mostafa.Badawy@shabakkatksa.com>; Tarek Abdelnaser Mahran <Tarek.Mahran@shabakkatksa.com>; TOC.Shift.Lead <TOC.Shift.Lead@latis.com.sa>; mohammed.alkhatatbeh <mohammed.alkhatatbeh@latis.com.sa>",
+        "Subject": "Need Approval For SLA Exceeded R2"
+    },
+    {
+        "Region": "Region_3",
+        "To": "Mohammed Vaseem Pasha <Mohammed.pasha@latis.com.sa>",
+        "Cc": "Hany Khodear <Hany.mostafa@Shabakkatksa.com>; Hussein Majdalaweyh <hussein.majdalaweyh@shabakkatksa.com>; Talal Khan <Talal.Haidar@shabakkatksa.com>; Khaled Owinat <khaled.owinat@shabakkatksa.com>; Mohamed Habib <Mohamed.Habib@Shabakkatksa.com>; Sameer Mansour <sameer.mansour@shabakkatksa.com>; Yasser Yousri <yasser.yousri@Shabakkatksa.com>; Mohammad Sultan <Mohammad.Sultan@shabakkatksa.com>; Salah Ghannam <Salah.Ghannam@shabakkatksa.com>; Ali Saleh <Ali.Saleh@Shabakkatksa.com>; Ali Abdullah <ali.abdullah@Shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@shabakkatksa.com>; Mostafa Ahmed Mohamed Badawy <Mostafa.Badawy@shabakkatksa.com>; Tarek Abdelnaser Mahran <Tarek.Mahran@shabakkatksa.com>; TOC.Shift.Lead <TOC.Shift.Lead@latis.com.sa>; mohammed.alkhatatbeh <mohammed.alkhatatbeh@latis.com.sa>",
+        "Subject": "Need Approval For SLA Exceeded R3"
+    },
+    {
+        "Region": "Region_4",
+        "To": "Mohannad Ahmed Abdelsheekh <Mohannad.abdelsheekh@latis.com.sa>",
+        "Cc": "Abdelaziz Samy <Abdelaziz.samy@Shabakkatksa.com>; Yasser Basiony <Yasser.Basiony@Shabakkatksa.com>; Jaffar Shaik <jaffar.shaik@shabakkatksa.com>; Medhat Hammam Mahmoud Hammam <Medhat.Hammam@shabakkatksa.com>; Abdelaziz Saeed Babeker Saad <Abdelaziz.Saad@shabakkatksa.com>; Naveed Ahamad Sayyad <Naveed.Sayyad@shabakkatksa.com>; Ahmed Youssef ahmed elnassag <Ahmed.Y.elnassag@shabakkatksa.com>; Sameer Mansour <sameer.mansour@shabakkatksa.com>; Yasser Yousri <yasser.yousri@Shabakkatksa.com>; Mohammad Sultan <Mohammad.Sultan@shabakkatksa.com>; Ali Saleh <Ali.Saleh@Shabakkatksa.com>; Salah Ghannam <Salah.Ghannam@shabakkatksa.com>; Ali Abdullah <ali.abdullah@Shabakkatksa.com>; Mohamed Mahmoud <Mohamed.Mahmoud@Shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@shabakkatksa.com>; Mostafa Ahmed Mohamed Badawy <Mostafa.Badawy@shabakkatksa.com>; Tarek Abdelnaser Mahran <Tarek.Mahran@shabakkatksa.com>; TOC.Shift.Lead <TOC.Shift.Lead@latis.com.sa>; mohammed.alkhatatbeh <mohammed.alkhatatbeh@latis.com.sa>",
+        "Subject": "Need Approval For SLA Exceeded R4"
+    },
+    {
+        "Region": "Region_5",
+        "To": "Hesham Fadel <Hesham.Fadel@latis.com.sa>",
+        "Cc": "Salem Qamhiyeh <Salem.Qamhiyeh@Shabakkatksa.com>; Mahmoud Elnahas <Mohamed.Elnahas@Shabakkatksa.com>; Mustafa AbdelKareem <Mustafa.AbdelKareem@shabakkatksa.com>; Ahmad Samir <ahmad.samir@shabakkatksa.com>; Muhammad Mubashar <muhammad.mubashar@shabakkatksa.com>; Sameer Mansour <sameer.mansour@shabakkatksa.com>; Yasser Yousri <yasser.yousri@Shabakkatksa.com>; Mohammad Sultan <Mohammad.Sultan@shabakkatksa.com>; Ali Saleh <Ali.Saleh@shabakkatksa.com>; Salah Ghannam <Salah.Ghannam@shabakkatksa.com>; Ali Abdullah <ali.abdullah@shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@shabakkatksa.com>; Mostafa Ahmed Mohamed Badawy <Mostafa.Badawy@shabakkatksa.com>; Mohamed Mahmoud <Mohamed.Mahmoud@shabakkatksa.com>; Tarek Abdelnaser Mahran <Tarek.Mahran@shabakkatksa.com>; TOC.Shift.Lead <TOC.Shift.Lead@latis.com.sa>; mohammed.alkhatatbeh <mohammed.alkhatatbeh@shabakkatksa.com>",
+        "Subject": "Need Approval For SLA Exceeded R5"
+    },
+    {
+        "Region": "Region_6",
+        "To": "Salman Muhammad Fazal Wahid <Salman.wahid@latis.com.sa>",
+        "Cc": "Mugahid Ahmed <Mu.abdulsamie@Shabakkatksa.com>; Moaz M. Elterifi <Moaz.Elterifi@Shabakkatksa.com>; Waheed Zada <waheed.zada@shabakkatksa.com>; Hassan Anter Hassan Elfarra <Hassan.Elfarra@shabakkatksa.com>; Sameer Mansour <sameer.mansour@shabakkatksa.com>; Ali Saleh <Ali.Saleh@shabakkatksa.com>; Yasser Yousri <yasser.yousri@Shabakkatksa.com>; Mohammad Sultan <Mohammad.Sultan@shabakkatksa.com>; Salah Ghannam <Salah.Ghannam@shabakkatksa.com>; Ali Abdullah <ali.abdullah@shabakkatksa.com>; Ahmed Hammad <Ahmed.Hammad@shabakkatksa.com>; Mostafa Ahmed Mohamed Badawy <Mostafa.Badawy@shabakkatksa.com>; Mohamed Mahmoud <Mohamed.Mahmoud@shabakkatksa.com>; Tarek Abdelnaser Mahran <Tarek.Mahran@shabakkatksa.com>; TOC.Shift.Lead <TOC.Shift.Lead@shabakkatksa.com>; mohammed.alkhatatbeh <mohammed.alkhatatbeh@shabakkatksa.com>",
+        "Subject": "Need Approval For SLA Exceeded R6"
+    }
+]
