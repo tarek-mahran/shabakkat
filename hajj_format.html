@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAJJ Outage Format</title>
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    :root {
+      --primary: #8b5cf6;
+      --primary-light: #a78bfa;
+      --primary-dark: #7c3aed;
+      --accent: #06b6d4;
+      --accent-light: #22d3ee;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --bg-primary: #030712;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1f2937;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --text-tertiary: #6b7280;
+      --border: rgba(255, 255, 255, 0.08);
+      --glow: rgba(139, 92, 246, 0.5);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated mesh gradient background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -150%;
+      left: -150%;
+      width: 400%;
+      height: 400%;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 40% 20%, rgba(34, 211, 238, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 10%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
+      animation: meshGradient 30s ease-in-out infinite;
+      filter: blur(40px);
+    }
+
+    /* Noise texture overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.03;
+      background-image: 
+        repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.5) 35px, rgba(255,255,255,.5) 70px);
+      pointer-events: none;
+    }
+
+    @keyframes meshGradient {
+      0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      25% { transform: translate(-5%, -10%) rotate(90deg) scale(1.1); }
+      50% { transform: translate(-10%, 5%) rotate(180deg) scale(0.95); }
+      75% { transform: translate(5%, -5%) rotate(270deg) scale(1.05); }
+    }
+
+    /* Floating particles */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      opacity: 0;
+      animation: float 20s infinite;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.4;
+      }
+      90% {
+        opacity: 0.4;
+      }
+      100% {
+        transform: translateY(-100vh) scale(1);
+        opacity: 0;
+      }
+    }
+
+    /* Main container */
+    .container {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      z-index: 10;
+    }
+
+    /* Card with advanced glassmorphism */
+    .card {
+      background: linear-gradient(135deg, 
+        rgba(17, 24, 39, 0.7) 0%, 
+        rgba(31, 41, 55, 0.7) 100%);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.25rem;
+      position: relative;
+      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      box-shadow: 
+        0 30px 60px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 0 120px rgba(139, 92, 246, 0.1);
+    }
+
+    /* Holographic effect on card */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, 
+        var(--primary), 
+        var(--accent), 
+        var(--primary), 
+        var(--accent));
+      background-size: 400% 400%;
+      border-radius: 32px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s;
+      animation: holographic 3s ease-in-out infinite;
+    }
+
+    @keyframes holographic {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .card:hover::before {
+      opacity: 0.3;
+    }
+
+    /* Header section */
+    .header {
+      text-align: center;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .logo-container {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 0.5rem;
+      position: relative;
+    }
+
+    .logo {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: white;
+      position: relative;
+      transform: rotate(-6deg);
+      transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      box-shadow: 
+        0 10px 30px rgba(139, 92, 246, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .logo:hover {
+      transform: rotate(0deg) scale(1.1);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, 
+        var(--text-primary) 0%, 
+        var(--primary-light) 50%, 
+        var(--accent-light) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .header .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.625rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    /* Form groups with depth */
+    .form-group {
+      margin-bottom: 0.75rem;
+      position: relative;
+      animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+      opacity: 0;
+    }
+
+    .form-group:nth-child(1) { animation-delay: 0.1s; }
+    .form-group:nth-child(2) { animation-delay: 0.2s; }
+    .form-group:nth-child(3) { animation-delay: 0.3s; }
+    .form-group:nth-child(4) { animation-delay: 0.4s; }
+    .form-group:nth-child(5) { animation-delay: 0.5s; }
+    .form-group:nth-child(6) { animation-delay: 0.6s; }
+    .form-group:nth-child(7) { animation-delay: 0.7s; }
+
+    @keyframes slideUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.3s;
+    }
+
+    /* Advanced input styling */
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: rgba(17, 24, 39, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+      outline: none;
+      position: relative;
+    }
+
+    input[type="text"]:hover,
+    input[type="number"]:hover,
+    textarea:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      background: rgba(17, 24, 39, 0.7);
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      background: rgba(17, 24, 39, 0.8);
+      box-shadow: 
+        0 0 0 4px rgba(139, 92, 246, 0.1),
+        0 0 30px rgba(139, 92, 246, 0.2),
+        inset 0 0 0 1px rgba(139, 92, 246, 0.3);
+      transform: translateY(-2px);
+    }
+
+    input[readonly] {
+      background: rgba(31, 41, 55, 0.3);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+      font-family: inherit;
+    }
+
+    /* Futuristic radio buttons */
+    .radio-grid {
+      display: grid;
+      gap: 0.375rem;
+      margin-top: 0.25rem;
+    }
+
+    .radio-grid.cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .radio-grid.cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .radio-option {
+      position: relative;
+      isolation: isolate;
+    }
+
+    .radio-option input {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .radio-option label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      background: rgba(17, 24, 39, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      min-height: 36px;
+    }
+
+    /* Ensure feedback buttons have consistent height */
+    .radio-grid.cols-2 .radio-option label,
+    .radio-grid.cols-3 .radio-option label {
+      min-height: 48px;
+    }
+
+    .radio-option label::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+      border-radius: 16px;
+      opacity: 0;
+    }
+
+    .radio-option label span {
+      position: relative;
+      z-index: 1;
+      line-height: 1.1;
+    }
+
+    .radio-option input:checked + label {
+      border-color: transparent;
+      color: white;
+      transform: scale(1.02);
+      box-shadow: 
+        0 0 30px rgba(139, 92, 246, 0.3),
+        0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .radio-option input:checked + label::before {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    .radio-option label:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Status indicators with glow */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      position: relative;
+      display: inline-block;
+      margin-right: 0.25rem;
+    }
+
+    .status-dot::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0.3;
+      filter: blur(4px);
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.3; }
+      50% { transform: scale(1.5); opacity: 0; }
+    }
+
+    .status-down { background: var(--error); }
+    .status-restored { background: var(--success); }
+    .status-restoring { background: var(--warning); }
+
+    /* Magnetic submit button */
+    .submit-container {
+      margin-top: 1rem;
+      position: relative;
+    }
+
+    .submit-button {
+      width: 100%;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      border: none;
+      border-radius: 16px;
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+      overflow: hidden;
+      box-shadow: 
+        0 10px 30px rgba(139, 92, 246, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .submit-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, 
+        transparent 30%, 
+        rgba(255, 255, 255, 0.3) 50%, 
+        transparent 70%);
+      transform: translateX(-100%);
+      transition: transform 0.6s;
+    }
+
+    .submit-button:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 
+        0 20px 40px rgba(139, 92, 246, 0.4),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .submit-button:hover::before {
+      transform: translateX(100%);
+    }
+
+    .submit-button:active {
+      transform: translateY(-1px) scale(1);
+    }
+
+    .button-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    /* Loading animation */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Success notification */
+    .notification {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      background: linear-gradient(135deg, 
+        rgba(16, 185, 129, 0.9) 0%, 
+        rgba(6, 182, 212, 0.9) 100%);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 1.25rem 2rem;
+      border-radius: 16px;
+      box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+      transform: translateX(400px);
+      transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .notification.show {
+      transform: translateX(0);
+    }
+
+    .notification-icon {
+      width: 24px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    /* Responsive design */
+    @media (max-width: 640px) {
+      body {
+        padding: 0.5rem;
+      }
+      
+      .card {
+        padding: 1rem;
+      }
+      
+      .header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .radio-grid.cols-3 {
+        grid-template-columns: 1fr;
+      }
+      
+      .radio-grid.cols-2 {
+        grid-template-columns: 1fr;
+      }
+      
+      .notification {
+        right: 1rem;
+        left: 1rem;
+        transform: translateY(-100px);
+      }
+      
+      .notification.show {
+        transform: translateY(0);
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+      }
+      
+      .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        background: white;
+      }
+      
+      * {
+        color: black !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating particles -->
+  <div class="particles">
+    <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="left: 20%; animation-delay: 2s;"></div>
+    <div class="particle" style="left: 30%; animation-delay: 4s;"></div>
+    <div class="particle" style="left: 40%; animation-delay: 6s;"></div>
+    <div class="particle" style="left: 50%; animation-delay: 8s;"></div>
+    <div class="particle" style="left: 60%; animation-delay: 10s;"></div>
+    <div class="particle" style="left: 70%; animation-delay: 12s;"></div>
+    <div class="particle" style="left: 80%; animation-delay: 14s;"></div>
+    <div class="particle" style="left: 90%; animation-delay: 16s;"></div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="logo-container">
+          <div class="logo">H</div>
+        </div>
+        <h1>HAJJ Outage Format</h1>
+        <p class="subtitle">Network Operations Center</p>
+      </div>
+
+      <form id="issueForm">
+        <!-- No. of down sites -->
+        <div class="form-group">
+          <label for="downSites">Number of Down Sites</label>
+          <input type="number" id="downSites" name="downSites" min="0" placeholder="0" />
+        </div>
+
+        <!-- Hub site -->
+        <div class="form-group">
+          <label for="hubSite">Hub Site</label>
+          <input type="text" id="hubSite" name="hubSite" placeholder="Enter site ID" />
+        </div>
+
+        <!-- Area (auto-filled) -->
+        <div class="form-group">
+          <label for="area">Area / Governorate</label>
+          <input type="text" id="area" name="area" readonly placeholder="Auto-populated based on site ID" />
+        </div>
+
+        <!-- Current status -->
+        <div class="form-group">
+          <label>Current Status</label>
+          <div class="radio-grid cols-3">
+            <div class="radio-option">
+              <input type="radio" id="statusStill" name="status" value="Still down" />
+              <label for="statusStill">
+                <span style="display: inline-flex; align-items: center;">
+                  <span class="status-dot status-down"></span>
+                  Still Down
+                </span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="statusRestored" name="status" value="Restored" />
+              <label for="statusRestored">
+                <span style="display: inline-flex; align-items: center;">
+                  <span class="status-dot status-restored"></span>
+                  Restored
+                </span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="statusRestoring" name="status" value="Restoring" />
+              <label for="statusRestoring">
+                <span style="display: inline-flex; align-items: center;">
+                  <span class="status-dot status-restoring"></span>
+                  Restoring
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Initial feedback -->
+        <div class="form-group">
+          <label>Initial Feedback</label>
+          <div class="radio-grid cols-3">
+            <div class="radio-option">
+              <input type="radio" id="fbPowerTeam" name="feedback" value="Power issue, team on the way need" />
+              <label for="fbPowerTeam">
+                <span style="display: block; text-align: center;">⚡ Power Issue<br><small style="opacity: 0.7; font-weight: 400;">Team Dispatched</small></span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="fbPowerAtSite" name="feedback" value="Power issue, team at site" />
+              <label for="fbPowerAtSite">
+                <span style="display: block; text-align: center;">⚡ Power Issue<br><small style="opacity: 0.7; font-weight: 400;">Team at Site</small></span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="fbPower" name="feedback" value="Power issue" />
+              <label for="fbPower">
+                <span style="display: block; text-align: center;">⚡ Power Issue</span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="fbTelecomTeam" name="feedback" value="Telecom issue, team on the way need" />
+              <label for="fbTelecomTeam">
+                <span style="display: block; text-align: center;">📡 Telecom Issue<br><small style="opacity: 0.7; font-weight: 400;">Team Dispatched</small></span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="fbTelecomAtSite" name="feedback" value="Telecom issue, team at site" />
+              <label for="fbTelecomAtSite">
+                <span style="display: block; text-align: center;">📡 Telecom Issue<br><small style="opacity: 0.7; font-weight: 400;">Team at Site</small></span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="fbTelecom" name="feedback" value="Telecom issue" />
+              <label for="fbTelecom">
+                <span style="display: block; text-align: center;">📡 Telecom Issue</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Issue owner -->
+        <div class="form-group">
+          <label>Issue Owner</label>
+          <div class="radio-grid cols-2">
+            <div class="radio-option">
+              <input type="radio" id="ownerZain" name="owner" value="Zain" />
+              <label for="ownerZain">
+                <span style="display: inline-flex; align-items: center;">Zain</span>
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="ownerLatis" name="owner" value="Latis" />
+              <label for="ownerLatis">
+                <span style="display: inline-flex; align-items: center;">Latis</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final RCA -->
+        <div class="form-group">
+          <label for="finalRca">Root Cause</label>
+          <textarea id="finalRca" name="finalRca" placeholder="Provide detailed root cause..."></textarea>
+        </div>
+
+        <!-- Submit button -->
+        <div class="submit-container">
+          <button type="button" id="copyFormatBtn" class="submit-button">
+            <div class="button-content">
+              <span id="buttonText">Copy Format</span>
+              <div class="spinner" id="loadingSpinner"></div>
+            </div>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success notification -->
+  <div class="notification" id="notification">
+    <div class="notification-icon">✓</div>
+    <div>
+      <strong>Success!</strong><br>
+      <small>Format copied to clipboard</small>
+    </div>
+  </div>
+
+  <script>
+    const EXCEL_URL = 'https://tarek-mahran.github.io/shabakkat/List%20of%20HAJJ%201446%20sites.xlsx';
+    let siteData = [];
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      // Load Excel data
+      fetch(EXCEL_URL)
+        .then(r => r.arrayBuffer())
+        .then(data => {
+          const wb = XLSX.read(data, { type: 'array' });
+          siteData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        })
+        .catch(err => console.error('Error loading site data:', err));
+    });
+
+    // Auto-populate area
+    document.getElementById('hubSite').addEventListener('input', (e) => {
+      const value = e.target.value.trim();
+      const row = siteData.find(r => String(r['Site ID']) === value);
+      const areaField = document.getElementById('area');
+      
+      if (row) {
+        areaField.value = row['Governorate'] || '';
+        // Highlight effect
+        areaField.style.borderColor = 'var(--success)';
+        areaField.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.2)';
+        setTimeout(() => {
+          areaField.style.borderColor = '';
+          areaField.style.boxShadow = '';
+        }, 1000);
+      } else {
+        areaField.value = '';
+      }
+    });
+
+    // Fallback copy function for better Blogger compatibility
+    function fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.top = 0;
+      textArea.style.left = 0;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        const successful = document.execCommand('copy');
+        return successful ? Promise.resolve() : Promise.reject(new Error('Fallback: Copy command unsuccessful'));
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+
+    function showSuccessAnimation() {
+      const button = document.getElementById('copyFormatBtn');
+      const buttonText = document.getElementById('buttonText');
+      const spinner = document.getElementById('loadingSpinner');
+      
+      // Success animation
+      setTimeout(() => {
+        spinner.style.display = 'none';
+        buttonText.textContent = '✓ Copied!';
+        buttonText.style.display = 'block';
+        buttonText.style.opacity = '1';
+        
+        // Show notification
+        const notification = document.getElementById('notification');
+        notification.classList.add('show');
+        
+        // Reset after delay
+        setTimeout(() => {
+          notification.classList.remove('show');
+          buttonText.textContent = 'Copy Format';
+          button.disabled = false;
+        }, 3000);
+      }, 800);
+    }
+
+    function showErrorAnimation() {
+      const button = document.getElementById('copyFormatBtn');
+      const buttonText = document.getElementById('buttonText');
+      const spinner = document.getElementById('loadingSpinner');
+      
+      // Error handling
+      spinner.style.display = 'none';
+      buttonText.textContent = '✗ Copy Failed';
+      buttonText.style.display = 'block';
+      buttonText.style.opacity = '1';
+      button.style.background = 'linear-gradient(135deg, var(--error) 0%, #dc2626 100%)';
+      
+      setTimeout(() => {
+        buttonText.textContent = 'Copy Format';
+        button.disabled = false;
+        button.style.background = '';
+      }, 2000);
+    }
+
+    // Copy format with robust Blogger compatibility
+    document.getElementById('copyFormatBtn').addEventListener('click', () => {
+      const button = document.getElementById('copyFormatBtn');
+      const buttonText = document.getElementById('buttonText');
+      const spinner = document.getElementById('loadingSpinner');
+      
+      // Validate form
+      const getVal = id => document.getElementById(id).value.trim();
+      const getRadio = name => (document.querySelector(`input[name="${name}"]:checked`) || {}).value || '';
+
+      const fields = [
+        { label: 'No. of down sites', value: getVal('downSites') },
+        { label: 'Hub site', value: getVal('hubSite') },
+        { label: 'Area', value: getVal('area') },
+        { label: 'Current status', value: getRadio('status') },
+        { label: 'Initial feedback', value: getRadio('feedback') },
+        { label: 'Issue owner', value: getRadio('owner') },
+        { label: 'Issue final RCA', value: getVal('finalRca') }
+      ];
+
+      const text = fields
+        .map(f => `*${f.label}:*${f.value ? ' ' + f.value : ''}`)
+        .join('\n');
+
+      // Animate button
+      button.disabled = true;
+      buttonText.style.opacity = '0';
+      setTimeout(() => {
+        buttonText.style.display = 'none';
+        spinner.style.display = 'block';
+      }, 200);
+      
+      // Try modern clipboard API first, then fallback
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showSuccessAnimation)
+        .catch(err => {
+          fallbackCopyTextToClipboard(text).then(showSuccessAnimation)
+          .catch(err => {
+            showErrorAnimation();
+            console.error('Clipboard error:', err);
+          });
+        });
+      } else {
+        // Use fallback directly if modern API not available
+        fallbackCopyTextToClipboard(text).then(showSuccessAnimation)
+        .catch(err => {
+          showErrorAnimation();
+          console.error('Clipboard error:', err);
+        });
+      }
+    });
+
+    // Enhanced input interactions
+    document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(input => {
+      input.addEventListener('focus', (e) => {
+        const label = e.target.parentElement.querySelector('label');
+        label.style.color = 'var(--primary-light)';
+      });
+      
+      input.addEventListener('blur', (e) => {
+        const label = e.target.parentElement.querySelector('label');
+        label.style.color = '';
+      });
+    });
+
+    // Add ripple effect to radio options
+    document.querySelectorAll('.radio-option label').forEach(label => {
+      label.addEventListener('click', function(e) {
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        ripple.style.cssText = `
+          position: absolute;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 50%;
+          transform: scale(0);
+          animation: rippleEffect 0.6s ease-out;
+          pointer-events: none;
+        `;
+        
+        const rect = this.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = x + 'px';
+        ripple.style.top = y + 'px';
+        
+        this.appendChild(ripple);
+        
+        setTimeout(() => ripple.remove(), 600);
+      });
+    });
+
+    // Add ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes rippleEffect {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+
+</body>
+</html>
