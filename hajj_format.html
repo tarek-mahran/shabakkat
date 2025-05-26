@@ -807,7 +807,7 @@
     // Auto-populate area
     document.getElementById('hubSite').addEventListener('input', (e) => {
       const value = e.target.value.trim();
-      const row = siteData.find(r => String(r['Site ID']) === value);
+      const row = siteData.find(r => String(r['Site ID']).toLowerCase() === value.toLowerCase());
       const areaField = document.getElementById('area');
       
       if (row) {
@@ -900,7 +900,7 @@
 
       const fields = [
         { label: 'No. of down sites', value: getVal('downSites') },
-        { label: 'Hub site', value: getVal('hubSite') },
+        { label: 'Hub site', value: getVal('hubSite').toUpperCase() },
         { label: 'Area', value: getVal('area') },
         { label: 'Current status', value: getRadio('status') },
         { label: 'Initial feedback', value: getRadio('feedback') },
