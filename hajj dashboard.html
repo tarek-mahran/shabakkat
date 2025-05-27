@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Haj PCMs Overview</title>
+
+  <!-- Excel parsing & Chart.js + DataLabels -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <!-- html2canvas & jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* RESET & LAYOUT */
+    * { box-sizing:border-box; margin:0; padding:0 }
+    body { font-family:Arial; padding:20px; color:#333; }
+    h1 {
+      font-size:20px; font-weight:bold; text-align:center;
+      margin-bottom:12px; position:relative;
+    }
+    h1::after {
+      content:""; display:block; height:1px; background:#777;
+      width:100%; margin-top:8px;
+    }
+    #controls { text-align:center; margin:20px 0; }
+    #controls button { margin-left:12px; padding:6px 12px; }
+
+    /* DASHBOARD GRID */
+    .dashboard {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(300px,1fr));
+      gap:20px; max-width:1320px; margin:0 auto;
+      justify-content:center;
+    }
+
+    /* CARD */
+    .card {
+      border:1px solid #777; border-radius:10px;
+      padding:16px; display:flex; flex-direction:column;
+    }
+    .card h2 {
+      font-size:16px; font-weight:bold; text-align:center;
+      margin-bottom:8px; position:relative;
+    }
+    .card h2::after {
+      content:""; position:absolute; bottom:0;
+      left:16px; right:16px; height:1px; background:#777;
+    }
+
+    /* METRIC BOX & BADGE */
+    .metric-box {
+      border:1px solid #bbb; border-radius:6px;
+      padding:12px; margin:12px 0; position:relative;
+    }
+    .big-number { text-align:center; font-weight:300; font-size:40px; }
+    .badge {
+      position:absolute; bottom:8px; right:8px;
+      border:1px solid #bbb; border-radius:4px;
+      padding:2px 6px; font-size:12px; background:#fff;
+    }
+
+    /* FAULT GRID */
+    .fault-grid {
+      display:grid; grid-template-columns:1fr 1fr;
+      grid-template-rows:1fr 1fr; gap:12px; margin:16px 0;
+    }
+    .fault-box {
+      border:1px solid #bbb; border-radius:6px;
+      padding:12px 8px 8px; position:relative;
+    }
+    .fault-icon { position:absolute; top:8px; left:8px; font-size:18px; }
+    .fault-value {
+      text-align:center; font-size:28px; font-weight:300;
+      margin-top:12px;
+    }
+    .fault-label { text-align:center; font-size:14px; margin-top:4px; }
+    .emergency { color:red;    border-radius:12px 0 0 0; }
+    .critical  { color:orange; border-radius:0 12px 0 0; }
+    .major     { color:gold;   border-radius:0 0 0 12px; }
+    .minor     { color:blue;   border-radius:0 0 12px 0; }
+
+    /* SUB-BOX FOR CHARTS */
+    .sub-box {
+      border:1px solid #bbb; border-radius:6px;
+      padding:8px; margin:12px 0; position:relative;
+    }
+
+    /* STATUS BOX */
+    .sub-metrics { display:flex; justify-content:space-between; }
+    .status-box {
+      width:48%; border:1px solid #bbb; border-radius:6px;
+      padding:16px 12px 24px; position:relative;
+    }
+    .status-icon {
+      position:absolute; top:-12px; left:-12px;
+      width:32px; height:32px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:16px;
+    }
+    .saved { background:green }
+    .down  { background:red   }
+    .status-label { margin-left:32px; font-weight:bold; }
+
+    /* MTTR */
+    .mttr-card { position:relative; padding-top:28px; }
+    .mttr-header {
+      position:absolute; top:14px; left:34%;
+      transform:translateX(-28%);
+      background:#fff; color:#109618;
+      padding:4px 12px; font-size:14px;
+      border:1px solid #bbb; border-radius:4px;
+      font-weight:bold;
+    }
+    .mttr-main {
+      border:1px solid #bbb; border-radius:6px;
+      padding:12px; text-align:center;
+    }
+    .mttr-main-value {
+      font-size:36px; font-weight:300; margin-top:8px;
+    }
+    .mttr-breakdown {
+      display:grid; grid-template-columns:1fr 1fr;
+      grid-template-rows:1fr 1fr; gap:12px; margin-top:16px;
+    }
+    .mttr-box {
+      border:1px solid #bbb; border-radius:6px;
+      padding:24px 8px 8px; position:relative;
+    }
+    .mttr-box .icon { position:absolute; top:-12px; left:8px; }
+    .sub-value { text-align:center; font-size:24px; font-weight:300; margin-top:8px; }
+    .sub-label { text-align:center; font-size:14px; margin-top:4px; }
+    .mttr-box.emergency .sub-label { color:red }
+    .mttr-box.critical  .sub-label { color:orange }
+    .mttr-box.major     .sub-label { color:gold }
+    .mttr-box.minor     .sub-label { color:blue }
+
+    /* CANVAS */
+    canvas { width:100% !important; height:100% !important; }
+  </style>
+</head>
+<body>
+  <h1>Haj PCMs Overview</h1>
+
+  <div id="controls">
+    <input type="file" id="file-input" accept=".xlsx">
+    <button id="export-btn">Export to PDF</button>
+  </div>
+
+  <div class="dashboard">
+    <!-- PCM Analysis -->
+    <div class="card">
+      <h2>PCM Analysis</h2>
+      <div>Total Received PCMs</div>
+      <div class="metric-box">
+        <div id="pcm-total" class="big-number">–</div>
+      </div>
+      <div>Distributed by Fault Level</div>
+      <div class="fault-grid">
+        <div class="fault-box emergency">
+          <span class="fault-icon">🔔</span>
+          <div id="fault-emergency" class="fault-value">–</div>
+          <div class="fault-label">Emergency</div>
+        </div>
+        <div class="fault-box critical">
+          <span class="fault-icon">🔔</span>
+          <div id="fault-critical" class="fault-value">–</div>
+          <div class="fault-label">Critical</div>
+        </div>
+        <div class="fault-box major">
+          <span class="fault-icon">🔔</span>
+          <div id="fault-major" class="fault-value">–</div>
+          <div class="fault-label">Major</div>
+        </div>
+        <div class="fault-box minor">
+          <span class="fault-icon">🔔</span>
+          <div id="fault-minor" class="fault-value">–</div>
+          <div class="fault-label">Minor</div>
+        </div>
+      </div>
+      <div>Distributed by PCM Status</div>
+      <div class="sub-box" style="height:180px;">
+        <canvas id="pcm-status-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Outage Analysis -->
+    <div class="card">
+      <h2>Outage Analysis</h2>
+      <div>Total outage PCMs</div>
+      <div class="metric-box">
+        <div id="outage-total" class="big-number">–</div>
+        <div id="outage-unique-sites" class="badge">–</div>
+      </div>
+      <div>Distributed by TT Type</div>
+      <div class="sub-box" style="height:90px;">
+        <canvas id="outage-tt-chart"></canvas>
+      </div>
+      <div>Top Sub Causes</div>
+      <div class="sub-box" style="height:283px;">
+        <canvas id="outage-subcause-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Power & MTTR Analysis -->
+    <div class="card">
+      <h2>Power & MTTR Analysis</h2>
+      <div>Total Power PCMs</div>
+      <div class="metric-box">
+        <div id="power-total" class="big-number">–</div>
+        <div id="power-unique-sites" class="badge">–</div>
+      </div>
+      <div class="sub-metrics">
+        <div class="status-box">
+          <div class="status-icon saved">✔</div>
+          <div class="status-label" style="color:green">Saved</div>
+          <div id="power-saved" class="big-number" style="color:green">–</div>
+          <div id="power-saved-sites" class="badge">–</div>
+        </div>
+        <div class="status-box">
+          <div class="status-icon down">✖</div>
+          <div class="status-label" style="color:red">Down</div>
+          <div id="power-down" class="big-number" style="color:red">–</div>
+          <div id="power-down-sites" class="badge">–</div>
+        </div>
+      </div>
+      <div class="mttr-card">
+        <div class="mttr-header">Avg. MTTR for All PCMs</div>
+        <div class="mttr-main">
+          <div id="avg-mttr" class="mttr-main-value">–</div>
+        </div>
+        <div class="mttr-breakdown">
+          <div class="mttr-box emergency">
+            <span class="icon">🔔</span>
+            <div id="mttr-em" class="sub-value">--</div>
+            <div class="sub-label">Emergency</div>
+          </div>
+          <div class="mttr-box critical">
+            <span class="icon">🔔</span>
+            <div id="mttr-cr" class="sub-value">--</div>
+            <div class="sub-label">Critical</div>
+          </div>
+          <div class="mttr-box major">
+            <span class="icon">🔔</span>
+            <div id="mttr-ma" class="sub-value">--</div>
+            <div class="sub-label">Major</div>
+          </div>
+          <div class="mttr-box minor">
+            <span class="icon">🔔</span>
+            <div id="mttr-mi" class="sub-value">--</div>
+            <div class="sub-label">Minor</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Repetition Analysis -->
+    <div class="card">
+      <h2>Repetition Analysis</h2>
+      <div>Repeated outage cases</div>
+      <div class="metric-box">
+        <div class="repetition-icon">🔴</div>
+        <div id="repeated-outage-cases" class="big-number">–</div>
+      </div>
+      <div>Top repeated outage</div>
+      <div class="metric-box">
+        <div class="repetition-icon">🔔</div>
+        <div id="top-repeated-outage" class="big-number" style="font-size:24px;">–</div>
+        <div id="top-repeated-outage-count" class="badge">–</div>
+      </div>
+      <div>Highest Duration</div>
+      <div class="metric-box">
+        <div class="repetition-icon">⏰</div>
+        <div id="highest-duration" class="big-number" style="font-size:28px;">–</div>
+        <div id="highest-duration-site" class="badge">–</div>
+      </div>
+      <div>Top repeated Alarm</div>
+      <div class="metric-box">
+        <div class="repetition-icon">⚠️</div>
+        <div id="top-repeated-alarm" class="big-number" style="font-size:16px;">–</div>
+        <div id="top-repeated-alarm-count" class="badge">–</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // GLOBAL CHART.JS CONFIG
+    Chart.register(ChartDataLabels);
+    Chart.defaults.font.family        = "Arial";
+    Chart.defaults.color              = "#444";
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.tooltip.backgroundColor     = "rgba(0,0,0,0.7)";
+    Chart.defaults.scale.grid.display                = false;
+
+    // Global variable to store chart instances for proper cleanup
+    let chartInstances = {};
+
+    // LOAD HAJJ SITE MAPPING
+    const MAPPING_URL =
+      "https://tarek-mahran.github.io/shabakkat/List%20of%20HAJJ%201446%20sites.xlsx";
+    let hajjSiteIDs = new Set();
+    const mappingLoaded = (async()=>{
+      const resp = await fetch(MAPPING_URL);
+      const buf  = await resp.arrayBuffer();
+      const wb   = XLSX.read(buf,{type:"array"});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      XLSX.utils.sheet_to_json(ws,{defval:""})
+           .forEach(r=> r["Site ID"] && hajjSiteIDs.add(
+             String(r["Site ID"]).trim()
+           ));
+    })();
+
+    // Clear all dashboard data
+    function clearDashboard() {
+      // Clear all numeric displays
+      document.getElementById("pcm-total").innerText = "–";
+      document.getElementById("fault-emergency").innerText = "–";
+      document.getElementById("fault-critical").innerText = "–";
+      document.getElementById("fault-major").innerText = "–";
+      document.getElementById("fault-minor").innerText = "–";
+      
+      document.getElementById("outage-total").innerText = "–";
+      document.getElementById("outage-unique-sites").innerText = "–";
+      
+      document.getElementById("power-total").innerText = "–";
+      document.getElementById("power-unique-sites").innerText = "–";
+      document.getElementById("power-saved").innerText = "–";
+      document.getElementById("power-down").innerText = "–";
+      document.getElementById("power-saved-sites").innerText = "–";
+      document.getElementById("power-down-sites").innerText = "–";
+      
+      document.getElementById("avg-mttr").innerText = "–";
+      document.getElementById("mttr-em").innerText = "--";
+      document.getElementById("mttr-cr").innerText = "--";
+      document.getElementById("mttr-ma").innerText = "--";
+      document.getElementById("mttr-mi").innerText = "--";
+
+      // Clear repetition analysis
+      document.getElementById("repeated-outage-cases").innerText = "–";
+      document.getElementById("top-repeated-outage").innerText = "–";
+      document.getElementById("top-repeated-outage-count").innerText = "–";
+      document.getElementById("highest-duration").innerText = "–";
+      document.getElementById("highest-duration-site").innerText = "–";
+      document.getElementById("top-repeated-alarm").innerText = "–";
+      document.getElementById("top-repeated-alarm-count").innerText = "–";
+
+      // Destroy existing charts
+      Object.values(chartInstances).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+          chart.destroy();
+        }
+      });
+      chartInstances = {};
+    }
+
+    document.getElementById("file-input")
+      .addEventListener("change", async e=>{
+        await mappingLoaded;
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Clear existing dashboard data
+        clearDashboard();
+        
+        const rdr = new FileReader();
+        rdr.onload = ev=>{
+          try {
+            const wb  = XLSX.read(ev.target.result,{type:"binary"});
+            const ws  = wb.Sheets[wb.SheetNames[0]];
+            const raw = XLSX.utils.sheet_to_json(ws,{defval:""});
+            const data = raw.filter(r=>
+              hajjSiteIDs.has(String(r["Site Name"]).trim())
+            );
+            console.log("New data loaded:", data.length, "records");
+            renderDashboard(data);
+          } catch (error) {
+            console.error("Error processing file:", error);
+            alert("Error processing file. Please check the file format.");
+          }
+        };
+        rdr.readAsBinaryString(file);
+      });
+
+    // EXPORT TO PDF
+    document.getElementById("export-btn")
+      .addEventListener("click", async ()=>{
+        const dash   = document.querySelector(".dashboard");
+        const canvas = await html2canvas(dash,{scale:2});
+        const img    = canvas.toDataURL("image/png");
+        const { jsPDF } = window.jspdf;
+        const pdf    = new jsPDF({
+          orientation:"landscape",
+          unit:"pt",
+          format:[canvas.width,canvas.height]
+        });
+        pdf.addImage(img,"PNG",0,0,canvas.width,canvas.height);
+        pdf.save("haj-pcms-overview.pdf");
+      });
+
+    function formatTime(sec){
+      const s = Math.round(sec),
+            h = Math.floor(s/3600),
+            m = Math.floor((s%3600)/60),
+            r = s%60;
+      return [h,m,r].map(v=>String(v).padStart(2,"0")).join(":");
+    }
+
+    function renderDashboard(data){
+      console.log("Rendering dashboard with", data.length, "records");
+      pcmAnalysis(data);
+      outageAnalysis(data);
+      powerMTTRAnalysis(data);
+      repetitionAnalysis(data);
+    }
+
+    // REPETITION ANALYSIS
+    function repetitionAnalysis(data){
+      console.log("=== Repetition Analysis ===");
+
+      // 1. REPEATED OUTAGE CASES
+      // Filter outage PCMs
+      const outagePCMs = data.filter(r=>{
+        const ds = String(r["Down Sites"] || "").toLowerCase();
+        return ds.includes("site down") || ds.includes("sites down");
+      });
+
+      // Remove duplicate TT IDs and count sites with repeated outages
+      const uniqueTTIDs = new Set();
+      const validOutages = [];
+      outagePCMs.forEach(r => {
+        const ttId = r["TT ID"];
+        if (ttId && !uniqueTTIDs.has(ttId)) {
+          uniqueTTIDs.add(ttId);
+          validOutages.push(r);
+        }
+      });
+
+      // Count outages per site
+      const siteOutageCounts = {};
+      validOutages.forEach(r => {
+        const siteName = r["Site Name"];
+        if (siteName) {
+          siteOutageCounts[siteName] = (siteOutageCounts[siteName] || 0) + 1;
+        }
+      });
+
+      // Count sites with repeated outages (more than 1)
+      const repeatedOutageSites = Object.values(siteOutageCounts).filter(count => count > 1).length;
+      document.getElementById("repeated-outage-cases").innerText = repeatedOutageSites;
+
+      // 2. TOP REPEATED OUTAGE
+      let topSite = "–";
+      let topCount = 0;
+      Object.entries(siteOutageCounts).forEach(([site, count]) => {
+        if (count > topCount) {
+          topCount = count;
+          topSite = site;
+        }
+      });
+      document.getElementById("top-repeated-outage").innerText = topSite || "–";
+      document.getElementById("top-repeated-outage-count").innerText = topCount > 1 ? topCount : "–";
+
+      // 3. HIGHEST DURATION
+      let highestDuration = 0;
+      let highestDurationSite = "–";
+      let highestDurationFormatted = "–";
+
+      outagePCMs.forEach(r => {
+        const createdAt = new Date(r["Created At"] || "");
+        const recoveryTime = new Date(r["Fault Recovery Time"] || "");
+        
+        if (!isNaN(createdAt.getTime()) && !isNaN(recoveryTime.getTime())) {
+          const durationMs = recoveryTime.getTime() - createdAt.getTime();
+          if (durationMs > 0 && durationMs > highestDuration) {
+            highestDuration = durationMs;
+            highestDurationSite = r["Site Name"] || "–";
+            highestDurationFormatted = formatTime(Math.round(durationMs / 1000));
+          }
+        }
+      });
+
+      document.getElementById("highest-duration").innerText = highestDurationFormatted;
+      document.getElementById("highest-duration-site").innerText = highestDurationSite;
+
+      // 4. TOP REPEATED ALARM
+      // Filter power PCMs using the same logic as power analysis
+      const keys = ["1607","7402","65163","1550","65109","65038",
+                    "65106","65338","65037","7103","7409"];
+      const powerPCMs1 = data.filter(r => {
+        const id = String(r["Alarm ID"] || "").toLowerCase();
+        return keys.some(k => id.includes(k)) || 
+               id.includes("main") || 
+               id.includes("commercial");
+      });
+
+      const powerPCMs = powerPCMs1.filter(r => {
+        const nm = String(r["Alarm Name"] || "").toLowerCase();
+        const ok = ["com","c. p"].some(t => nm.includes(t)) ||
+                   nm.startsWith("dc main") ||
+                   nm.includes("mains") ||
+                   nm.includes("main failure") ||
+                   nm.includes("main power") ||
+                   nm.startsWith("dc power");
+        return ok && !nm.includes("ac");
+      });
+
+      // Count alarm occurrences per site
+      const alarmSiteCounts = {};
+      powerPCMs.forEach(r => {
+        const alarmName = r["Alarm Name"];
+        const siteName = r["Site Name"];
+        if (alarmName && siteName) {
+          const key = `${alarmName}@${siteName}`;
+          alarmSiteCounts[key] = (alarmSiteCounts[key] || 0) + 1;
+        }
+      });
+
+      // Find top repeated alarm
+      let topAlarm = "–";
+      let topAlarmCount = 0;
+      Object.entries(alarmSiteCounts).forEach(([key, count]) => {
+        if (count > 1 && count > topAlarmCount) {
+          topAlarmCount = count;
+          const [alarmName, siteName] = key.split('@');
+          topAlarm = `${alarmName} @ ${siteName}`;
+        }
+      });
+
+      document.getElementById("top-repeated-alarm").innerText = topAlarm || "–";
+      document.getElementById("top-repeated-alarm-count").innerText = topAlarmCount > 1 ? topAlarmCount : "–";
+
+      console.log("Repetition Analysis Results:", {
+        repeatedOutageSites,
+        topRepeatedOutage: { site: topSite, count: topCount },
+        highestDuration: { duration: highestDurationFormatted, site: highestDurationSite },
+        topRepeatedAlarm: { alarm: topAlarm, count: topAlarmCount }
+      });
+    }
+
+    // PCM ANALYSIS
+    function pcmAnalysis(data){
+      console.log("=== PCM Analysis ===");
+      console.log("Processing", data.length, "records");
+      
+      document.getElementById("pcm-total").innerText = data.length;
+      const faults={Emergency:0,Critical:0,Major:0,Minor:0},
+            stats ={Running:0,Closed:0,Cancelled:0,Escalated:0};
+      data.forEach(r=>{
+        if(faults[r["Fault Level"]]!==undefined) faults[r["Fault Level"]]++;
+        const st = r["pcm_status"]==="Completed"?"Closed":r["pcm_status"];
+        if(stats[st]!==undefined) stats[st]++;
+      });
+      
+      console.log("Fault Level distribution:", faults);
+      console.log("Status distribution:", stats);
+      
+      ["Emergency","Critical","Major","Minor"].forEach(l=>{
+        document.getElementById(`fault-${l.toLowerCase()}`).innerText = faults[l];
+      });
+
+      // PCM-STATUS CHART with labels on left and right sides (percentage only)
+      const totalStatus = Object.values(stats).reduce((a,b)=>a+b,0);
+      
+      // Destroy existing chart if it exists
+      if (chartInstances.pcmStatusChart) {
+        chartInstances.pcmStatusChart.destroy();
+      }
+      
+      chartInstances.pcmStatusChart = new Chart(document.getElementById("pcm-status-chart"),{
+        type:"doughnut",
+        data:{
+          labels:Object.keys(stats),
+          datasets:[{
+            data:Object.values(stats),
+            backgroundColor:["#3366cc","#109618","#aaaaaa","#ffbb33"],
+            borderWidth:0
+          }]
+        },
+        options:{
+          responsive:true, 
+          maintainAspectRatio:false,
+          cutout:"60%",
+          layout: {
+            padding: {
+              top: 15,
+              right: 30,
+              bottom: 15,
+              left: 30
+            }
+          },
+          plugins:{
+            legend:{
+              display:true, 
+              position:"bottom", 
+              align:"center",
+              labels:{
+                usePointStyle:true,
+                boxWidth:6,
+                font:{size:8},
+                padding:6,
+                generateLabels: function(chart) {
+                  const data = chart.data;
+                  if (data.labels.length && data.datasets.length) {
+                    return data.labels.map((label, i) => {
+                      const meta = chart.getDatasetMeta(0);
+                      const style = meta.controller.getStyle(i);
+                      return {
+                        text: label,
+                        fillStyle: style.backgroundColor,
+                        strokeStyle: style.borderColor,
+                        lineWidth: style.borderWidth,
+                        pointStyle: 'circle',
+                        hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                        index: i
+                      };
+                    });
+                  }
+                  return [];
+                }
+              }
+            },
+            datalabels:{
+              display: false // We'll use custom labels instead
+            }
+          }
+        },
+        plugins: [{
+          // Custom plugin to draw percentage labels on sides with connector lines
+          afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            const chartArea = chart.chartArea;
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+            
+            // Arrays to store labels for left and right sides
+            const leftLabels = [];
+            const rightLabels = [];
+            
+            // Categorize labels by side
+            meta.data.forEach((element, index) => {
+              const model = element;
+              const { startAngle, endAngle } = model;
+              const middleAngle = (startAngle + endAngle) / 2;
+              
+              // Determine which side (left or right)
+              const labelData = {
+                index: index,
+                angle: middleAngle,
+                value: chart.data.datasets[0].data[index],
+                label: chart.data.labels[index],
+                color: chart.data.datasets[0].backgroundColor[index]
+              };
+              
+              if (Math.cos(middleAngle) < 0) {
+                leftLabels.push(labelData);
+              } else {
+                rightLabels.push(labelData);
+              }
+            });
+            
+            // Sort labels by vertical position
+            leftLabels.sort((a, b) => Math.sin(a.angle) - Math.sin(b.angle));
+            rightLabels.sort((a, b) => Math.sin(a.angle) - Math.sin(b.angle));
+            
+            // Draw left side labels
+            const leftX = chartArea.left - 2;
+            const leftStartY = centerY - (leftLabels.length * 18) / 2;
+            
+            leftLabels.forEach((labelData, i) => {
+              const element = meta.data[labelData.index];
+              const { x, y, innerRadius, outerRadius } = element;
+              const middleRadius = (innerRadius + outerRadius) / 2;
+              const startX = x + Math.cos(labelData.angle) * middleRadius;
+              const startY = y + Math.sin(labelData.angle) * middleRadius;
+              const labelY = leftStartY + (i * 18);
+              
+              // Draw connector line (extremely short)
+              ctx.save();
+              ctx.strokeStyle = "#999";
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(startX, startY);
+              ctx.lineTo(leftX, labelY);
+              ctx.stroke();
+              ctx.restore();
+              
+              // Draw percentage box only
+              const percentage = totalStatus ? (labelData.value/totalStatus*100).toFixed(1) : 0;
+              const text = `${percentage}%`;
+              
+              ctx.save();
+              ctx.fillStyle = labelData.color;
+              ctx.fillRect(leftX - 18, labelY - 5, 22, 10);
+              ctx.fillStyle = "#fff";
+              ctx.font = "bold 8px Arial";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(text, leftX - 7, labelY);
+              ctx.restore();
+            });
+            
+            // Draw right side labels
+            const rightX = chartArea.right + 2;
+            const rightStartY = centerY - (rightLabels.length * 18) / 2;
+            
+            rightLabels.forEach((labelData, i) => {
+              const element = meta.data[labelData.index];
+              const { x, y, innerRadius, outerRadius } = element;
+              const middleRadius = (innerRadius + outerRadius) / 2;
+              const startX = x + Math.cos(labelData.angle) * middleRadius;
+              const startY = y + Math.sin(labelData.angle) * middleRadius;
+              const labelY = rightStartY + (i * 18);
+              
+              // Draw connector line (extremely short)
+              ctx.save();
+              ctx.strokeStyle = "#999";
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(startX, startY);
+              ctx.lineTo(rightX, labelY);
+              ctx.stroke();
+              ctx.restore();
+              
+              // Draw percentage box only
+              const percentage = totalStatus ? (labelData.value/totalStatus*100).toFixed(1) : 0;
+              const text = `${percentage}%`;
+              
+              ctx.save();
+              ctx.fillStyle = labelData.color;
+              ctx.fillRect(rightX - 4, labelY - 5, 22, 10);
+              ctx.fillStyle = "#fff";
+              ctx.font = "bold 8px Arial";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(text, rightX + 7, labelY);
+              ctx.restore();
+            });
+          }
+        }]
+      });
+    }
+
+    // OUTAGE ANALYSIS
+    function outageAnalysis(data){
+      console.log("=== Outage Analysis ===");
+      
+      const out = data.filter(r=>{
+        const ds=String(r["Down Sites"]||"").toLowerCase();
+        return ds.includes("site down")||ds.includes("sites down");
+      });
+      
+      console.log("Outage PCMs found:", out.length);
+      
+      document.getElementById("outage-total").innerText = out.length;
+      document.getElementById("outage-unique-sites").innerText =
+        new Set(out.map(r=>r["Site Name"])).size;
+
+      let em=0, te=0;
+      out.forEach(r=>{
+        const s = r["Skill"]==="Telecom"?"TE":r["Skill"];
+        if(s==="EM") em++; else if(s==="TE") te++;
+      });
+      const tot=em+te, pe=tot?em/tot*100:0, pt=tot?te/tot*100:0;
+      
+      // Destroy existing chart if it exists
+      if (chartInstances.outageTTChart) {
+        chartInstances.outageTTChart.destroy();
+      }
+      
+      chartInstances.outageTTChart = new Chart(document.getElementById("outage-tt-chart"),{
+        type:"bar",
+        data:{
+          labels:[""],
+          datasets:[
+            {label:"EM", data:[pe], backgroundColor:"#ffbb33"},
+            {label:"TE", data:[pt], backgroundColor:"#3366cc"}
+          ]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          indexAxis:"y",
+          scales:{ x:{stacked:true, display:false}, y:{stacked:true, display:false} },
+          plugins:{
+            legend:{
+              display:true, position:"top", align:"end",
+              labels:{ usePointStyle:true, boxWidth:8, font:{size:10}, padding:8 }
+            },
+            datalabels:{
+              color:"#fff", anchor:"center", align:"center",
+              font:{weight:"bold",size:10},
+              formatter:v=>v.toFixed(2)+"%"
+            }
+          }
+        }
+      });
+
+      const comp = out.filter(r=>r["pcm_status"]==="Completed"),
+            sub  = {};
+      comp.forEach(r=> sub[r["Sub Cause"]] = (sub[r["Sub Cause"]]||0)+1 );
+      const top5 = Object.entries(sub)
+                        .sort((a,b)=>b[1]-a[1])
+                        .slice(0,5);
+      
+      // Calculate total for percentage calculation
+      const totalSubCauses = top5.reduce((sum, [, count]) => sum + count, 0);
+      
+      // Destroy existing chart if it exists
+      if (chartInstances.outageSubcauseChart) {
+        chartInstances.outageSubcauseChart.destroy();
+      }
+      
+      chartInstances.outageSubcauseChart = new Chart(document.getElementById("outage-subcause-chart"),{
+        type:"bar",
+        data:{
+          labels: top5.map(r=>r[0]),
+          datasets:[{
+            data: top5.map(r=>r[1]),
+            backgroundColor:"#3366cc", barPercentage:0.6,
+            categoryPercentage:0.8, borderRadius:4
+          }]
+        },
+        options:{
+          indexAxis:"y", responsive:true, maintainAspectRatio:false,
+          scales:{
+            x:{ display:false, grid:{display:false} },
+            y:{ 
+              display:true, 
+              grid:{display:false}, 
+              ticks:{
+                font:{size:9}, 
+                padding:6,
+                textStrokeWidth: 0,
+                maxRotation: 0,
+                callback: function(value, index, values) {
+                  const label = this.getLabelForValue(value);
+                  return label.length > 20 ? label.substring(0, 17) + '...' : label;
+                }
+              },
+              position: 'left'
+            }
+          },
+          plugins:{
+            legend:{ display:false },
+            datalabels:{
+              display: true,
+              anchor:"end", 
+              align:"right", 
+              color:"#333",
+              font:{weight:"bold", size:9}, 
+              formatter:(value, context) => {
+                const percentage = totalSubCauses ? ((value / totalSubCauses) * 100).toFixed(1) : 0;
+                return `${percentage}%`;
+              },
+              clip: false
+            }
+          },
+          layout:{ padding:{left:20, right:30, top:8, bottom:8} }
+        }
+      });
+    }
+
+    // POWER & MTTR ANALYSIS
+    function powerMTTRAnalysis(data){
+      console.log("=== Power & MTTR Analysis ===");
+      
+      const keys=["1607","7402","65163","1550","65109","65038",
+                  "65106","65338","65037","7103","7409"];
+      const s1 = data.filter(r=>{
+        const id=String(r["Alarm ID"]||"").toLowerCase();
+        return keys.some(k=>id.includes(k))
+            || id.includes("main")
+            || id.includes("commercial");
+      });
+      const power = s1.filter(r=>{
+        const nm=String(r["Alarm Name"]||"").toLowerCase();
+        const ok = ["com","c. p"].some(t=>nm.includes(t))
+                || nm.startsWith("dc main")
+                || nm.includes("mains")
+                || nm.includes("main failure")
+                || nm.includes("main power")
+                || nm.startsWith("dc power");
+        return ok && !nm.includes("ac");
+      });
+
+      console.log("Power PCMs found:", power.length);
+
+      document.getElementById("power-total").innerText = power.length;
+      document.getElementById("power-unique-sites").innerText =
+        new Set(power.map(r=>r["Site Name"])).size;
+
+      // Get outage events (PCMs with "sites down" or "site down")
+      const outageEvents = data.filter(r=>{
+        const ds=String(r["Down Sites"]||"").toLowerCase();
+        return ds.includes("site down")||ds.includes("sites down");
+      }).map(r => ({
+        siteName: r["Site Name"],
+        createdAt: new Date(r["Created At"] || ""),
+        isValidDate: !isNaN(new Date(r["Created At"] || "").getTime())
+      })).filter(e => e.isValidDate);
+
+      // Categorize power PCMs as "Down" or "Saved"
+      const downPCMs = [];
+      const savedPCMs = [];
+
+      power.forEach(powerPCM => {
+        const powerSite = powerPCM["Site Name"];
+        const powerTime = new Date(powerPCM["Created At"] || "");
+        const isPowerTimeValid = !isNaN(powerTime.getTime());
+        
+        if (!isPowerTimeValid) {
+          savedPCMs.push(powerPCM); // Default to saved if no valid time
+          return;
+        }
+
+        // Check if there's an outage event for the same site within 24 hours
+        const hasOutageWithin24h = outageEvents.some(outage => {
+          if (outage.siteName !== powerSite) return false;
+          
+          const timeDiffMs = Math.abs(powerTime.getTime() - outage.createdAt.getTime());
+          const hours24InMs = 24 * 60 * 60 * 1000;
+          
+          return timeDiffMs <= hours24InMs;
+        });
+
+        if (hasOutageWithin24h) {
+          downPCMs.push(powerPCM);
+        } else {
+          savedPCMs.push(powerPCM);
+        }
+      });
+
+      document.getElementById("power-down").innerText = downPCMs.length;
+      document.getElementById("power-saved").innerText = savedPCMs.length;
+      
+      // Count unique sites for badges
+      document.getElementById("power-down-sites").innerText =
+        new Set(downPCMs.map(r=>r["Site Name"])).size;
+      document.getElementById("power-saved-sites").innerText =
+        new Set(savedPCMs.map(r=>r["Site Name"])).size;
+
+      // MTTR Calculation with specific filtering
+      const mttrPCMs = data.filter(r => {
+        // Filter completed PCMs
+        if (r["pcm_status"] !== "Completed") return false;
+        
+        // Filter FLM resolved owner
+        if (r["Resolved Owner"] !== "FLM") return false;
+        
+        // Ignore HC in TT Type
+        const ttType = String(r["TT Type"] || "").toLowerCase();
+        if (ttType.includes("hc")) return false;
+        
+        // Ignore HC in Title
+        const title = String(r["Title"] || "").toLowerCase();
+        if (title.includes("hc")) return false;
+        
+        // Ignore Health Check in Alarm Name
+        const alarmName = String(r["Alarm Name"] || "").toLowerCase();
+        if (alarmName.includes("health check")) return false;
+        
+        return true;
+      });
+
+      // Calculate MTTR using Fault Recovery Time and Created At
+      const mttrTimes = [];
+      mttrPCMs.forEach(r => {
+        const reportedTime = new Date(r["Created At"] || "");
+        const resolvedTime = new Date(r["Fault Recovery Time"] || "");
+        
+        if (!isNaN(reportedTime.getTime()) && !isNaN(resolvedTime.getTime())) {
+          const mttrMs = resolvedTime.getTime() - reportedTime.getTime();
+          if (mttrMs > 0) { // Only positive values
+            mttrTimes.push(Math.round(mttrMs / 1000)); // Convert to seconds
+          }
+        }
+      });
+
+      // Average MTTR for all PCMs
+      const avgMTTR = mttrTimes.length ? mttrTimes.reduce((a,b)=>a+b,0) / mttrTimes.length : 0;
+      document.getElementById("avg-mttr").innerText =
+        mttrTimes.length ? formatTime(avgMTTR) : "--";
+
+      // MTTR by Fault Level
+      const byLvl = {};
+      mttrPCMs.forEach(r => {
+        const l = r["Fault Level"];
+        if (!l || !["Emergency", "Critical", "Major", "Minor"].includes(l)) return;
+        
+        const reportedTime = new Date(r["Created At"] || "");
+        const resolvedTime = new Date(r["Fault Recovery Time"] || "");
+        
+        if (!isNaN(reportedTime.getTime()) && !isNaN(resolvedTime.getTime())) {
+          const mttrMs = resolvedTime.getTime() - reportedTime.getTime();
+          if (mttrMs > 0) {
+            (byLvl[l] = byLvl[l] || []).push(Math.round(mttrMs / 1000));
+          }
+        }
+      });
+
+      ["Emergency","Critical","Major","Minor"].forEach(l=>{
+        const arr = byLvl[l] || [];
+        const avgTime = arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
+        document.getElementById({
+          Emergency:"mttr-em",
+          Critical:"mttr-cr",
+          Major:"mttr-ma",
+          Minor:"mttr-mi"
+        }[l]).innerText = arr.length ? formatTime(avgTime) : "--";
+      });
+    }
+  </script>
+</body>
+</html>
