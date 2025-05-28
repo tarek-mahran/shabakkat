@@ -459,7 +459,62 @@
     let autoModeInterval = null;
     let isAutoMode = false;
     let originalData = []; // Store unfiltered data
+    let isLoading = false; // Prevent multiple simultaneous loads
     const AUTO_URL = "https://tarek-mahran.github.io/shabakkat/PCMS.xlsx";
+
+    // Loading state management
+    function showLoadingState() {
+      if (isLoading) return;
+      isLoading = true;
+      
+      // Add loading overlay
+      const loadingOverlay = document.createElement('div');
+      loadingOverlay.id = 'loading-overlay';
+      loadingOverlay.innerHTML = `
+        <div style="
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+          background: rgba(255,255,255,0.8); z-index: 9999; 
+          display: flex; align-items: center; justify-content: center;
+          backdrop-filter: blur(2px);
+        ">
+          <div style="
+            background: white; padding: 20px; border-radius: 8px; 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2); text-align: center;
+          ">
+            <div style="
+              width: 40px; height: 40px; border: 4px solid #f3f3f3;
+              border-top: 4px solid #109618; border-radius: 50%;
+              animation: spin 1s linear infinite; margin: 0 auto 10px;
+            "></div>
+            <div style="color: #333; font-weight: bold;">Loading PCMS Data...</div>
+            <div style="color: #666; font-size: 12px; margin-top: 5px;">Processing in background</div>
+          </div>
+        </div>
+      `;
+      
+      // Add loading animation CSS
+      if (!document.getElementById('loading-styles')) {
+        const style = document.createElement('style');
+        style.id = 'loading-styles';
+        style.textContent = `
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(loadingOverlay);
+    }
+
+    function hideLoadingState() {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+      isLoading = false;
+    }
 
     // Wait for DOM to be fully loaded before adding event listeners
     document.addEventListener('DOMContentLoaded', function() {
@@ -517,9 +572,15 @@
         }
       });
 
-      // Filter event listeners
-      document.getElementById("region-filter").addEventListener("change", applyFilters);
-      document.getElementById("subproject-filter").addEventListener("change", applyFilters);
+      // Filter event listeners with debouncing for better performance
+      let filterTimeout;
+      const debouncedApplyFilters = () => {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(applyFiltersAsync, 300); // 300ms delay
+      };
+      
+      document.getElementById("region-filter").addEventListener("change", debouncedApplyFilters);
+      document.getElementById("subproject-filter").addEventListener("change", debouncedApplyFilters);
 
       // Update interval when changed
       document.getElementById("refresh-interval").addEventListener("change", function() {
@@ -542,99 +603,236 @@
       }
     }
 
-    // Function to load data from URL
+    // Async data processing with chunking for better performance
+    async function processDataInChunks(rawData, chunkSize = 100) {
+      const results = [];
+      const totalChunks = Math.ceil(rawData.length / chunkSize);
+      
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = rawData.slice(i * chunkSize, (i + 1) * chunkSize);
+        const processedChunk = chunk.filter(r =>
+          hajjSiteIDs.has(String(r["Site Name"]).trim())
+        );
+        results.push(...processedChunk);
+        
+        // Yield control to browser to keep UI responsive
+        if (i % 5 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+      
+      return results;
+    }
+
+    // Enhanced function to load data from URL with background processing
     async function loadDataFromURL() {
+      if (isLoading) {
+        console.log("Already loading data, skipping...");
+        return;
+      }
+      
       try {
         await mappingLoaded;
+        showLoadingState();
         
         console.log("Loading data from URL...");
+        
+        // Fetch data asynchronously
         const response = await fetch(AUTO_URL);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        // Process file in background
         const arrayBuffer = await response.arrayBuffer();
+        
+        // Yield control to browser
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
         const wb = XLSX.read(arrayBuffer, {type: "array"});
         const ws = wb.Sheets[wb.SheetNames[0]];
         const raw = XLSX.utils.sheet_to_json(ws, {defval: ""});
-        const data = raw.filter(r =>
-          hajjSiteIDs.has(String(r["Site Name"]).trim())
-        );
+        
+        // Process data in chunks to avoid blocking
+        const data = await processDataInChunks(raw);
         
         // Store original data and populate filters
         originalData = data;
-        populateFilters(data);
+        
+        // Populate filters asynchronously
+        await populateFiltersAsync(data);
         
         console.log("Data loaded successfully:", data.length, "records");
-        clearDashboard();
-        renderDashboard(data);
         
-        // Update last refresh time (optional visual feedback)
+        // Render dashboard progressively
+        clearDashboard();
+        await renderDashboardAsync(data);
+        
+        // Update last refresh time
         console.log("Data refreshed at:", new Date().toLocaleTimeString());
         
       } catch (error) {
         console.error("Error loading data from URL:", error);
-        // Don't show alert in auto mode to avoid interrupting user
         if (isAutoMode) {
           console.log("Will retry on next interval...");
         } else {
           console.log("Failed to load initial data - user can upload file manually");
         }
-        throw error; // Re-throw for initialization error handling
+        throw error;
+      } finally {
+        hideLoadingState();
       }
     }
 
-    // Populate filter dropdowns with unique values from data
-    function populateFilters(data) {
-      // Get unique regions
-      const regions = [...new Set(data.map(row => String(row["Region"] || "").trim()).filter(Boolean))].sort();
-      const regionSelect = document.getElementById("region-filter");
-      regionSelect.innerHTML = '<option value="">All Regions</option>';
-      regions.forEach(region => {
-        const option = document.createElement("option");
-        option.value = region;
-        option.textContent = region;
-        regionSelect.appendChild(option);
-      });
+    // Enhanced populate filters with async processing
+    async function populateFiltersAsync(data) {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // Get unique regions
+          const regions = [...new Set(data.map(row => String(row["Region"] || "").trim()).filter(Boolean))].sort();
+          const regionSelect = document.getElementById("region-filter");
+          regionSelect.innerHTML = '<option value="">All Regions</option>';
+          regions.forEach(region => {
+            const option = document.createElement("option");
+            option.value = region;
+            option.textContent = region;
+            regionSelect.appendChild(option);
+          });
 
-      // Get unique sub projects
-      const subProjects = [...new Set(data.map(row => String(row["Sub Project"] || "").trim()).filter(Boolean))].sort();
-      const subProjectSelect = document.getElementById("subproject-filter");
-      subProjectSelect.innerHTML = '<option value="">All Sub Projects</option>';
-      subProjects.forEach(subProject => {
-        const option = document.createElement("option");
-        option.value = subProject;
-        option.textContent = subProject;
-        subProjectSelect.appendChild(option);
+          // Get unique sub projects
+          const subProjects = [...new Set(data.map(row => String(row["Sub Project"] || "").trim()).filter(Boolean))].sort();
+          const subProjectSelect = document.getElementById("subproject-filter");
+          subProjectSelect.innerHTML = '<option value="">All Sub Projects</option>';
+          subProjects.forEach(subProject => {
+            const option = document.createElement("option");
+            option.value = subProject;
+            option.textContent = subProject;
+            subProjectSelect.appendChild(option);
+          });
+          
+          resolve();
+        }, 0);
       });
     }
 
-    // Apply filters and update dashboard
-    function applyFilters() {
+    // Populate filter dropdowns with unique values from data (sync version for compatibility)
+    function populateFilters(data) {
+      populateFiltersAsync(data);
+    }
+
+    // Enhanced dashboard rendering with progressive loading
+    async function renderDashboardAsync(data) {
+      return new Promise(resolve => {
+        // Use requestAnimationFrame for smooth rendering
+        requestAnimationFrame(() => {
+          try {
+            renderDashboard(data);
+            resolve();
+          } catch (error) {
+            console.error("Error rendering dashboard:", error);
+            resolve();
+          }
+        });
+      });
+    }
+
+    // Performance monitoring
+    function measurePerformance(label, fn) {
+      return async (...args) => {
+        const start = performance.now();
+        try {
+          const result = await fn(...args);
+          const end = performance.now();
+          console.log(`${label} completed in ${(end - start).toFixed(2)}ms`);
+          return result;
+        } catch (error) {
+          const end = performance.now();
+          console.log(`${label} failed after ${(end - start).toFixed(2)}ms`);
+          throw error;
+        }
+      };
+    }
+
+    // Optimized chart cleanup for better memory management
+    function clearDashboardOptimized() {
+      // Clear existing charts more efficiently
+      Object.values(chartInstances).forEach(chart => {
+        try {
+          if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+          }
+        } catch (e) {
+          console.warn('Error destroying chart:', e);
+        }
+      });
+      chartInstances = {};
+
+      // Clear dashboard content efficiently
+      const dashboard = document.querySelector(".dashboard");
+      if (dashboard) {
+        // Use documentFragment for better performance
+        dashboard.innerHTML = "";
+      }
+    }
+
+    // Enhanced clear dashboard with performance optimization
+    function clearDashboard() {
+      requestAnimationFrame(clearDashboardOptimized);
+    }
+    async function applyFiltersAsync() {
+      if (isLoading) return;
+      
       const regionFilter = document.getElementById("region-filter").value;
       const subProjectFilter = document.getElementById("subproject-filter").value;
       
-      let filteredData = originalData;
-      
-      // Apply region filter
-      if (regionFilter) {
-        filteredData = filteredData.filter(row => 
-          String(row["Region"] || "").trim() === regionFilter
-        );
+      // Show mini loading state for filters
+      const dashboard = document.querySelector(".dashboard");
+      if (dashboard) {
+        dashboard.style.opacity = "0.7";
+        dashboard.style.pointerEvents = "none";
       }
       
-      // Apply sub project filter
-      if (subProjectFilter) {
-        filteredData = filteredData.filter(row => 
-          String(row["Sub Project"] || "").trim() === subProjectFilter
-        );
+      try {
+        // Process filtering in background
+        await new Promise(resolve => {
+          setTimeout(() => {
+            let filteredData = originalData;
+            
+            // Apply region filter
+            if (regionFilter) {
+              filteredData = filteredData.filter(row => 
+                String(row["Region"] || "").trim() === regionFilter
+              );
+            }
+            
+            // Apply sub project filter
+            if (subProjectFilter) {
+              filteredData = filteredData.filter(row => 
+                String(row["Sub Project"] || "").trim() === subProjectFilter
+              );
+            }
+            
+            console.log(`Filtered data: ${filteredData.length} records (Region: ${regionFilter || 'All'}, Sub Project: ${subProjectFilter || 'All'})`);
+            
+            // Update dashboard with filtered data
+            clearDashboard();
+            renderDashboard(filteredData);
+            
+            resolve();
+          }, 0);
+        });
+      } finally {
+        // Restore dashboard state
+        if (dashboard) {
+          dashboard.style.opacity = "1";
+          dashboard.style.pointerEvents = "auto";
+        }
       }
-      
-      console.log(`Filtered data: ${filteredData.length} records (Region: ${regionFilter || 'All'}, Sub Project: ${subProjectFilter || 'All'})`);
-      
-      // Update dashboard with filtered data
-      clearDashboard();
-      renderDashboard(filteredData);
+    }
+
+    // Apply filters and update dashboard (sync version)
+    function applyFilters() {
+      applyFiltersAsync();
     }
 
     // LOAD HAJJ SITE MAPPING
@@ -700,35 +898,70 @@
         // Only process manual file input if auto mode is off
         if (isAutoMode) return;
         
-        await mappingLoaded;
         const file = e.target.files[0];
         if (!file) return;
         
-        // Clear existing dashboard data
-        clearDashboard();
+        if (isLoading) {
+          console.log("Already processing data, please wait...");
+          return;
+        }
         
-        const rdr = new FileReader();
-        rdr.onload = ev=>{
-          try {
-            const wb  = XLSX.read(ev.target.result,{type:"binary"});
-            const ws  = wb.Sheets[wb.SheetNames[0]];
-            const raw = XLSX.utils.sheet_to_json(ws,{defval:""});
-            const data = raw.filter(r=>
-              hajjSiteIDs.has(String(r["Site Name"]).trim())
-            );
+        try {
+          await mappingLoaded;
+          showLoadingState();
+          
+          console.log("Processing manual file upload...");
+          
+          // Clear existing dashboard data
+          clearDashboard();
+          
+          // Process file asynchronously
+          const rdr = new FileReader();
+          
+          const processFile = new Promise((resolve, reject) => {
+            rdr.onload = async (ev) => {
+              try {
+                // Yield control to browser
+                await new Promise(resolve => setTimeout(resolve, 0));
+                
+                const wb = XLSX.read(ev.target.result, {type: "binary"});
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const raw = XLSX.utils.sheet_to_json(ws, {defval: ""});
+                
+                // Process data in chunks
+                const data = await processDataInChunks(raw);
+                
+                // Store original data and populate filters
+                originalData = data;
+                await populateFiltersAsync(data);
+                
+                console.log("Manual file loaded:", data.length, "records");
+                
+                // Render dashboard progressively
+                await renderDashboardAsync(data);
+                
+                resolve();
+              } catch (error) {
+                console.error("Error processing file:", error);
+                reject(error);
+              }
+            };
             
-            // Store original data and populate filters
-            originalData = data;
-            populateFilters(data);
-            
-            console.log("Manual file loaded:", data.length, "records");
-            renderDashboard(data);
-          } catch (error) {
-            console.error("Error processing file:", error);
-            alert("Error processing file. Please check the file format.");
-          }
-        };
-        rdr.readAsBinaryString(file);
+            rdr.onerror = () => reject(new Error("File reading failed"));
+          });
+          
+          // Start reading file
+          rdr.readAsBinaryString(file);
+          
+          // Wait for processing to complete
+          await processFile;
+          
+        } catch (error) {
+          console.error("Error processing manual file:", error);
+          alert("Error processing file. Please check the file format and try again.");
+        } finally {
+          hideLoadingState();
+        }
       });
 
     // EXPORT TO PDF
