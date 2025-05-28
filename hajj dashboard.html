@@ -108,6 +108,9 @@
       max-width: 1320px;
     }
     #controls button { margin-left:12px; padding:6px 12px; }
+    #controls select { margin-left:12px; padding:6px 10px; border-radius:4px; border:1px solid #ccc; }
+    #auto-mode-btn.active { background-color:#109618; color:white; }
+    #refresh-interval:disabled { opacity:0.6; cursor:not-allowed; }
 
     /* DASHBOARD GRID */
     .dashboard {
@@ -262,6 +265,40 @@
   <div id="controls">
     <input type="file" id="file-input" accept=".xlsx">
     <button id="export-btn">Export to PDF</button>
+    <button id="auto-mode-btn">Auto Mode: OFF</button>
+    <select id="refresh-interval" disabled>
+      <option value="30">30 seconds</option>
+      <option value="60">1 minute</option>
+      <option value="300" selected>5 minutes</option>
+      <option value="600">10 minutes</option>
+      <option value="900">15 minutes</option>
+      <option value="1800">30 minutes</option>
+      <option value="2700">45 minutes</option>
+      <option value="3600">1 hour</option>
+      <option value="7200">2 hours</option>
+      <option value="10800">3 hours</option>
+      <option value="14400">4 hours</option>
+      <option value="18000">5 hours</option>
+      <option value="21600">6 hours</option>
+      <option value="25200">7 hours</option>
+      <option value="28800">8 hours</option>
+      <option value="32400">9 hours</option>
+      <option value="36000">10 hours</option>
+      <option value="39600">11 hours</option>
+      <option value="43200">12 hours</option>
+      <option value="46800">13 hours</option>
+      <option value="50400">14 hours</option>
+      <option value="54000">15 hours</option>
+      <option value="57600">16 hours</option>
+      <option value="61200">17 hours</option>
+      <option value="64800">18 hours</option>
+      <option value="68400">19 hours</option>
+      <option value="72000">20 hours</option>
+      <option value="75600">21 hours</option>
+      <option value="79200">22 hours</option>
+      <option value="82800">23 hours</option>
+      <option value="86400">24 hours</option>
+    </select>
   </div>
 
   <div class="dashboard">
@@ -411,9 +448,15 @@
 
     // Global variable to store chart instances for proper cleanup
     let chartInstances = {};
+    let autoModeInterval = null;
+    let isAutoMode = false;
+    const AUTO_URL = "https://tarek-mahran.github.io/shabakkat/PCMS.xlsx";
 
     // Wait for DOM to be fully loaded before adding event listeners
     document.addEventListener('DOMContentLoaded', function() {
+      // Load initial data from URL on startup
+      initializeDashboard();
+      
       // Toggle controls visibility
       document.getElementById("toggle-controls").addEventListener("click", function() {
         const controls = document.getElementById("controls");
@@ -427,7 +470,102 @@
           toggleBtn.classList.remove("rotated");
         }
       });
+
+      // Auto Mode functionality
+      document.getElementById("auto-mode-btn").addEventListener("click", function() {
+        const btn = this;
+        const intervalSelect = document.getElementById("refresh-interval");
+        const fileInput = document.getElementById("file-input");
+        
+        if (!isAutoMode) {
+          // Enable Auto Mode
+          isAutoMode = true;
+          btn.textContent = "Auto Mode: ON";
+          btn.classList.add("active");
+          intervalSelect.disabled = false;
+          fileInput.disabled = true;
+          
+          // Load data immediately
+          loadDataFromURL();
+          
+          // Set up interval
+          const intervalSeconds = parseInt(intervalSelect.value);
+          autoModeInterval = setInterval(loadDataFromURL, intervalSeconds * 1000);
+          
+        } else {
+          // Disable Auto Mode
+          isAutoMode = false;
+          btn.textContent = "Auto Mode: OFF";
+          btn.classList.remove("active");
+          intervalSelect.disabled = true;
+          fileInput.disabled = false;
+          
+          // Clear interval
+          if (autoModeInterval) {
+            clearInterval(autoModeInterval);
+            autoModeInterval = null;
+          }
+        }
+      });
+
+      // Update interval when changed
+      document.getElementById("refresh-interval").addEventListener("change", function() {
+        if (isAutoMode && autoModeInterval) {
+          clearInterval(autoModeInterval);
+          const intervalSeconds = parseInt(this.value);
+          autoModeInterval = setInterval(loadDataFromURL, intervalSeconds * 1000);
+        }
+      });
     });
+
+    // Initialize dashboard with data on startup
+    async function initializeDashboard() {
+      try {
+        console.log("Initializing dashboard with data from URL...");
+        await loadDataFromURL();
+      } catch (error) {
+        console.error("Error initializing dashboard:", error);
+        console.log("Dashboard initialized with empty data - user can upload file manually");
+      }
+    }
+
+    // Function to load data from URL
+    async function loadDataFromURL() {
+      try {
+        await mappingLoaded;
+        
+        console.log("Loading data from URL...");
+        const response = await fetch(AUTO_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const wb = XLSX.read(arrayBuffer, {type: "array"});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, {defval: ""});
+        const data = raw.filter(r =>
+          hajjSiteIDs.has(String(r["Site Name"]).trim())
+        );
+        
+        console.log("Data loaded successfully:", data.length, "records");
+        clearDashboard();
+        renderDashboard(data);
+        
+        // Update last refresh time (optional visual feedback)
+        console.log("Data refreshed at:", new Date().toLocaleTimeString());
+        
+      } catch (error) {
+        console.error("Error loading data from URL:", error);
+        // Don't show alert in auto mode to avoid interrupting user
+        if (isAutoMode) {
+          console.log("Will retry on next interval...");
+        } else {
+          console.log("Failed to load initial data - user can upload file manually");
+        }
+        throw error; // Re-throw for initialization error handling
+      }
+    }
 
     // LOAD HAJJ SITE MAPPING
     const MAPPING_URL =
@@ -489,6 +627,9 @@
 
     document.getElementById("file-input")
       .addEventListener("change", async e=>{
+        // Only process manual file input if auto mode is off
+        if (isAutoMode) return;
+        
         await mappingLoaded;
         const file = e.target.files[0];
         if (!file) return;
@@ -505,7 +646,7 @@
             const data = raw.filter(r=>
               hajjSiteIDs.has(String(r["Site Name"]).trim())
             );
-            console.log("New data loaded:", data.length, "records");
+            console.log("Manual file loaded:", data.length, "records");
             renderDashboard(data);
           } catch (error) {
             console.error("Error processing file:", error);
@@ -518,17 +659,64 @@
     // EXPORT TO PDF
     document.getElementById("export-btn")
       .addEventListener("click", async ()=>{
-        const dash   = document.querySelector(".dashboard");
-        const canvas = await html2canvas(dash,{scale:2});
-        const img    = canvas.toDataURL("image/png");
-        const { jsPDF } = window.jspdf;
-        const pdf    = new jsPDF({
-          orientation:"landscape",
-          unit:"pt",
-          format:[canvas.width,canvas.height]
-        });
-        pdf.addImage(img,"PNG",0,0,canvas.width,canvas.height);
-        pdf.save("haj-pcms-overview.pdf");
+        // Hide elements that shouldn't be in PDF
+        const toggleBtn = document.getElementById("toggle-controls");
+        const controls = document.getElementById("controls");
+        const originalToggleDisplay = toggleBtn.style.display;
+        const originalControlsDisplay = controls.style.display;
+        
+        // Temporarily hide toggle button and controls
+        toggleBtn.style.display = "none";
+        controls.style.display = "none";
+        
+        try {
+          // Capture the entire page content
+          const canvas = await html2canvas(document.body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            scrollX: 0,
+            scrollY: 0,
+            width: window.innerWidth,
+            height: document.body.scrollHeight
+          });
+          
+          const img = canvas.toDataURL("image/png");
+          const { jsPDF } = window.jspdf;
+          
+          // Calculate PDF dimensions based on canvas
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+          const ratio = imgWidth / imgHeight;
+          
+          // Use A4 landscape or adjust based on content
+          let pdfWidth, pdfHeight;
+          if (ratio > 1.4) { // Wide content - use landscape
+            pdfWidth = Math.min(imgWidth * 0.75, 1200);
+            pdfHeight = pdfWidth / ratio;
+          } else { // Tall content - use portrait or custom size
+            pdfHeight = Math.min(imgHeight * 0.75, 1600);
+            pdfWidth = pdfHeight * ratio;
+          }
+          
+          const pdf = new jsPDF({
+            orientation: ratio > 1.4 ? "landscape" : "portrait",
+            unit: "pt",
+            format: [pdfWidth, pdfHeight]
+          });
+          
+          pdf.addImage(img, "PNG", 0, 0, pdfWidth, pdfHeight);
+          pdf.save("haj-pcms-overview.pdf");
+          
+        } catch (error) {
+          console.error("Error generating PDF:", error);
+          alert("Error generating PDF. Please try again.");
+        } finally {
+          // Restore original visibility
+          toggleBtn.style.display = originalToggleDisplay;
+          controls.style.display = originalControlsDisplay;
+        }
       });
 
     function formatTime(sec){
