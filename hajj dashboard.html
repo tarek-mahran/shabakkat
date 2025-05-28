@@ -497,11 +497,11 @@
           fileInput.disabled = true;
           
           // Load data immediately
-          loadDataFromURL();
+          loadDataFromURL(true); // Pass true to indicate Auto Mode loading
           
           // Set up interval
           const intervalSeconds = parseInt(intervalSelect.value);
-          autoModeInterval = setInterval(loadDataFromURL, intervalSeconds * 1000);
+          autoModeInterval = setInterval(() => loadDataFromURL(true), intervalSeconds * 1000);
           
         } else {
           // Disable Auto Mode
@@ -528,7 +528,7 @@
         if (isAutoMode && autoModeInterval) {
           clearInterval(autoModeInterval);
           const intervalSeconds = parseInt(this.value);
-          autoModeInterval = setInterval(loadDataFromURL, intervalSeconds * 1000);
+          autoModeInterval = setInterval(() => loadDataFromURL(true), intervalSeconds * 1000);
         }
       });
     });
@@ -537,11 +537,11 @@
     async function initializeDashboard() {
       try {
         // Show loading indicator
-        showLoadingIndicator();
+        showLoadingIndicator(false);
         console.log("Loading dashboard data in background...");
         
         // Load data without blocking UI
-        await loadDataFromURL();
+        await loadDataFromURL(false);
         
       } catch (error) {
         console.error("Error initializing dashboard:", error);
@@ -553,34 +553,58 @@
     }
 
     // Show loading indicator
-    function showLoadingIndicator() {
+    function showLoadingIndicator(isAutoMode = false) {
       const dashboard = document.querySelector('.dashboard');
       if (dashboard && !document.getElementById('loading-indicator')) {
         const loader = document.createElement('div');
         loader.id = 'loading-indicator';
+        
+        // Different styling for Auto Mode - less intrusive
+        const autoModeStyle = isAutoMode ? `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: rgba(16, 150, 24, 0.9);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          z-index: 1000;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ` : `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(255, 255, 255, 0.9);
+          padding: 20px 30px;
+          border-radius: 8px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+          z-index: 1000;
+          text-align: center;
+        `;
+        
+        const spinnerSize = isAutoMode ? '16px' : '40px';
+        const spinnerBorder = isAutoMode ? '2px' : '3px';
+        const spinnerColor = isAutoMode ? '#fff' : '#109618';
+        const spinnerBg = isAutoMode ? 'rgba(255,255,255,0.3)' : '#f3f3f3';
+        
         loader.innerHTML = `
-          <div style="
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            text-align: center;
-          ">
-            <div style="margin-bottom: 10px;">Loading PCMS Data...</div>
+          <div style="${autoModeStyle}">
+            ${!isAutoMode ? '<div style="margin-bottom: 10px;">Loading PCMS Data...</div>' : ''}
             <div style="
-              width: 40px;
-              height: 40px;
-              border: 3px solid #f3f3f3;
-              border-top: 3px solid #109618;
+              width: ${spinnerSize};
+              height: ${spinnerSize};
+              border: ${spinnerBorder} solid ${spinnerBg};
+              border-top: ${spinnerBorder} solid ${spinnerColor};
               border-radius: 50%;
               animation: spin 1s linear infinite;
-              margin: 0 auto;
+              ${!isAutoMode ? 'margin: 0 auto;' : ''}
             "></div>
+            ${isAutoMode ? '<span>Auto Refreshing...</span>' : ''}
           </div>
         `;
         document.body.appendChild(loader);
@@ -609,11 +633,14 @@
     }
 
     // Function to load data from URL (non-blocking)
-    async function loadDataFromURL() {
+    async function loadDataFromURL(isAutoModeRefresh = false) {
       try {
         await mappingLoaded;
         
-        console.log("Fetching data from URL...");
+        // Show appropriate loading indicator
+        showLoadingIndicator(isAutoModeRefresh);
+        
+        console.log(isAutoModeRefresh ? "Auto Mode: Refreshing data..." : "Fetching data from URL...");
         
         // Use fetch with timeout to prevent hanging
         const controller = new AbortController();
@@ -647,24 +674,30 @@
               originalData = data;
               populateFilters(data);
               
-              console.log("Data processed successfully:", data.length, "records");
+              console.log(isAutoModeRefresh ? "Auto refresh completed:" : "Data processed successfully:", data.length, "records");
               
               // Render dashboard in next tick for smooth UI
               requestAnimationFrame(() => {
                 clearDashboard();
                 renderDashboard(data);
                 console.log("Dashboard updated at:", new Date().toLocaleTimeString());
+                
+                // Hide loading indicator after rendering
+                setTimeout(() => hideLoadingIndicator(), 500);
               });
               
               resolve();
             } catch (error) {
               console.error("Error processing data:", error);
+              hideLoadingIndicator();
               resolve(); // Don't block on processing errors
             }
           }, 0);
         });
         
       } catch (error) {
+        hideLoadingIndicator();
+        
         if (error.name === 'AbortError') {
           console.error("Data loading timed out");
         } else {
@@ -672,7 +705,7 @@
         }
         
         // Don't show alert in auto mode to avoid interrupting user
-        if (isAutoMode) {
+        if (isAutoMode || isAutoModeRefresh) {
           console.log("Will retry on next interval...");
         } else {
           console.log("Failed to load data - user can upload file manually");
@@ -802,7 +835,7 @@
         if (!file) return;
         
         // Show loading indicator for manual uploads
-        showLoadingIndicator();
+        showLoadingIndicator(false);
         
         // Clear existing dashboard data
         clearDashboard();
