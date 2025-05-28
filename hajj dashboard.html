@@ -108,7 +108,9 @@
       max-width: 1320px;
     }
     #controls button { margin-left:12px; padding:6px 12px; }
-    #controls select { margin-left:12px; padding:6px 10px; border-radius:4px; border:1px solid #ccc; }
+    #controls select { margin-left:12px; padding:6px 10px; border-radius:4px; border:1px solid #ccc; background:#fff; }
+    #controls input[type="file"] { margin-right:12px; }
+    #region-filter, #subproject-filter { min-width:150px; }
     #auto-mode-btn.active { background-color:#109618; color:white; }
     #refresh-interval:disabled { opacity:0.6; cursor:not-allowed; }
 
@@ -264,6 +266,12 @@
 
   <div id="controls">
     <input type="file" id="file-input" accept=".xlsx">
+    <select id="region-filter">
+      <option value="">All Regions</option>
+    </select>
+    <select id="subproject-filter">
+      <option value="">All Sub Projects</option>
+    </select>
     <button id="export-btn">Export to PDF</button>
     <button id="auto-mode-btn">Auto Mode: OFF</button>
     <select id="refresh-interval" disabled>
@@ -450,6 +458,7 @@
     let chartInstances = {};
     let autoModeInterval = null;
     let isAutoMode = false;
+    let originalData = []; // Store unfiltered data
     const AUTO_URL = "https://tarek-mahran.github.io/shabakkat/PCMS.xlsx";
 
     // Wait for DOM to be fully loaded before adding event listeners
@@ -508,6 +517,10 @@
         }
       });
 
+      // Filter event listeners
+      document.getElementById("region-filter").addEventListener("change", applyFilters);
+      document.getElementById("subproject-filter").addEventListener("change", applyFilters);
+
       // Update interval when changed
       document.getElementById("refresh-interval").addEventListener("change", function() {
         if (isAutoMode && autoModeInterval) {
@@ -548,6 +561,10 @@
           hajjSiteIDs.has(String(r["Site Name"]).trim())
         );
         
+        // Store original data and populate filters
+        originalData = data;
+        populateFilters(data);
+        
         console.log("Data loaded successfully:", data.length, "records");
         clearDashboard();
         renderDashboard(data);
@@ -565,6 +582,59 @@
         }
         throw error; // Re-throw for initialization error handling
       }
+    }
+
+    // Populate filter dropdowns with unique values from data
+    function populateFilters(data) {
+      // Get unique regions
+      const regions = [...new Set(data.map(row => String(row["Region"] || "").trim()).filter(Boolean))].sort();
+      const regionSelect = document.getElementById("region-filter");
+      regionSelect.innerHTML = '<option value="">All Regions</option>';
+      regions.forEach(region => {
+        const option = document.createElement("option");
+        option.value = region;
+        option.textContent = region;
+        regionSelect.appendChild(option);
+      });
+
+      // Get unique sub projects
+      const subProjects = [...new Set(data.map(row => String(row["Sub Project"] || "").trim()).filter(Boolean))].sort();
+      const subProjectSelect = document.getElementById("subproject-filter");
+      subProjectSelect.innerHTML = '<option value="">All Sub Projects</option>';
+      subProjects.forEach(subProject => {
+        const option = document.createElement("option");
+        option.value = subProject;
+        option.textContent = subProject;
+        subProjectSelect.appendChild(option);
+      });
+    }
+
+    // Apply filters and update dashboard
+    function applyFilters() {
+      const regionFilter = document.getElementById("region-filter").value;
+      const subProjectFilter = document.getElementById("subproject-filter").value;
+      
+      let filteredData = originalData;
+      
+      // Apply region filter
+      if (regionFilter) {
+        filteredData = filteredData.filter(row => 
+          String(row["Region"] || "").trim() === regionFilter
+        );
+      }
+      
+      // Apply sub project filter
+      if (subProjectFilter) {
+        filteredData = filteredData.filter(row => 
+          String(row["Sub Project"] || "").trim() === subProjectFilter
+        );
+      }
+      
+      console.log(`Filtered data: ${filteredData.length} records (Region: ${regionFilter || 'All'}, Sub Project: ${subProjectFilter || 'All'})`);
+      
+      // Update dashboard with filtered data
+      clearDashboard();
+      renderDashboard(filteredData);
     }
 
     // LOAD HAJJ SITE MAPPING
@@ -646,6 +716,11 @@
             const data = raw.filter(r=>
               hajjSiteIDs.has(String(r["Site Name"]).trim())
             );
+            
+            // Store original data and populate filters
+            originalData = data;
+            populateFilters(data);
+            
             console.log("Manual file loaded:", data.length, "records");
             renderDashboard(data);
           } catch (error) {
