@@ -15,16 +15,98 @@
   <style>
     /* RESET & LAYOUT */
     * { box-sizing:border-box; margin:0; padding:0 }
-    body { font-family:Arial; padding:20px; color:#333; }
+    body { 
+      font-family:Arial; padding:20px; color:#333; 
+      background-image: url('https://tarek-mahran.github.io/shabakkat/HAJ_Dashboard_Background.png');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-position: center;
+      min-height: 100vh;
+    }
     h1 {
-      font-size:20px; font-weight:bold; text-align:center;
+      font-size:24px; font-weight:bold; text-align:center;
       margin-bottom:12px; position:relative;
+      color: #333; text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.75);
+      padding: 20px 30px; border-radius: 8px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 1320px;
+      margin: 0 auto 12px auto;
+    }
+    .logo {
+      height: 120px;
+      width: 250px;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .logo-left {
+      height: 85px;
+      width: 250px;
+      position: absolute;
+      left: 40px;
+      top: 52%;
+      transform: translateY(-50%);
+    }
+    
+    .toggle-btn {
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 30px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #bbb;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .toggle-btn:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: translateX(-50%) scale(1.1);
+    }
+    
+    .toggle-btn.rotated {
+      transform: translateX(-50%) rotate(180deg);
+    }
+    
+    .toggle-btn.rotated:hover {
+      transform: translateX(-50%) rotate(180deg) scale(1.1);
+    }
+    
+    .arrow-down {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #666;
     }
     h1::after {
-      content:""; display:block; height:1px; background:#777;
-      width:100%; margin-top:8px;
+      display: none;
     }
-    #controls { text-align:center; margin:20px 0; }
+    #controls { 
+      text-align:center; margin:20px auto; 
+      background: rgba(255, 255, 255, 0.75);
+      padding: 15px;
+      border-radius: 8px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      display: none;
+      max-width: 1320px;
+    }
     #controls button { margin-left:12px; padding:6px 12px; }
 
     /* DASHBOARD GRID */
@@ -39,6 +121,9 @@
     .card {
       border:1px solid #777; border-radius:10px;
       padding:16px; display:flex; flex-direction:column;
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
     .card h2 {
       font-size:16px; font-weight:bold; text-align:center;
@@ -57,6 +142,8 @@
       display:flex;
       flex-direction:column;
       justify-content:center;
+      background:rgba(255, 255, 255, 0.7);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .big-number { text-align:center; font-weight:300; font-size:40px; }
     .badge {
@@ -78,6 +165,8 @@
     .fault-box {
       border:1px solid #bbb; border-radius:6px;
       padding:12px 8px 8px; position:relative;
+      background:rgba(255, 255, 255, 0.7);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .fault-icon { position:absolute; top:8px; left:8px; font-size:18px; }
     .fault-value {
@@ -94,6 +183,8 @@
     .sub-box {
       border:1px solid #bbb; border-radius:6px;
       padding:8px; margin:12px 0; position:relative;
+      background:rgba(255, 255, 255, 0.7);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     /* STATUS BOX */
@@ -101,6 +192,8 @@
     .status-box {
       width:48%; border:1px solid #bbb; border-radius:6px;
       padding:16px 12px 24px; position:relative;
+      background:rgba(255, 255, 255, 0.7);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .status-icon {
       position:absolute; top:-12px; left:-12px;
@@ -115,17 +208,21 @@
     /* MTTR */
     .mttr-card { position:relative; padding-top:28px; }
     .mttr-header {
-      position:absolute; top:14px; left:34%;
-      transform:translateX(-23%);
+      position:absolute; top:14px; left:50%;
+      transform:translateX(-50%);
       background:#fff; color:#109618;
       padding:4px 12px; font-size:14px;
       border:1px solid #bbb; border-radius:4px;
       font-weight:bold;
+      white-space: nowrap;
+      text-align: center;
     }
     .mttr-main {
       border:1px solid #bbb; border-radius:6px;
       padding:20px; text-align:center; min-height:105px;
       display:flex; flex-direction:column; justify-content:center;
+      background:rgba(255, 255, 255, 0.7);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .mttr-main-value {
       font-size:36px; font-weight:300; margin-top:8px;
@@ -137,6 +234,8 @@
     .mttr-box {
       border:1px solid #bbb; border-radius:6px;
       padding:24px 8px 8px; position:relative;
+      background:rgba(255, 255, 255, 0.7);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .mttr-box .icon { position:absolute; top:-12px; left:8px; }
     .sub-value { text-align:center; font-size:24px; font-weight:300; margin-top:8px; }
@@ -151,7 +250,14 @@
   </style>
 </head>
 <body>
-  <h1>Haj PCMs Overview</h1>
+  <h1>
+    <img src="https://tarek-mahran.github.io/shabakkat/Shabakkat_Logo.png" alt="Shabakkat Logo" class="logo-left">
+    <span>Haj PCMs Overview</span>
+    <img src="https://tarek-mahran.github.io/shabakkat/HAJ_Dashboard_logo.png" alt="Hajj 1446 Logo" class="logo">
+    <button class="toggle-btn" id="toggle-controls">
+      <div class="arrow-down"></div>
+    </button>
+  </h1>
 
   <div id="controls">
     <input type="file" id="file-input" accept=".xlsx">
@@ -305,6 +411,23 @@
 
     // Global variable to store chart instances for proper cleanup
     let chartInstances = {};
+
+    // Wait for DOM to be fully loaded before adding event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      // Toggle controls visibility
+      document.getElementById("toggle-controls").addEventListener("click", function() {
+        const controls = document.getElementById("controls");
+        const toggleBtn = document.getElementById("toggle-controls");
+        
+        if (controls.style.display === "none" || controls.style.display === "") {
+          controls.style.display = "block";
+          toggleBtn.classList.add("rotated");
+        } else {
+          controls.style.display = "none";
+          toggleBtn.classList.remove("rotated");
+        }
+      });
+    });
 
     // LOAD HAJJ SITE MAPPING
     const MAPPING_URL =
