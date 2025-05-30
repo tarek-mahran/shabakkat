@@ -113,6 +113,66 @@
     #region-filter, #subproject-filter { min-width:150px; }
     #auto-mode-btn.active { background-color:#109618; color:white; }
     #refresh-interval:disabled { opacity:0.6; cursor:not-allowed; }
+    
+    .date-filter-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 12px;
+      margin-right: 12px;
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #f9f9f9;
+    }
+    
+    .date-filter-container label {
+      font-weight: bold;
+      color: #333;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    
+    .date-filter-container input[type="datetime-local"] {
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12px;
+      background: white;
+      min-width: 180px;
+      font-family: monospace;
+    }
+    
+    .date-filter-container input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+    }
+    
+    .date-filter-container input[type="datetime-local"]:focus {
+      border-color: #109618;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(16, 150, 24, 0.2);
+    }
+    
+    .date-filter-container span {
+      color: #666;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .date-filter-container button {
+      padding: 4px 10px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      margin: 0;
+    }
+    
+    .date-filter-container button:hover {
+      background: #ff5252;
+    }
 
     /* DASHBOARD GRID */
     .dashboard {
@@ -266,6 +326,13 @@
 
   <div id="controls">
     <input type="file" id="file-input" accept=".xlsx">
+    <div class="date-filter-container">
+      <label>Time Filter:</label>
+      <input type="datetime-local" id="date-from" step="60" placeholder="YYYY-MM-DD HH:MM">
+      <span>to</span>
+      <input type="datetime-local" id="date-to" step="60" placeholder="YYYY-MM-DD HH:MM">
+      <button id="clear-dates">Clear</button>
+    </div>
     <select id="region-filter">
       <option value="">All Regions</option>
     </select>
@@ -520,6 +587,13 @@
       });
 
       // Filter event listeners
+      document.getElementById("date-from").addEventListener("change", applyFilters);
+      document.getElementById("date-to").addEventListener("change", applyFilters);
+      document.getElementById("clear-dates").addEventListener("click", clearDateFilter);
+      
+      // Setup time picker behavior
+      setupDateTimePickers();
+      
       document.getElementById("region-filter").addEventListener("change", applyFilters);
       document.getElementById("subproject-filter").addEventListener("change", applyFilters);
 
@@ -739,12 +813,116 @@
       });
     }
 
+    // Setup datetime picker behavior
+    function setupDateTimePickers() {
+      const dateFromInput = document.getElementById("date-from");
+      const dateToInput = document.getElementById("date-to");
+      
+      // Helper function to format datetime for input (YYYY-MM-DDTHH:MM)
+      function formatDateTimeLocal(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+      
+      // When date-from is clicked without a value, set time to 00:00
+      dateFromInput.addEventListener("focus", function() {
+        if (!this.value) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Set to 00:00
+          this.value = formatDateTimeLocal(today);
+        }
+      });
+      
+      // When date-to is clicked without a value, set time to 23:59
+      dateToInput.addEventListener("focus", function() {
+        if (!this.value) {
+          const today = new Date();
+          today.setHours(23, 59, 0, 0); // Set to 23:59
+          this.value = formatDateTimeLocal(today);
+        }
+      });
+      
+      // Add input event listeners to show format helper
+      [dateFromInput, dateToInput].forEach(input => {
+        input.addEventListener("input", function() {
+          // Optional: Add visual feedback for valid format
+          if (this.value) {
+            this.style.color = "#333";
+          }
+        });
+      });
+    }
+
+    // Clear date filter
+    function clearDateFilter() {
+      document.getElementById("date-from").value = "";
+      document.getElementById("date-to").value = "";
+      applyFilters();
+    }
+
     // Apply filters and update dashboard
     function applyFilters() {
+      const dateFrom = document.getElementById("date-from").value;
+      const dateTo = document.getElementById("date-to").value;
       const regionFilter = document.getElementById("region-filter").value;
       const subProjectFilter = document.getElementById("subproject-filter").value;
       
       let filteredData = originalData;
+      
+      // Apply date filter
+      if (dateFrom || dateTo) {
+        filteredData = filteredData.filter(row => {
+          const createdAt = row["Created At"];
+          if (!createdAt) return false;
+          
+          // Parse the date - handle various date formats
+          let rowDate;
+          try {
+            // If it's already a Date object
+            if (createdAt instanceof Date) {
+              rowDate = createdAt;
+            } 
+            // If it's a string, try to parse it
+            else if (typeof createdAt === 'string') {
+              // Handle various date formats that might come from Excel
+              rowDate = new Date(createdAt);
+            }
+            // If it's a number (Excel serial date)
+            else if (typeof createdAt === 'number') {
+              // Excel date serial number conversion
+              rowDate = new Date((createdAt - 25569) * 86400 * 1000);
+            }
+            else {
+              return false;
+            }
+            
+            // Check if date is valid
+            if (isNaN(rowDate.getTime())) {
+              return false;
+            }
+            
+            // Apply date range filter
+            if (dateFrom) {
+              const fromDate = new Date(dateFrom);
+              if (rowDate < fromDate) return false;
+            }
+            
+            if (dateTo) {
+              const toDate = new Date(dateTo);
+              if (rowDate > toDate) return false;
+            }
+            
+            return true;
+          } catch (error) {
+            console.warn("Error parsing date:", createdAt, error);
+            return false;
+          }
+        });
+      }
       
       // Apply region filter
       if (regionFilter) {
@@ -760,7 +938,15 @@
         );
       }
       
-      console.log(`Filtered data: ${filteredData.length} records (Region: ${regionFilter || 'All'}, Sub Project: ${subProjectFilter || 'All'})`);
+      // Log filter details with formatted dates
+      let dateRangeText = 'Any';
+      if (dateFrom || dateTo) {
+        const fromText = dateFrom ? new Date(dateFrom).toLocaleString() : 'Beginning';
+        const toText = dateTo ? new Date(dateTo).toLocaleString() : 'End';
+        dateRangeText = `${fromText} to ${toText}`;
+      }
+      
+      console.log(`Filtered data: ${filteredData.length} records (Time: ${dateRangeText}, Region: ${regionFilter || 'All'}, Sub Project: ${subProjectFilter || 'All'})`);
       
       // Update dashboard with filtered data
       clearDashboard();
