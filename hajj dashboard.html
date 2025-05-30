@@ -18,23 +18,48 @@
   <style>
     /* RESET & LAYOUT */
     * { box-sizing:border-box; margin:0; padding:0 }
+    
+    /* Video Background */
+    #background-video {
+      position: fixed;
+      top: -5%;
+      left: -5%;
+      width: 110%;
+      height: 110%;
+      object-fit: cover;
+      z-index: -1;
+      opacity: 0.8;
+      filter: brightness(1.2) contrast(1.1);
+      transform: scale(1.05);
+    }
+    
     body { 
       font-family:Arial; padding:20px; color:#333; 
-      background-image: url('https://tarek-mahran.github.io/shabakkat/HAJ_Dashboard_Background.png');
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-      background-position: center;
       min-height: 100vh;
+      position: relative;
     }
+    
+    /* Overlay to improve readability */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
     h1 {
       font-size:24px; font-weight:bold; text-align:center;
       margin-bottom:12px; position:relative;
-      color: #333; text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
-      background: rgba(255, 255, 255, 0.75);
+      color: #333; text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.85);
       padding: 20px 30px; border-radius: 8px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
       min-height: 100px;
       display: flex;
       align-items: center;
@@ -66,14 +91,14 @@
       transform: translateX(-50%);
       width: 30px;
       height: 30px;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       border: 1px solid #bbb;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
       transition: all 0.3s ease;
     }
     
@@ -102,11 +127,11 @@
     }
     #controls { 
       text-align:center; margin:20px auto; 
-      background: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.85);
       padding: 15px;
       border-radius: 8px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
       display: none;
       max-width: 1320px;
     }
@@ -186,9 +211,9 @@
     .card {
       border:1px solid #777; border-radius:10px;
       padding:16px; display:flex; flex-direction:column;
-      background:rgba(255, 255, 255, 0.8);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      background:rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
     }
     .card h2 {
       font-size:16px; font-weight:bold; text-align:center;
@@ -207,8 +232,9 @@
       display:flex;
       flex-direction:column;
       justify-content:center;
-      background:rgba(255, 255, 255, 0.7);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
     .big-number { text-align:center; font-weight:300; font-size:40px; }
     .badge {
@@ -230,8 +256,9 @@
     .fault-box {
       border:1px solid #bbb; border-radius:6px;
       padding:12px 8px 8px; position:relative;
-      background:rgba(255, 255, 255, 0.7);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
     .fault-icon { position:absolute; top:8px; left:8px; font-size:18px; }
     .fault-value {
@@ -248,8 +275,9 @@
     .sub-box {
       border:1px solid #bbb; border-radius:6px;
       padding:8px; margin:12px 0; position:relative;
-      background:rgba(255, 255, 255, 0.7);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
 
     /* STATUS BOX */
@@ -257,8 +285,9 @@
     .status-box {
       width:48%; border:1px solid #bbb; border-radius:6px;
       padding:16px 12px 24px; position:relative;
-      background:rgba(255, 255, 255, 0.7);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
     .status-icon {
       position:absolute; top:-12px; left:-12px;
@@ -286,8 +315,9 @@
       border:1px solid #bbb; border-radius:6px;
       padding:20px; text-align:center; min-height:105px;
       display:flex; flex-direction:column; justify-content:center;
-      background:rgba(255, 255, 255, 0.7);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
     .mttr-main-value {
       font-size:36px; font-weight:300; margin-top:8px;
@@ -299,8 +329,9 @@
     .mttr-box {
       border:1px solid #bbb; border-radius:6px;
       padding:24px 8px 8px; position:relative;
-      background:rgba(255, 255, 255, 0.7);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background:rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
     .mttr-box .icon { position:absolute; top:-12px; left:8px; }
     .sub-value { text-align:center; font-size:24px; font-weight:300; margin-top:8px; }
@@ -315,6 +346,13 @@
   </style>
 </head>
 <body>
+  <!-- Background Video -->
+  <video id="background-video" autoplay muted loop playsinline>
+    <source src="https://tarek-mahran.github.io/shabakkat/Haj_Background_Video.mp4" type="video/mp4">
+    <!-- Fallback for browsers that don't support video -->
+    Your browser does not support the video tag.
+  </video>
+
   <h1>
     <img src="https://tarek-mahran.github.io/shabakkat/Shabakkat_Logo.png" alt="Shabakkat Logo" class="logo-left">
     <span>Haj PCMs Overview</span>
@@ -621,6 +659,25 @@
           const intervalSeconds = parseInt(this.value);
           autoModeInterval = setInterval(() => loadDataFromURL(true), intervalSeconds * 1000);
         }
+      });
+
+      // Video error handling
+      const video = document.getElementById('background-video');
+      video.addEventListener('error', function(e) {
+        console.warn('Background video failed to load:', e);
+        // Optionally add a fallback background image
+        document.body.style.backgroundImage = "url('https://tarek-mahran.github.io/shabakkat/HAJ_Dashboard_Background.png')";
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundRepeat = "no-repeat";
+        document.body.style.backgroundAttachment = "fixed";
+        document.body.style.backgroundPosition = "center";
+      });
+
+      // Ensure video plays on user interaction (for mobile compatibility)
+      video.addEventListener('canplay', function() {
+        video.play().catch(function(error) {
+          console.warn('Video autoplay failed:', error);
+        });
       });
     });
 
@@ -1097,12 +1154,30 @@
         // Hide elements that shouldn't be in PDF
         const toggleBtn = document.getElementById("toggle-controls");
         const controls = document.getElementById("controls");
+        const video = document.getElementById("background-video");
         const originalToggleDisplay = toggleBtn.style.display;
         const originalControlsDisplay = controls.style.display;
+        const originalVideoDisplay = video.style.display;
         
-        // Temporarily hide toggle button and controls
+        // Temporarily hide toggle button, controls, and video
         toggleBtn.style.display = "none";
         controls.style.display = "none";
+        video.style.display = "none";
+        
+        // Add temporary background for PDF
+        const tempBackground = document.createElement('div');
+        tempBackground.style.position = 'fixed';
+        tempBackground.style.top = '0';
+        tempBackground.style.left = '0';
+        tempBackground.style.width = '100%';
+        tempBackground.style.height = '100%';
+        tempBackground.style.backgroundImage = "url('https://tarek-mahran.github.io/shabakkat/HAJ_Dashboard_Background.png')";
+        tempBackground.style.backgroundSize = 'cover';
+        tempBackground.style.backgroundRepeat = 'no-repeat';
+        tempBackground.style.backgroundPosition = 'center';
+        tempBackground.style.zIndex = '-2';
+        tempBackground.id = 'temp-pdf-background';
+        document.body.insertBefore(tempBackground, document.body.firstChild);
         
         try {
           // Capture the entire page content
@@ -1151,6 +1226,13 @@
           // Restore original visibility
           toggleBtn.style.display = originalToggleDisplay;
           controls.style.display = originalControlsDisplay;
+          video.style.display = originalVideoDisplay;
+          
+          // Remove temporary background
+          const tempBg = document.getElementById('temp-pdf-background');
+          if (tempBg) {
+            tempBg.remove();
+          }
         }
       });
 
