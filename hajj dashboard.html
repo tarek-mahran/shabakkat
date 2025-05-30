@@ -12,6 +12,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+  <!-- Flatpickr DateTime Picker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <style>
     /* RESET & LAYOUT */
     * { box-sizing:border-box; margin:0; padding:0 }
@@ -114,65 +117,62 @@
     #auto-mode-btn.active { background-color:#109618; color:white; }
     #refresh-interval:disabled { opacity:0.6; cursor:not-allowed; }
     
+    
     .date-filter-container {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      margin-left: 12px;
-      margin-right: 12px;
-      padding: 6px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      background: #f9f9f9;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin: 0 12px;
     }
-    
+
     .date-filter-container label {
-      font-weight: bold;
+      font-weight: 600;
       color: #333;
-      font-size: 12px;
-      white-space: nowrap;
+      font-size: 14px;
+      margin-right: 4px;
     }
-    
-    .date-filter-container input[type="datetime-local"] {
-      padding: 4px 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 12px;
-      background: white;
-      min-width: 180px;
+
+    .date-filter-container input[type="text"] {
+      width: 140px;
+      padding: 6px 8px;
+      border: none;
+      border-radius: 6px;
+      background: #f1f3f5;
+      text-align: center;
       font-family: monospace;
+      font-size: 13px;
     }
-    
-    .date-filter-container input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-      cursor: pointer;
-    }
-    
-    .date-filter-container input[type="datetime-local"]:focus {
-      border-color: #109618;
+
+    .date-filter-container input[type="text"]:focus {
       outline: none;
-      box-shadow: 0 0 0 2px rgba(16, 150, 24, 0.2);
+      box-shadow: 0 0 0 2px rgba(16,150,24,0.3);
     }
-    
+
     .date-filter-container span {
+      margin: 0 4px;
       color: #666;
-      font-size: 12px;
-      font-weight: bold;
+      font-size: 14px;
     }
-    
+
     .date-filter-container button {
-      padding: 4px 10px;
+      padding: 6px 10px;
       background: #ff6b6b;
       color: white;
       border: none;
-      border-radius: 4px;
-      font-size: 11px;
+      border-radius: 6px;
+      font-size: 12px;
       cursor: pointer;
-      margin: 0;
     }
-    
+
     .date-filter-container button:hover {
       background: #ff5252;
     }
+
 
     /* DASHBOARD GRID */
     .dashboard {
@@ -328,9 +328,9 @@
     <input type="file" id="file-input" accept=".xlsx">
     <div class="date-filter-container">
       <label>Time Filter:</label>
-      <input type="datetime-local" id="date-from" step="60" placeholder="YYYY-MM-DD HH:MM">
+      <input type="text" id="date-from" step="60" placeholder="YYYY-MM-DD HH:MM">
       <span>to</span>
-      <input type="datetime-local" id="date-to" step="60" placeholder="YYYY-MM-DD HH:MM">
+      <input type="text" id="date-to" step="60" placeholder="YYYY-MM-DD HH:MM">
       <button id="clear-dates">Clear</button>
     </div>
     <select id="region-filter">
@@ -596,6 +596,23 @@
       
       document.getElementById("region-filter").addEventListener("change", applyFilters);
       document.getElementById("subproject-filter").addEventListener("change", applyFilters);
+      // Initialize Flatpickr on date filter inputs
+      flatpickr("#date-from", {
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:i",
+        defaultHour: 0,
+        defaultMinute: 0,
+        onChange: applyFilters
+      });
+      flatpickr("#date-to", {
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:i",
+        defaultHour: 23,
+        defaultMinute: 59,
+        onChange: applyFilters
+      });
 
       // Update interval when changed
       document.getElementById("refresh-interval").addEventListener("change", function() {
@@ -857,7 +874,21 @@
       });
     }
 
+    
+    // Helper function to format date/time for display (YYYY-MM-DD HH:MM)
+    function formatDateTimeDisplay(dateStr) {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
     // Clear date filter
+
     function clearDateFilter() {
       document.getElementById("date-from").value = "";
       document.getElementById("date-to").value = "";
@@ -941,8 +972,8 @@
       // Log filter details with formatted dates
       let dateRangeText = 'Any';
       if (dateFrom || dateTo) {
-        const fromText = dateFrom ? new Date(dateFrom).toLocaleString() : 'Beginning';
-        const toText = dateTo ? new Date(dateTo).toLocaleString() : 'End';
+        const fromText = dateFrom ? formatDateTimeDisplay(dateFrom) : 'Beginning';
+        const toText = dateTo ? formatDateTimeDisplay(dateTo) : 'End';
         dateRangeText = `${fromText} to ${toText}`;
       }
       
