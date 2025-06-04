@@ -1,0 +1,764 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html expr:dir='data:blog.languageDirection' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+<head>
+  <!-- MOBILE OPTIMIZATION: Better responsive viewport -->
+  <meta content='width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=3.0, user-scalable=yes' name='viewport'/>
+  
+  <!-- SPEED OPTIMIZATION: DNS Prefetch -->
+  <link href='//tarek-mahran.github.io' rel='dns-prefetch'/>
+  <link href='//apis.google.com' rel='dns-prefetch'/>
+  <link href='//pagead2.googlesyndication.com' rel='dns-prefetch'/>
+  
+  <!-- SPEED OPTIMIZATION: Preload critical resources -->
+  <link as='document' href='https://tarek-mahran.github.io/shabakkat/hajj%20dashboard.html' rel='preload'/>
+  
+  <b:if cond='data:blog.url == data:blog.homepageUrl'>
+    <meta content='Haj Dashboard' name='description'/>
+    <meta content='Haj Dashboard' name='keywords'/>
+    <meta content='https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj4mw3DWgEFR7TiFs-GI1_UOcA7PIQGc-PnxJs7rWBBm6XGtmsJghgF3-afwIHr8Ta8wkPAyuTBGww-q2gIDh5QOEbKcUJmASqFhqbRKXuizx_lcct3NfW0-E0yO5cfrXgLgx_QI0JAbg-s-WJaXPCTDYechvY8uACActpUJOUgSGaDJphoQ2jb8-q4yCAH/s3334/haj-pcms-overview%20%282%29-1.png' name='og:image'/>
+    <meta content='global' name='distribution'/>
+    <meta content='10 days' name='revisit'/>
+    <meta content='10 days' name='revisit-after'/>
+    <meta content='document' name='resource-type'/>
+    <meta content='all' name='audience'/>
+    <meta content='general' name='rating'/>
+    <meta content='all' name='robots'/>
+    <meta content='index, follow' name='robots'/>
+    <meta content='ar' name='language'/>
+  </b:if>
+
+  <b:include data='blog' name='all-head-content'/>
+
+  <b:if cond='data:blog.pageType == &quot;item&quot;'>
+    <title><data:blog.pageName/></title>
+  <b:else/>
+    <title><data:blog.pageTitle/></title>
+  </b:if>
+    
+  <!-- FAVICON SECTION - MULTIPLE SOLUTIONS -->
+  
+  <!-- Solution 1: Use Blogger's built-in favicon (RECOMMENDED) -->
+  <b:if cond='data:blog.blogspotFaviconUrl'>
+    <link expr:href='data:blog.blogspotFaviconUrl' rel='icon' type='image/x-icon'/>
+    <link expr:href='data:blog.blogspotFaviconUrl' rel='shortcut icon' type='image/x-icon'/>
+  </b:if>
+  
+  <!-- Solution 2: Force favicon with JavaScript -->
+  <script type='text/javascript'>
+    //<![CDATA[
+    (function() {
+      function addFavicon() {
+        // Remove existing favicons
+        var existingIcons = document.querySelectorAll('link[rel*="icon"]');
+        existingIcons.forEach(function(icon) {
+          if (icon.href.indexOf('dashboard') === -1 && icon.href.indexOf('blogspot') === -1) {
+            icon.remove();
+          }
+        });
+        
+        // Add custom favicon
+        var link = document.createElement('link');
+        link.rel = 'shortcut icon';
+        link.type = 'image/x-icon';
+        // Try multiple URLs
+        var faviconUrls = [
+          'https://raw.githubusercontent.com/tarek-mahran/shabakkat/main/dashboard.ico',
+          'https://tarek-mahran.github.io/shabakkat/dashboard.ico',
+          'data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        ];
+        
+        function tryNextUrl(index) {
+          if (index >= faviconUrls.length) return;
+          
+          link.href = faviconUrls[index];
+          link.onerror = function() {
+            tryNextUrl(index + 1);
+          };
+          
+          document.head.appendChild(link.cloneNode());
+        }
+        
+        tryNextUrl(0);
+      }
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addFavicon);
+      } else {
+        addFavicon();
+      }
+    })();
+    //]]>
+  </script>
+
+  <b:skin><![CDATA[
+    /* Hide default navbar and feeds */
+    #navbar, body#layout #navbar, .blog-feeds, .post-feeds, .sha_bu {
+      display: none !important;
+    }
+
+    /* SPEED OPTIMIZATION: GPU acceleration */
+    body {
+      background: #ffffff;
+      margin: 0; 
+      padding: 0;
+      transform: translateZ(0); /* Force GPU acceleration */
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* SPEED OPTIMIZATION: Optimized iframe container */
+    #pctemp {
+      overflow: auto;
+      position: relative;
+      will-change: transform; /* Optimize for animations */
+      contain: layout style paint; /* CSS containment for performance */
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Super Modern Footer credit styling */
+    #footer-credit {
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(255, 107, 53, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(75, 108, 183, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+        linear-gradient(135deg, 
+          rgba(10, 10, 25, 0.95) 0%, 
+          rgba(25, 35, 65, 0.9) 25%,
+          rgba(45, 65, 125, 0.85) 50%, 
+          rgba(85, 45, 15, 0.9) 75%,
+          rgba(15, 15, 30, 0.95) 100%
+        );
+      backdrop-filter: blur(25px) saturate(180%);
+      -webkit-backdrop-filter: blur(25px) saturate(180%);
+      color: white;
+      text-align: center;
+      padding: 15px 40px;
+      font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: 1.2px;
+      position: relative;
+      z-index: 1000;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-image: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 107, 53, 0.5) 25%, 
+        rgba(75, 108, 183, 0.5) 50%, 
+        rgba(139, 69, 19, 0.5) 75%, 
+        transparent 100%
+      ) 1;
+      box-shadow: 
+        0 -20px 60px rgba(0, 0, 0, 0.4),
+        0 -10px 30px rgba(75, 108, 183, 0.15),
+        0 -5px 15px rgba(255, 107, 53, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+      overflow: hidden;
+      transform: translateZ(0);
+      will-change: transform, box-shadow;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Animated background particles */
+    #footer-credit::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(255, 107, 53, 0.08) 0%, transparent 25%),
+        radial-gradient(circle at 30% 70%, rgba(75, 108, 183, 0.06) 0%, transparent 30%),
+        radial-gradient(circle at 70% 30%, rgba(139, 69, 19, 0.04) 0%, transparent 35%);
+      animation: particles 8s ease-in-out infinite;
+      opacity: 0.6;
+    }
+
+    /* Animated top border */
+    #footer-credit::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(
+        90deg, 
+        transparent 0%,
+        #ff6b35 15%,
+        #f7931e 25%,
+        #4B6CB7 50%,
+        #182848 65%,
+        #8b4513 85%,
+        transparent 100%
+      );
+      background-size: 300% 100%;
+      animation: gradient-flow 6s ease-in-out infinite;
+      filter: blur(0.5px);
+    }
+
+    /* Hover effect with 3D transform */
+    #footer-credit:hover {
+      transform: translateY(-3px) translateZ(10px) rotateX(2deg);
+      box-shadow: 
+        0 -25px 80px rgba(0, 0, 0, 0.5),
+        0 -15px 40px rgba(75, 108, 183, 0.25),
+        0 -8px 25px rgba(255, 107, 53, 0.2),
+        inset 0 2px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(30px) saturate(200%);
+      -webkit-backdrop-filter: blur(30px) saturate(200%);
+    }
+
+    #footer-credit:hover::before {
+      opacity: 0.8;
+      animation-duration: 4s;
+    }
+
+    /* Author link styling - Super enhanced */
+    #author-link {
+      position: relative;
+      z-index: 3;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.05em;
+      background: linear-gradient(
+        135deg,
+        #ff6b35 0%,
+        #ff8a50 25%,
+        #f7931e 50%,
+        #ffab40 75%,
+        #ff6b35 100%
+      );
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: author-pulse 3s ease-in-out infinite;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+      padding: 6px 12px;
+      margin: 0 6px;
+      border-radius: 25px;
+      display: inline-block;
+      transform: translateZ(0);
+      will-change: transform, filter;
+    }
+
+    /* Glowing background for author link */
+    #author-link::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 107, 53, 0.3) 0%,
+        rgba(247, 147, 30, 0.2) 50%,
+        rgba(255, 171, 64, 0.3) 100%
+      );
+      border-radius: 27px;
+      z-index: -1;
+      opacity: 0;
+      filter: blur(8px);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    #author-link:hover {
+      transform: translateY(-2px) translateZ(5px) scale(1.05);
+      filter: 
+        drop-shadow(0 8px 25px rgba(255, 107, 53, 0.4))
+        drop-shadow(0 4px 15px rgba(247, 147, 30, 0.3))
+        brightness(1.2)
+        contrast(1.1);
+      text-shadow: 
+        0 0 20px rgba(255, 107, 53, 0.6),
+        0 0 40px rgba(255, 107, 53, 0.3);
+    }
+
+    #author-link:hover::before {
+      opacity: 1;
+      transform: scale(1.1);
+      filter: blur(12px);
+    }
+
+    #author-link:active {
+      transform: translateY(-1px) translateZ(2px) scale(1.02);
+      transition: all 0.1s cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    /* Floating animation for "Created By" text */
+    #footer-credit > span, #footer-credit {
+      animation: float-text 4s ease-in-out infinite;
+    }
+
+    /* Enhanced keyframe animations */
+    @keyframes particles {
+      0%, 100% { 
+        transform: translateY(0) rotate(0deg) scale(1);
+        opacity: 0.6;
+      }
+      25% { 
+        transform: translateY(-5px) rotate(90deg) scale(1.1);
+        opacity: 0.8;
+      }
+      50% { 
+        transform: translateY(-3px) rotate(180deg) scale(0.9);
+        opacity: 0.7;
+      }
+      75% { 
+        transform: translateY(-7px) rotate(270deg) scale(1.05);
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes gradient-flow {
+      0%, 100% { background-position: 0% 50%; }
+      33% { background-position: 100% 50%; }
+      66% { background-position: 200% 50%; }
+    }
+
+    @keyframes author-pulse {
+      0%, 100% { 
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.4));
+      }
+      33% { 
+        background-position: 100% 50%;
+        filter: drop-shadow(0 0 12px rgba(247, 147, 30, 0.5));
+      }
+      66% { 
+        background-position: 200% 50%;
+        filter: drop-shadow(0 0 15px rgba(255, 171, 64, 0.6));
+      }
+    }
+
+    @keyframes float-text {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-1px); }
+    }
+
+    /* Super modern shimmer effect */
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) rotate(-10deg); }
+      50% { transform: translateX(0%) rotate(0deg); }
+      100% { transform: translateX(100%) rotate(10deg); }
+    }
+
+    /* MOBILE OPTIMIZATION: Better responsive iframe handling */
+    @media screen and (max-width: 768px) {
+      body {
+        margin: 0;
+        padding: 0;
+        overflow-x: auto; /* Allow horizontal scroll */
+      }
+      
+      #pctemp {
+        overflow-x: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        width: 100vw; /* Full viewport width */
+        margin: 0;
+        padding: 0;
+      }
+      
+      /* Better iframe scaling to show full content */
+      .dashboard-iframe {
+        width: 1400px !important; /* Force wider width to prevent cutoff */
+        min-width: 1400px;
+        height: 1200px;
+        transform-origin: 0 0; /* Scale from top-left */
+        transform: scale(0.54); /* Scale to fit mobile screen */
+        margin: 0;
+        padding: 0;
+      }
+      
+      /* Adjust container to accommodate scaled content */
+      #pctemp {
+        height: 650px; /* Adjusted for scaled iframe */
+        overflow: auto;
+      }
+
+      #footer-credit {
+        font-size: 14px;
+        padding: 16px 20px;
+        letter-spacing: 0.8px;
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+
+      #footer-credit strong {
+        font-size: 14px;
+      }
+
+      #author-link {
+        font-size: 14px;
+      }
+
+      #fs-btn {
+        position: relative !important;
+        right: auto !important;
+        top: auto !important;
+        transform: none !important;
+        align-self: center;
+        margin-top: 10px;
+      }
+
+      #fs-btn:hover {
+        transform: scale(1.1) !important;
+      }
+
+      #fs-btn:active {
+        transform: scale(0.95) !important;
+      }
+    }
+
+    @media screen and (max-width: 480px) {
+      .dashboard-iframe {
+        width: 1400px !important;
+        min-width: 1400px;
+        height: 1200px;
+        transform: scale(0.46); /* Smaller scale for phones */
+      }
+      
+      #pctemp {
+        height: 550px; /* Adjusted for smaller scale */
+      }
+
+      #footer-credit {
+        font-size: 13px;
+        padding: 14px 16px;
+        letter-spacing: 0.6px;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      #footer-credit strong {
+        font-size: 13px;
+      }
+
+      #author-link {
+        font-size: 13px;
+      }
+
+      #fs-btn {
+        position: relative !important;
+        right: auto !important;
+        top: auto !important;
+        transform: none !important;
+        width: 40px !important;
+        height: 40px !important;
+        margin-top: 8px;
+      }
+
+      #fs-btn:hover {
+        transform: scale(1.1) !important;
+      }
+
+      #fs-btn:active {
+        transform: scale(0.95) !important;
+      }
+
+      #fs-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    /* SPEED OPTIMIZATION: Loading indicator */
+    .loading-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #333;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4B6CB7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Hide loading indicator when iframe loads */
+    .dashboard-iframe.loaded ~ .loading-indicator {
+      display: none;
+    }
+
+    /* SPEED OPTIMIZATION: Iframe optimizations */
+    .dashboard-iframe {
+      display: block;
+      border: none;
+      width: 100%;
+      height: 1000px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      contain: strict; /* CSS containment */
+    }
+
+    .dashboard-iframe.loaded {
+      opacity: 1;
+    }
+
+    /* Fullscreen styles - optimized */
+    #pctemp:-webkit-full-screen, 
+    #pctemp:-moz-full-screen, 
+    #pctemp:-ms-fullscreen, 
+    #pctemp:fullscreen { 
+      width: 100% !important; 
+      height: 100% !important; 
+    }
+    
+    .dashboard-iframe:-webkit-full-screen, 
+    .dashboard-iframe:-moz-full-screen, 
+    .dashboard-iframe:-ms-fullscreen, 
+    .dashboard-iframe:fullscreen { 
+      width: 100% !important; 
+      height: 100% !important; 
+    }
+
+    /* SPEED OPTIMIZATION: Optimized fullscreen button in footer */
+    #fs-btn {
+      position: absolute !important;
+      right: 30px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 46px !important;
+      height: 46px !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+      border: 2px solid rgba(255, 107, 53, 0.4) !important;
+      border-radius: 50% !important;
+      box-shadow: 
+        0 4px 12px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1) !important;
+      z-index: 10 !important;
+      will-change: transform !important;
+      backdrop-filter: blur(15px) !important;
+      -webkit-backdrop-filter: blur(15px) !important;
+    }
+    
+    #fs-btn:hover {
+      transform: translateY(-50%) scale(1.1) !important;
+      background: linear-gradient(135deg, 
+        rgba(255, 107, 53, 0.8) 0%, 
+        rgba(247, 147, 30, 0.7) 50%, 
+        rgba(255, 171, 64, 0.8) 100%
+      ) !important;
+      border-color: rgba(255, 107, 53, 0.8) !important;
+      box-shadow: 
+        0 8px 20px rgba(255, 107, 53, 0.3),
+        0 4px 12px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    #fs-btn:active {
+      transform: translateY(-50%) scale(0.95) !important;
+      transition: all 0.1s cubic-bezier(0.4, 0, 0.6, 1) !important;
+    }
+  ]]></b:skin>
+
+  <!-- SPEED OPTIMIZATION: Inline critical JavaScript -->
+  <script type='text/javascript'>
+    //<![CDATA[
+    // SPEED OPTIMIZATION: Preload iframe content
+    (function() {
+      // Create hidden iframe to preload content
+      var preloadIframe = document.createElement('iframe');
+      preloadIframe.src = 'https://tarek-mahran.github.io/shabakkat/hajj%20dashboard.html';
+      preloadIframe.style.display = 'none';
+      preloadIframe.style.position = 'absolute';
+      preloadIframe.style.left = '-9999px';
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.appendChild(preloadIframe);
+      });
+    })();
+    //]]>
+  </script>
+</head>
+
+<body expr:class='&quot;loading&quot; + data:blog.mobileClass'>
+  <!-- Navbar widget - SPEED OPTIMIZED -->
+  <b:section class='navbar' id='navbar' maxwidgets='1' showaddelement='no'>
+    <b:widget id='Navbar1' locked='true' title='Navbar' type='Navbar' version='1'>
+      <b:includable id='main'>&lt;script type=&quot;text/javascript&quot;&gt;
+    function setAttributeOnload(object, attribute, val) {
+      if(window.addEventListener) {
+        window.addEventListener(&#39;load&#39;,
+          function(){ object[attribute] = val; }, false);
+      } else {
+        window.attachEvent(&#39;onload&#39;, function(){ object[attribute] = val; });
+      }
+    }
+  &lt;/script&gt;
+&lt;div id=&quot;navbar-iframe-container&quot;&gt;&lt;/div&gt;
+&lt;script type=&quot;text/javascript&quot; src=&quot;https://apis.google.com/js/platform.js&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;text/javascript&quot;&gt;
+      gapi.load(&quot;gapi.iframes:gapi.iframes.style.bubble&quot;, function() {
+        if (gapi.iframes &amp;&amp; gapi.iframes.getContext) {
+          gapi.iframes.getContext().openChild({
+              url: &#39;https://www.blogger.com/navbar/6408316126693948714?origin\x3dhttps://www.blogger.com&#39;,
+              where: document.getElementById(&quot;navbar-iframe-container&quot;),
+              id: &quot;navbar-iframe&quot;
+          });
+        }
+      });
+    &lt;/script&gt;&lt;script type=&quot;text/javascript&quot;&gt;
+(function() {
+var script = document.createElement(&#39;script&#39;);
+script.type = &#39;text/javascript&#39;;
+script.src = &#39;//pagead2.googlesyndication.com/pagead/js/google_top_exp.js&#39;;
+var head = document.getElementsByTagName(&#39;head&#39;)[0];
+if (head) {
+head.appendChild(script);
+}})();
+&lt;/script&gt;
+</b:includable>
+    </b:widget>
+  </b:section>
+
+  <!-- SPEED OPTIMIZED: Dashboard iframe container -->
+  <div id='pctemp'>
+    <!-- Loading indicator -->
+    <div class='loading-indicator' id='loading-indicator'>
+      <div class='loading-spinner'/>
+      <span>Loading Haj Dashboard...</span>
+    </div>
+    
+    <!-- MOBILE OPTIMIZED: Enhanced iframe -->
+    <iframe allow='fullscreen' allowfullscreen='true' class='dashboard-iframe' id='dashboard-iframe' importance='high' loading='eager' mozallowfullscreen='true' referrerpolicy='no-referrer-when-downgrade' sandbox='allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox' scrolling='yes' src='https://app.powerbi.com/view?r=eyJrIjoiNmM3MTQ4OGQtYWMzYy00MmJmLWE0MTktM2Q3MGQ1MjFkYjg5IiwidCI6IjgyY2FlNDVlLTY0NmEtNDc1My1hZjY2LTAwNjMzNGY2M2E1NSJ9' style='border:none; display:block; width:100%; height:1000px;' webkitallowfullscreen='true'>
+    </iframe>
+    
+    <!-- MOBILE HELPER: Enhanced touch instructions -->
+    <div id='mobile-helper' style='display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg, #4B6CB7, #182848); color:white; padding:10px 20px; border-radius:25px; font-size:13px; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.3);'>
+      📱 Full dashboard visible - Swipe to navigate
+    </div>
+  </div>
+
+  <!-- Footer Credit Section -->
+  <div id='footer-credit'>
+    Created By <a href='mailto:tarek.mahran@shabakkatksa.com' id='author-link'>Tarek Mahran</a>
+    
+    <!-- SPEED OPTIMIZED: Enhanced fullscreen button -->
+    <div aria-label='Fullscreen' id='fs-btn'>
+      <svg fill='none' height='28' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' viewBox='0 0 24 24' width='28'>
+        <path d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'/>
+        <circle cx='12' cy='12' fill='white' r='1'/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- SPEED OPTIMIZED: Enhanced JavaScript -->
+  <script type='text/javascript'>
+    //<![CDATA[
+    document.addEventListener('DOMContentLoaded', function(){
+      var iframe = document.getElementById('dashboard-iframe');
+      var loadingIndicator = document.getElementById('loading-indicator');
+      var btn = document.getElementById('fs-btn');
+      var container = document.getElementById('pctemp');
+      
+      // SPEED OPTIMIZATION: Handle iframe loading states
+      if (iframe) {
+        // Show loading indicator initially
+        iframe.style.opacity = '0';
+        
+        // Handle iframe load event
+        iframe.addEventListener('load', function() {
+          this.classList.add('loaded');
+          this.style.opacity = '1';
+          if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+          }
+        });
+        
+        // SPEED OPTIMIZATION: Fallback timeout
+        setTimeout(function() {
+          if (!iframe.classList.contains('loaded')) {
+            iframe.classList.add('loaded');
+            iframe.style.opacity = '1';
+            if (loadingIndicator) {
+              loadingIndicator.style.display = 'none';
+            }
+          }
+        }, 5000); // 5 second fallback
+      }
+      
+      // SPEED OPTIMIZATION: Optimized fullscreen handler
+      if (btn && container) {
+        btn.addEventListener('click', function(){
+          if (container.requestFullscreen) {
+            container.requestFullscreen();
+          } else if (container.mozRequestFullScreen) {
+            container.mozRequestFullScreen();
+          } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen();
+          } else if (container.msRequestFullscreen) {
+            container.msRequestFullscreen();
+          }
+        });
+      }
+      
+      // SPEED OPTIMIZATION: Intersection Observer for performance
+      if ('IntersectionObserver' in window && iframe) {
+        var observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              // Iframe is visible, ensure it's fully loaded
+              if (!iframe.classList.contains('loaded')) {
+                iframe.src = iframe.src; // Refresh if needed
+              }
+            }
+          });
+        });
+        observer.observe(iframe);
+      }
+    });
+    
+    // SPEED OPTIMIZATION: Remove Google Ads loading delay
+    (function() {
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.async = true;
+      script.src = '//pagead2.googlesyndication.com/pagead/js/google_top_exp.js';
+      var head = document.getElementsByTagName('head')[0];
+      if (head) {
+        setTimeout(function() {
+          head.appendChild(script);
+        }, 2000); // Delay non-critical ads
+      }
+    })();
+    //]]>
+  </script>
+</body>
+</html>
