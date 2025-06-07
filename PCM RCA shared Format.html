@@ -442,37 +442,184 @@
   <textarea id="hiddenCopy" style="position: absolute; left: -9999px;"></textarea>
   
   <script>
-    let siteData = {};
+    // Data storage for all three Excel files
+    let zainLatisData = {};
+    let shlData = [];
+    let siteDbData = [];
+    let subProjectsData = [];
     let globalFaultLevel = "";
     let alarmTime = '';
+    let dataLoaded = false;
     
-    async function loadSiteData() {
+    async function loadAllSiteData() {
       const dataStatus = document.getElementById('dataStatus');
       dataStatus.style.display = 'flex';
-      const url = 'https://tarek-mahran.github.io/shabakkat/Zain%20%26%20LATIS%20Data%20Base.xlsx';
+      dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading site databases...';
+      
       try {
-        const response = await fetch(url);
-        const data = await response.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        // Load Zain & LATIS Database
+        await loadZainLatisData();
+        dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading SHL database...';
         
-        jsonData.forEach(row => {
-          if (row['Site ID Code']) {
-            siteData[row['Site ID Code']] = {
-              powerSource: row['Power Type'] || '',
-              bbStatus: row['BB Status'] || '',
-              eol: row['EOL Gen'] || ''
-            };
-          }
-        });
+        // Load SHL Database
+        await loadShlData();
+        dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Site DB Management & Sub Projects...';
+        
+        // Load Site DB Management
+        await loadSiteDbData();
+        
+        dataLoaded = true;
         dataStatus.style.display = 'none';
+        console.log('All databases loaded successfully');
+        
       } catch (error) {
         console.error("Error loading site data:", error);
         dataStatus.classList.remove('loading');
         dataStatus.classList.add('error');
-        dataStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error loading site data`;
+        dataStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error loading databases`;
       }
+    }
+    
+    async function loadZainLatisData() {
+      const url = 'https://tarek-mahran.github.io/shabakkat/Zain%20%26%20LATIS%20Data%20Base.xlsx';
+      const response = await fetch(url);
+      const data = await response.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet);
+      
+      // Store data for both lookup and additional info
+      jsonData.forEach(row => {
+        // Store for HUB Site ID lookup
+        const siteIdCode = row['Site ID Code'];
+        if (siteIdCode) {
+          // Store for 5G, 4G, 3G, 2G lookups
+          if (row['5G Site ID']) zainLatisData[row['5G Site ID']] = siteIdCode;
+          if (row['4G Site ID']) zainLatisData[row['4G Site ID']] = siteIdCode;
+          if (row['3G Site ID']) zainLatisData[row['3G Site ID']] = siteIdCode;
+          if (row['2G Site ID']) zainLatisData[row['2G Site ID']] = siteIdCode;
+          
+          // Also store additional site info by Site ID Code for later use
+          zainLatisData[`info_${siteIdCode}`] = {
+            powerSource: row['Power Type'] || 'N/A',
+            bbStatus: row['BB Status'] || 'N/A',
+            eol: row['EOL Gen'] || 'N/A'
+          };
+        }
+      });
+    }
+    
+    async function loadShlData() {
+      const url = 'https://tarek-mahran.github.io/shabakkat/SHL%20DB.xlsx';
+      const response = await fetch(url);
+      const data = await response.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      shlData = XLSX.utils.sheet_to_json(sheet);
+    }
+    
+    async function loadSiteDbData() {
+      const url = 'https://tarek-mahran.github.io/shabakkat/Site_DB_Management.xlsx';
+      const response = await fetch(url);
+      const data = await response.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      // Look for "Site DB Management" sheet
+      const siteDbSheetName = workbook.SheetNames.find(name => 
+        name.toLowerCase().includes('site db management')
+      ) || workbook.SheetNames[0];
+      
+      const siteDbSheet = workbook.Sheets[siteDbSheetName];
+      siteDbData = XLSX.utils.sheet_to_json(siteDbSheet);
+      
+      // Look for "Sub Projects And Skills" sheet
+      const subProjectsSheetName = workbook.SheetNames.find(name => 
+        name.toLowerCase().includes('sub projects and skills')
+      );
+      
+      if (subProjectsSheetName) {
+        const subProjectsSheet = workbook.Sheets[subProjectsSheetName];
+        subProjectsData = XLSX.utils.sheet_to_json(subProjectsSheet);
+      } else {
+        console.warn('Sub Projects And Skills sheet not found');
+        subProjectsData = [];
+      }
+    }
+    
+    function findHubSiteId(originalSiteId) {
+      if (!originalSiteId) return 'N/A';
+      
+      // Step 1: Check Zain & LATIS Database
+      // Check in order: 5G Site ID, 4G Site ID, 3G Site ID, 2G Site ID
+      const hubSiteId = zainLatisData[originalSiteId];
+      if (hubSiteId) {
+        console.log(`Found in Zain/LATIS DB: ${originalSiteId} -> ${hubSiteId}`);
+        return hubSiteId;
+      }
+      
+      // Step 2: Check SHL Database
+      const shlRecord = shlData.find(row => 
+        row['Keyword'] && row['Keyword'].toString().toLowerCase() === originalSiteId.toLowerCase()
+      );
+      if (shlRecord && shlRecord['Site Name']) {
+        console.log(`Found in SHL DB: ${originalSiteId} -> ${shlRecord['Site Name']}`);
+        return shlRecord['Site Name'];
+      }
+      
+      // Step 3: Check Site DB Management
+      const siteDbRecord = siteDbData.find(row => 
+        row['Site Name'] && row['Site Name'].toString().toLowerCase() === originalSiteId.toLowerCase()
+      );
+      if (siteDbRecord && siteDbRecord['Site ID']) {
+        console.log(`Found in Site DB Management: ${originalSiteId} -> ${siteDbRecord['Site ID']}`);
+        return siteDbRecord['Site ID'];
+      }
+      
+      console.log(`Site ID not found in any database: ${originalSiteId}`);
+      return originalSiteId; // Return original if not found
+    }
+    
+    function getSiteInfo(hubSiteId) {
+      const info = zainLatisData[`info_${hubSiteId}`];
+      return info || {
+        powerSource: 'N/A',
+        bbStatus: 'N/A',
+        eol: 'N/A'
+      };
+    }
+    
+    function getSitePriority(hubSiteId) {
+      if (!hubSiteId || hubSiteId === 'N/A') return '';
+      
+      // Look up the HUB Site ID in the Site DB Management data
+      const siteRecord = siteDbData.find(row => 
+        row['Site ID'] && row['Site ID'].toString().toLowerCase() === hubSiteId.toLowerCase()
+      );
+      
+      if (siteRecord && siteRecord['Site Priority']) {
+        console.log(`Found priority for ${hubSiteId}: ${siteRecord['Site Priority']}`);
+        return siteRecord['Site Priority'];
+      }
+      
+      console.log(`Priority not found for HUB Site ID: ${hubSiteId}`);
+      return '';
+    }
+    
+    function getSiteOwner(hubSiteId) {
+      if (!hubSiteId || hubSiteId === 'N/A') return 'N/A';
+      
+      // Look up the HUB Site ID in the Sub Projects And Skills data
+      const subProjectRecord = subProjectsData.find(row => 
+        row['Site ID'] && row['Site ID'].toString().toLowerCase() === hubSiteId.toLowerCase()
+      );
+      
+      if (subProjectRecord && subProjectRecord['Sub Project']) {
+        console.log(`Found site owner for ${hubSiteId}: ${subProjectRecord['Sub Project']}`);
+        return subProjectRecord['Sub Project'];
+      }
+      
+      console.log(`Site owner not found for HUB Site ID: ${hubSiteId}`);
+      return 'N/A';
     }
     
     function copyOutput() {
@@ -495,9 +642,12 @@
     }
     
     function convertTicket() {
-      // Ensure site data is loaded
-      if (Object.keys(siteData).length === 0) {
-        loadSiteData();
+      // Ensure all site data is loaded
+      if (!dataLoaded) {
+        loadAllSiteData().then(() => {
+          if (dataLoaded) convertTicket();
+        });
+        return;
       }
       
       const input = document.getElementById('input').value;
@@ -513,24 +663,23 @@
       
       alarmTime = input.match(/Fault First Occur Time:\s*(.*)/)?.[1] || '';
       
-      const siteId = input.match(/Site ID:\s*(.*)/)?.[1] || '';
+      const originalSiteId = input.match(/Site ID:\s*(.*)/)?.[1] || '';
       const region = input.match(/Region:\s*(.*)/)?.[1] || '';
       const impactedSites = input.match(/Impacted Site List:\s*(.*)/)?.[1] || '';
       
-      const techMatch = title.match(/(\d+)\(2G\).*(\d+)\(3G\).*(\d+)\(LTE\).*(\d+)\(5G\)/) ||
-                        title.match(/(\d+)\(2G\).*(\d+)\(3G\).*(\d+)\(LTE\)/) ||
-                        title.match(/(\d+)\(2G\).*(\d+)\(3G\)/) ||
-                        title.match(/(\d+)\(2G\)/) || [];
-      const [ , num2G = 0, num3G = 0, numLTE = 0, num5G = 0] = techMatch.map(Number);
+      // Use the new lookup function to find HUB Site ID
+      const hubSiteId = findHubSiteId(originalSiteId);
       
       const physicalSites = impactedSites ? impactedSites.split(',').length : 0;
-      const hubSiteId = siteId;
-      const priorityMatch = title.match(new RegExp(`${hubSiteId}-P(\\d+)`));
-      const priority = priorityMatch ? `P${priorityMatch[1]}` : '';
       
-      const powerSource = siteData[hubSiteId]?.powerSource || 'N/A';
-      const bbStatus = siteData[hubSiteId]?.bbStatus || 'N/A';
-      const eol = siteData[hubSiteId]?.eol || 'N/A';
+      // Get priority from Site DB Management using HUB Site ID
+      const priority = getSitePriority(hubSiteId);
+      
+      // Get site owner from Sub Projects And Skills using HUB Site ID
+      const siteOwner = getSiteOwner(hubSiteId);
+      
+      // Get site info using the found HUB Site ID
+      const siteInfo = getSiteInfo(hubSiteId);
       
       // Build header with asterisks and generate a separator line matching header text length (excluding asterisks)
       let headerLine = `*Escalation - ${faultLevel} - ${region}*`;
@@ -548,14 +697,17 @@
           `Region: ${region}<br>` +
           `HUB Site ID: ${hubSiteId}<br>` +
           `Severity: ${faultLevel}<br>` +
-          `Sites Technology: ${num2G + num3G + numLTE + num5G} (2G=${num2G}/3G=${num3G}/LTE=${numLTE}/5G=${num5G})<br>` +
-          `Physical Sites: ${physicalSites}<br>` +
-          `Priority: <span class="priority-badge">${priority}</span><br>` +
-          `Power Source: ${powerSource}<br>` +
-          `BB status: ${bbStatus}<br>` +
-          `EOL: ${eol}`;
+          `Affected Physical Sites: ${physicalSites}<br>` +
+          `Priority: ${priority ? `<span class="priority-badge">${priority}</span>` : 'N/A'}<br>` +
+          `Power Source: ${siteInfo.powerSource}<br>` +
+          `BB Status: ${siteInfo.bbStatus}<br>` +
+          `Site Owner: ${siteOwner}<br>` +
+          `EOL: ${siteInfo.eol}`;
       
       document.getElementById('output').innerHTML = outputText;
+      
+      // Update duration if restored time is already filled
+      updateDuration();
     }
     
     function updateDuration() {
@@ -612,10 +764,12 @@
       document.getElementById('output').innerHTML = "";
       const copyMessage = document.getElementById('copyMessage');
       copyMessage.classList.remove('show');
+      alarmTime = '';
+      globalFaultLevel = '';
     }
     
-    // Load site data on page load
-    window.addEventListener('load', loadSiteData);
+    // Load all site data on page load
+    window.addEventListener('load', loadAllSiteData);
   </script>
 </body>
 </html>
