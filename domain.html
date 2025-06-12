@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Outage Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .header-card {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header-card h1 {
+            font-size: 22px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 8px;
+        }
+
+        .header-card p {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .content-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+        }
+
+        .control-frame {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 15px;
+        }
+
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: #007bff;
+            padding: 6px;
+            width: 40px;
+            height: 36px;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+
+        .table-container {
+            flex: 1;
+            margin: 0 15px;
+            overflow: auto;
+            border-radius: 8px;
+            border: 1px solid #109DA4;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background-color: #109DA4;
+            color: white;
+            font-weight: bold;
+            padding: 12px 8px;
+            text-align: center;
+            border: 1px solid #109DA4;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .data-table th:hover {
+            background-color: #0e8891;
+        }
+
+        .data-table td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #109DA4;
+            background-color: white;
+        }
+
+        .data-table tr:nth-child(even) td {
+            background-color: #f8f9fa;
+        }
+
+        .data-table tr:hover td {
+            background-color: #e7f5ff;
+        }
+
+        .filter-icon {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .filter-icon:hover {
+            opacity: 1;
+        }
+
+        .status-label {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 0 15px;
+            transition: all 0.3s ease;
+        }
+
+        .status-loading {
+            color: #0d6efd;
+            background-color: #e7f5ff;
+        }
+
+        .status-success {
+            color: #198754;
+            background-color: #d1e7dd;
+        }
+
+        .status-error {
+            color: #dc3545;
+            background-color: #f8d7da;
+        }
+
+        .button-card {
+            padding: 12px 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .spacer {
+            flex: 1;
+        }
+
+        .filter-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .filter-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .filter-search {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .filter-options {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .filter-option {
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .filter-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .filter-option input {
+            margin-right: 8px;
+        }
+
+        .loading-animation {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(50, 50, 50, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .auto-mode-active {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+        }
+
+        .data-loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 16px;
+            color: #6c757d;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .button-card {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .button-group {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .data-table {
+                font-size: 11px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Card -->
+        <div class="card header-card">
+            <h1>Active Outage Dashboard</h1>
+            <p>Monitor and manage active network outages</p>
+        </div>
+
+        <!-- CORS Notice -->
+        <div class="card" id="corsNotice" style="background-color: #fff3cd; border-color: #ffeaa7; display: none;">
+            <div style="padding: 15px;">
+                <h4 style="color: #856404; margin-bottom: 10px;">⚠️ CORS Restriction Notice</h4>
+                <p style="color: #856404; margin-bottom: 10px;">
+                    Due to browser security restrictions (CORS policy), this web version cannot directly access the SharePoint file. 
+                    The data loading will fall back to demo mode.
+                </p>
+                <p style="color: #856404; font-size: 12px;">
+                    <strong>Solutions:</strong><br>
+                    • Deploy this page to the same domain as SharePoint<br>
+                    • Use a proxy server to handle the SharePoint requests<br>
+                    • Configure SharePoint CORS settings<br>
+                    • Use the desktop PyQt5 version for full functionality
+                </p>
+            </div>
+        </div>
+        <div class="card header-card">
+            <h1>Active Outage Dashboard</h1>
+            <p>Monitor and manage active network outages</p>
+        </div>
+
+        <!-- Content Card -->
+        <div class="card content-card">
+            <!-- Control Frame -->
+            <div class="control-frame">
+                <button class="btn btn-icon" onclick="takeScreenshot()" title="Capture table contents as image">
+                    📷
+                </button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="table-container">
+                <table class="data-table" id="activeTable">
+                    <thead>
+                        <tr id="tableHeaders">
+                            <!-- Headers will be populated by JavaScript -->
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+                <div class="data-loading" id="loadingMessage">
+                    <div class="loading-animation"></div>
+                    Loading data...
+                </div>
+            </div>
+
+            <!-- Status Label -->
+            <div class="status-label" id="statusLabel">Ready</div>
+        </div>
+
+        <!-- Button Card -->
+        <div class="card button-card">
+            <div class="button-group">
+                <button class="btn" onclick="refreshData()">
+                    🔄 Refresh
+                </button>
+                <button class="btn" id="autoModeBtn" onclick="toggleAutoMode()">
+                    ▶️ Auto Mode
+                </button>
+            </div>
+            
+            <div class="spacer"></div>
+            
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="exportToExcel()">
+                    📊 Export to Excel
+                </button>
+                <button class="btn btn-secondary" onclick="exportToCSV()">
+                    📄 Export to CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Dialog -->
+    <div class="filter-dialog" id="filterDialog">
+        <div class="filter-content">
+            <h3 id="filterTitle">Filter Column</h3>
+            <input type="text" class="filter-search" id="filterSearch" placeholder="Search values...">
+            <div class="filter-options" id="filterOptions">
+                <!-- Filter options will be populated dynamically -->
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+                <button class="btn btn-secondary" onclick="closeFilterDialog()">Cancel</button>
+                <button class="btn" onclick="applyFilter()">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include SheetJS for Excel file processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        // Data structure matching your Python application
+        let activeOutageData = [];
+        let originalData = [];
+        let columnFilters = {};
+        let autoModeActive = false;
+        let autoModeTimer = null;
+
+        // SharePoint link matching your Python code
+        const SHARE_LINK = "https://shabakkatmisr-my.sharepoint.com/:x:/g/personal/tarek_mahran_shabakkatmisr_site/EcWDUeEU6gBGsFEuuaL5bo0BIU_CeGYiQmqgCObGlGiftw?e=3fjsVP";
+
+        // Column definitions matching your DISPLAY_COLUMNS
+        const DISPLAY_COLUMNS = [
+            "PCM", "Region", "Count sites", "Hub Site", "Fault Level", "PCM Created At",
+            "Elapsed Duration(Hrs)", "Creat Fault First Time Occured", "Power Source",
+            "Battery Backup Status", "EM Field Feedback", "Site Owner"
+        ];
+
+        // Convert SharePoint link to download link (matching Python function)
+        function convertToDownloadLink(link) {
+            return link.split("?")[0] + "?download=1";
+        }
+
+        // Extract named table data (matching Python function)
+        function extractNamedTable(workbook, sheetName, tableName, regionName) {
+            const sheet = workbook.Sheets[sheetName];
+            if (!sheet) {
+                console.warn(`Sheet ${sheetName} not found`);
+                return [];
+            }
+
+            // Convert sheet to JSON
+            const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            if (data.length === 0) return [];
+
+            // First row is headers, rest are data
+            const headers = data[0];
+            const rows = data.slice(1);
+
+            // Convert to objects and add Region
+            const result = rows.map(row => {
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = row[index] || null;
+                });
+                obj["Region"] = regionName;
+                return obj;
+            }).filter(row => {
+                // Filter out rows where Hub Site is empty (matching Python logic)
+                return row["Hub Site"] && String(row["Hub Site"]).trim() !== "";
+            });
+
+            return result;
+        }
+
+        // Format duration (matching Python function)
+        function formatDuration(value) {
+            if (!value) return value;
+            
+            try {
+                // If it's already in HH:MM:SS format, return as is
+                if (typeof value === 'string' && value.match(/^\d+:\d{2}:\d{2}$/)) {
+                    return value;
+                }
+                
+                // If it's a number (Excel duration), convert to HH:MM:SS
+                if (typeof value === 'number') {
+                    const totalSeconds = Math.floor(value * 24 * 60 * 60);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+                    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+                
+                return String(value);
+            } catch (e) {
+                return String(value);
+            }
+        }
+
+        // Load combined Excel from OneDrive (matching Python function)
+        async function loadCombinedExcelFromOnedrive() {
+            console.log("Starting to load data from OneDrive");
+            const downloadUrl = convertToDownloadLink(SHARE_LINK);
+            console.log(`Download URL: ${downloadUrl}`);
+
+            const maxRetries = 3;
+            let retryDelay = 2000; // Initial delay in milliseconds
+
+            for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+                try {
+                    console.log(`Attempt ${retryCount + 1}/${maxRetries}`);
+                    
+                    // Fetch the Excel file with timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+                    
+                    const response = await fetch(downloadUrl, {
+                        signal: controller.signal,
+                        mode: 'cors'
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    console.log(`Response status code: ${response.status}`);
+                    
+                    // Get the file as array buffer
+                    const arrayBuffer = await response.arrayBuffer();
+                    console.log("File content loaded, parsing workbook...");
+                    
+                    // Load workbook with SheetJS
+                    const workbook = XLSX.read(arrayBuffer, {
+                        cellStyles: true,
+                        cellFormulas: true,
+                        cellDates: true,
+                        cellNF: true,
+                        sheetStubs: true
+                    });
+
+                    // Process sheets and tables (matching Python logic)
+                    const sheetsTablesMap = {
+                        "R1": "Region1",
+                        "R2": "Region2", 
+                        "R3": "Region3",
+                        "R4": "Region4",
+                        "R5": "Region5",
+                        "R6": "Region6"
+                    };
+
+                    let allData = [];
+                    for (const [sheet, table] of Object.entries(sheetsTablesMap)) {
+                        if (workbook.SheetNames.includes(sheet)) {
+                            console.log(`Processing sheet ${sheet}`);
+                            const data = extractNamedTable(workbook, sheet, table, sheet);
+                            if (data.length > 0) {
+                                allData = allData.concat(data);
+                            }
+                        } else {
+                            console.log(`Sheet ${sheet} not found`);
+                        }
+                    }
+
+                    console.log(`Concatenating ${allData.length} records`);
+
+                    if (allData.length === 0) {
+                        console.log("No data found in any sheet");
+                        return [];
+                    }
+
+                    // Process the data (matching Python logic)
+                    allData.forEach(row => {
+                        // Convert Count sites to integer
+                        if (row['Count sites']) {
+                            const countSites = parseInt(row['Count sites']);
+                            row['Count sites'] = isNaN(countSites) ? 0 : countSites;
+                        }
+
+                        // Format Elapsed Duration
+                        if (row['Elapsed Duration(Hrs)']) {
+                            row['Elapsed Duration(Hrs)'] = formatDuration(row['Elapsed Duration(Hrs)']);
+                        }
+
+                        // Convert date columns to strings
+                        ['PCM Created At', 'Creat Fault First Time Occured'].forEach(col => {
+                            if (row[col] && row[col] instanceof Date) {
+                                row[col] = row[col].toISOString().split('T')[0];
+                            } else if (row[col]) {
+                                row[col] = String(row[col]);
+                            }
+                        });
+
+                        // Fill null values with "N/A"
+                        Object.keys(row).forEach(key => {
+                            if (row[key] === null || row[key] === undefined || row[key] === '') {
+                                row[key] = "N/A";
+                            }
+                        });
+                    });
+
+                    // Filter to only include display columns that exist
+                    const filteredData = allData.map(row => {
+                        const filteredRow = {};
+                        DISPLAY_COLUMNS.forEach(col => {
+                            filteredRow[col] = row[col] || "N/A";
+                        });
+                        return filteredRow;
+                    });
+
+                    console.log(`Final dataframe shape: ${filteredData.length} rows`);
+                    return filteredData;
+
+                } catch (error) {
+                    console.error(`Attempt ${retryCount + 1} failed:`, error);
+                    
+                    if (error.name === 'AbortError') {
+                        console.error("Request timed out after 60 seconds");
+                        if (retryCount === maxRetries - 1) {
+                            throw new Error("Connection to SharePoint timed out. Please check your internet connection and try again.");
+                        }
+                    } else if (retryCount === maxRetries - 1) {
+                        throw new Error(`Error connecting to SharePoint after ${maxRetries} attempts: ${error.message}`);
+                    }
+                    
+                    // Wait before retrying with exponential backoff
+                    if (retryCount < maxRetries - 1) {
+                        console.log(`Retrying in ${retryDelay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        retryDelay *= 2; // Exponential backoff
+                    }
+                }
+            }
+
+            throw new Error(`Failed to connect to SharePoint after ${maxRetries} attempts`);
+        }
+
+        function initializeTable() {
+            // Create table headers
+            const headerRow = document.getElementById('tableHeaders');
+            headerRow.innerHTML = '';
+            
+            DISPLAY_COLUMNS.forEach((column, index) => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                th.style.cursor = 'pointer';
+                th.onclick = () => showFilterDialog(column, index);
+                
+                // Add filter icon
+                const filterIcon = document.createElement('span');
+                filterIcon.className = 'filter-icon';
+                filterIcon.innerHTML = '🔽';
+                th.appendChild(filterIcon);
+                
+                headerRow.appendChild(th);
+            });
+        }
+
+        function populateTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = DISPLAY_COLUMNS.length;
+                cell.textContent = 'No data available';
+                cell.style.textAlign = 'center';
+                cell.style.padding = '20px';
+                row.appendChild(cell);
+                tbody.appendChild(row);
+                return;
+            }
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                
+                DISPLAY_COLUMNS.forEach(column => {
+                    const cell = document.createElement('td');
+                    let value = item[column] || '';
+                    
+                    // Apply special formatting based on column content
+                    if (column === 'Fault Level') {
+                        cell.style.fontWeight = 'bold';
+                        if (value === 'Critical') cell.style.color = '#dc3545';
+                        else if (value === 'High') cell.style.color = '#fd7e14';
+                        else if (value === 'Medium') cell.style.color = '#ffc107';
+                        else if (value === 'Low') cell.style.color = '#198754';
+                    } else if (column.includes('Date') || column.includes('Time')) {
+                        cell.style.color = '#0d6efd';
+                    } else if (column === 'Count sites') {
+                        cell.style.fontWeight = 'bold';
+                        cell.style.color = '#fd7e14';
+                    }
+                    
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function showFilterDialog(columnName, columnIndex) {
+            const dialog = document.getElementById('filterDialog');
+            const title = document.getElementById('filterTitle');
+            const options = document.getElementById('filterOptions');
+            
+            title.textContent = `Filter ${columnName}`;
+            
+            // Get unique values for this column
+            const uniqueValues = [...new Set(originalData.map(item => item[columnName]))].sort();
+            
+            options.innerHTML = '';
+            uniqueValues.forEach(value => {
+                const option = document.createElement('div');
+                option.className = 'filter-option';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = value;
+                checkbox.checked = !columnFilters[columnName] || columnFilters[columnName].includes(value);
+                
+                option.appendChild(checkbox);
+                option.appendChild(document.createTextNode(value));
+                options.appendChild(option);
+            });
+            
+            dialog.style.display = 'block';
+            dialog.currentColumn = columnName;
+        }
+
+        function closeFilterDialog() {
+            document.getElementById('filterDialog').style.display = 'none';
+        }
+
+        function applyFilter() {
+            const dialog = document.getElementById('filterDialog');
+            const columnName = dialog.currentColumn;
+            const checkboxes = dialog.querySelectorAll('input[type="checkbox"]');
+            
+            const selectedValues = [];
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedValues.push(checkbox.value);
+                }
+            });
+            
+            if (selectedValues.length === 0) {
+                delete columnFilters[columnName];
+            } else {
+                columnFilters[columnName] = selectedValues;
+            }
+            
+            applyFilters();
+            closeFilterDialog();
+        }
+
+        function applyFilters() {
+            let filteredData = [...originalData];
+            
+            Object.keys(columnFilters).forEach(column => {
+                const values = columnFilters[column];
+                filteredData = filteredData.filter(item => values.includes(item[column]));
+            });
+            
+            activeOutageData = filteredData;
+            populateTable(activeOutageData);
+            
+            // Update status
+            const statusLabel = document.getElementById('statusLabel');
+            statusLabel.textContent = `Showing ${filteredData.length} of ${originalData.length} records`;
+        }
+
+        // Fallback sample data for when CORS prevents SharePoint access
+        function generateFallbackData() {
+            console.log("Using fallback sample data due to CORS restrictions");
+            const regions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
+            const faultLevels = ['Critical', 'High', 'Medium', 'Low'];
+            const powerSources = ['SCECO', 'Generator', 'UPS', 'Solar'];
+            const batteryStatus = ['Normal', 'Low', 'Critical', 'Failed'];
+            const siteOwners = ['Zain', 'STC', 'Mobily', 'CITC'];
+            
+            const data = [];
+            for (let i = 1; i <= 25; i++) {
+                data.push({
+                    'PCM': `PCM-${String(i).padStart(4, '0')}`,
+                    'Region': regions[Math.floor(Math.random() * regions.length)],
+                    'Count sites': Math.floor(Math.random() * 10) + 1,
+                    'Hub Site': `SITE-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+                    'Fault Level': faultLevels[Math.floor(Math.random() * faultLevels.length)],
+                    'PCM Created At': new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    'Elapsed Duration(Hrs)': `${Math.floor(Math.random() * 48)}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+                    'Creat Fault First Time Occured': new Date(Date.now() - Math.random() * 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    'Power Source': powerSources[Math.floor(Math.random() * powerSources.length)],
+                    'Battery Backup Status': batteryStatus[Math.floor(Math.random() * batteryStatus.length)],
+                    'EM Field Feedback': Math.random() > 0.5 ? 'Confirmed' : 'Pending',
+                    'Site Owner': siteOwners[Math.floor(Math.random() * siteOwners.length)]
+                });
+            }
+            return data;
+        }
+
+        async function refreshData() {
+            const statusLabel = document.getElementById('statusLabel');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const corsNotice = document.getElementById('corsNotice');
+            
+            try {
+                // Show loading state
+                statusLabel.className = 'status-label status-loading';
+                statusLabel.textContent = 'Loading data...';
+                loadingMessage.style.display = 'block';
+                document.getElementById('tableBody').style.display = 'none';
+                
+                // Disable refresh button during loading
+                const refreshButtons = document.querySelectorAll('button');
+                refreshButtons.forEach(btn => {
+                    if (btn.textContent.includes('Refresh')) {
+                        btn.disabled = true;
+                    }
+                });
+                
+                console.log("Starting _performRefresh");
+                
+                // Try to load real data from OneDrive
+                try {
+                    originalData = await loadCombinedExcelFromOnedrive();
+                    console.log("Data loaded successfully from SharePoint");
+                    corsNotice.style.display = 'none'; // Hide CORS notice if successful
+                } catch (corsError) {
+                    console.warn("CORS or network error, falling back to sample data:", corsError);
+                    
+                    // Show CORS notice
+                    corsNotice.style.display = 'block';
+                    
+                    // Use fallback sample data
+                    originalData = generateFallbackData();
+                    showToast('Using demo data due to network restrictions');
+                }
+                
+                activeOutageData = [...originalData];
+                
+                // Hide loading message
+                loadingMessage.style.display = 'none';
+                document.getElementById('tableBody').style.display = '';
+                
+                populateTable(activeOutageData);
+                console.log("Data displayed in table");
+                
+                // Update status with success styling
+                const now = new Date().toLocaleString();
+                statusLabel.className = 'status-label status-success';
+                statusLabel.textContent = `Last updated: ${now} (${originalData.length} records)`;
+                
+                showToast('Data refreshed successfully');
+                
+            } catch (error) {
+                console.error("Error in refreshData:", error);
+                
+                // Hide loading message
+                loadingMessage.style.display = 'none';
+                document.getElementById('tableBody').style.display = '';
+                
+                // Show error status
+                statusLabel.className = 'status-label status-error';
+                statusLabel.textContent = 'Failed to update data';
+                
+                showToast(`Error refreshing data: ${error.message}`);
+                
+                // If we have no data, show an empty table
+                if (originalData.length === 0) {
+                    populateTable([]);
+                }
+                
+            } finally {
+                // Re-enable refresh buttons
+                const refreshButtons = document.querySelectorAll('button');
+                refreshButtons.forEach(btn => {
+                    if (btn.textContent.includes('Refresh') && !btn.disabled) {
+                        btn.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function toggleAutoMode() {
+            const btn = document.getElementById('autoModeBtn');
+            
+            if (!autoModeActive) {
+                const interval = prompt('Enter refresh interval in seconds:', '60');
+                if (!interval || isNaN(interval)) return;
+                
+                autoModeActive = true;
+                btn.textContent = '⏹️ Stop Auto Mode';
+                btn.classList.add('auto-mode-active');
+                
+                autoModeTimer = setInterval(refreshData, parseInt(interval) * 1000);
+                showToast(`Auto mode enabled (${interval}s interval)`);
+            } else {
+                autoModeActive = false;
+                btn.textContent = '▶️ Auto Mode';
+                btn.classList.remove('auto-mode-active');
+                
+                if (autoModeTimer) {
+                    clearInterval(autoModeTimer);
+                    autoModeTimer = null;
+                }
+                showToast('Auto mode disabled');
+            }
+        }
+
+        function exportToExcel() {
+            // Convert data to CSV format for Excel compatibility
+            const headers = DISPLAY_COLUMNS.join(',');
+            const rows = activeOutageData.map(item => 
+                DISPLAY_COLUMNS.map(col => `"${item[col] || ''}"`).join(',')
+            );
+            
+            const csvContent = [headers, ...rows].join('\n');
+            downloadFile(csvContent, 'active_outage.csv', 'text/csv');
+            showToast('Excel file downloaded');
+        }
+
+        function exportToCSV() {
+            const headers = DISPLAY_COLUMNS.join(',');
+            const rows = activeOutageData.map(item => 
+                DISPLAY_COLUMNS.map(col => `"${item[col] || ''}"`).join(',')
+            );
+            
+            const csvContent = [headers, ...rows].join('\n');
+            downloadFile(csvContent, 'active_outage.csv', 'text/csv');
+            showToast('CSV file downloaded');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function takeScreenshot() {
+            // Use html2canvas library for taking screenshots
+            // For demo purposes, we'll just show a message
+            showToast('Screenshot functionality requires html2canvas library');
+            
+            // In a real implementation, you would include html2canvas and use:
+            // html2canvas(document.querySelector('.table-container')).then(canvas => {
+            //     canvas.toBlob(blob => {
+            //         navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+            //         showToast('Screenshot copied to clipboard');
+            //     });
+            // });
+        }
+
+        function showToast(message) {
+            // Remove existing toasts
+            document.querySelectorAll('.toast').forEach(toast => toast.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Hide and remove toast
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Filter search functionality
+        document.getElementById('filterSearch').addEventListener('input', function(e) {
+            const searchText = e.target.value.toLowerCase();
+            const options = document.querySelectorAll('.filter-option');
+            
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                option.style.display = text.includes(searchText) ? 'block' : 'none';
+            });
+        });
+
+        // Click outside to close filter dialog
+        document.getElementById('filterDialog').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeFilterDialog();
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTable();
+            
+            // Show initial loading message
+            const statusLabel = document.getElementById('statusLabel');
+            statusLabel.className = 'status-label status-loading';
+            statusLabel.textContent = 'Initializing...';
+            
+            // Load initial data after a short delay
+            setTimeout(() => {
+                refreshData();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
