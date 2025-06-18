@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Active Outages</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -13,57 +13,141 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
             min-height: 100vh;
-            padding: 10px;
+            padding: 20px;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Modern animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-30px) rotate(2deg); }
+            66% { transform: translateY(-20px) rotate(-2deg); }
         }
 
         .container {
             max-width: 98vw;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 8px 32px rgba(31, 38, 135, 0.37),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
             overflow: hidden;
+            position: relative;
+            animation: slideInUp 0.8s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .header {
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             color: white;
-            padding: 20px;
+            padding: 40px 20px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            pointer-events: none;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 15px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .header p {
             opacity: 0.9;
-            font-size: 1.1em;
+            font-size: 1.2em;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+            margin: 0;
         }
 
         .toolbar {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-bottom: 1px solid #e9ecef;
+            background: rgba(248, 249, 250, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(233, 236, 239, 0.5);
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 24px;
             align-items: center;
+            position: relative;
+            overflow: visible;
+            z-index: 10;
+        }
+
+        .toolbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%);
+            pointer-events: none;
         }
 
         .toolbar-group {
             display: flex;
-            gap: 5px;
+            gap: 12px;
             align-items: center;
-            border-right: 1px solid #dee2e6;
-            padding-right: 10px;
-            margin-right: 5px;
+            border-right: 1px solid rgba(222, 226, 230, 0.6);
+            padding-right: 20px;
+            margin-right: 16px;
+            position: relative;
+            z-index: 1;
         }
 
         .toolbar-group:last-child {
@@ -71,44 +155,94 @@
         }
 
         .btn {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 25px;
+            padding: 16px 28px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            gap: 12px;
+            box-shadow: 
+                0 4px 20px rgba(102, 126, 234, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: fit-content;
+            white-space: nowrap;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 8px 30px rgba(102, 126, 234, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.2) inset;
         }
 
         .btn:active {
-            transform: translateY(0);
+            transform: translateY(-1px) scale(0.98);
+            transition: all 0.1s ease;
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            background: linear-gradient(135deg, #8b949e 0%, #6c757d 100%);
+            box-shadow: 
+                0 4px 20px rgba(108, 117, 125, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 
+                0 8px 30px rgba(108, 117, 125, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.2) inset;
         }
 
         .btn-warning {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #212529;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            box-shadow: 
+                0 4px 20px rgba(240, 147, 251, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-warning:hover {
+            box-shadow: 
+                0 8px 30px rgba(240, 147, 251, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.2) inset;
         }
 
         .btn-info {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 
+                0 4px 20px rgba(79, 172, 254, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-info:hover {
+            box-shadow: 
+                0 8px 30px rgba(79, 172, 254, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.2) inset;
         }
 
         .btn:disabled {
@@ -122,6 +256,18 @@
             text-align: right;
             color: #6c757d;
             font-weight: 500;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            margin-left: 16px;
+        }
+
+        .status-bar:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
         }
 
         .progress-container {
@@ -156,6 +302,8 @@
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
+            position: relative;
+            z-index: 1;
         }
 
         .tabs {
@@ -166,26 +314,33 @@
         }
 
         .tab {
-            padding: 15px 25px;
+            padding: 16px 32px;
             background: transparent;
             border: none;
             cursor: pointer;
             font-weight: 600;
             color: #6c757d;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
             white-space: nowrap;
+            position: relative;
+            font-size: 15px;
         }
 
         .tab.active {
-            color: #4a90e2;
-            border-bottom-color: #4a90e2;
-            background: white;
+            color: #667eea;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            box-shadow: 
+                0 4px 20px rgba(102, 126, 234, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+            transform: translateY(-2px);
         }
 
         .tab:hover {
-            color: #4a90e2;
-            background: rgba(74, 144, 226, 0.1);
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.08);
+            transform: translateY(-1px);
         }
 
         .tab-content {
@@ -194,6 +349,7 @@
             height: 60vh;
             overflow: auto;
             width: 100%;
+            box-sizing: border-box;
         }
 
         .tab-content.active {
@@ -201,13 +357,19 @@
         }
 
         .table-container {
-            background: white;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
             overflow: auto;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 
+                0 8px 32px rgba(31, 38, 135, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.3) inset;
             width: 100%;
             max-height: 55vh;
-            border: 1px solid #e9ecef;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 1;
+            display: block;
         }
 
         /* Custom scrollbar styling for table container */
@@ -222,13 +384,13 @@
         }
 
         .table-container::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 6px;
             border: 2px solid #f1f1f1;
         }
 
         .table-container::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #357abd 0%, #2c5aa0 100%);
+            background: linear-gradient(135deg, #764ba2 0%, #f093fb 100%);
         }
 
         .table-container::-webkit-scrollbar-corner {
@@ -238,7 +400,7 @@
         /* Firefox scrollbar styling */
         .table-container {
             scrollbar-width: auto;
-            scrollbar-color: #4a90e2 #f1f1f1;
+            scrollbar-color: #667eea #f1f1f1;
         }
 
         table {
@@ -246,25 +408,33 @@
             border-collapse: separate;
             border-spacing: 0;
             font-size: 14px;
-            table-layout: auto;
+            table-layout: fixed; /* Fixed layout for better column control */
             max-width: 100%;
+            min-width: 100%;
         }
 
         th {
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 8px 6px;
+            padding: 12px 8px;
             text-align: center;
-            font-weight: 600;
+            font-weight: 700;
             border-right: 1px solid rgba(255, 255, 255, 0.2);
             position: sticky;
             top: 0;
             z-index: 10;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            hyphens: auto;
             position: relative; /* For resize handle */
-            font-size: 13px;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1.3;
+            min-height: 40px;
+            vertical-align: middle;
         }
 
         th.resizing {
@@ -309,7 +479,7 @@
         }
 
         td {
-            padding: 6px 4px;
+            padding: 4px 2px;
             border-bottom: 1px solid #e9ecef;
             border-right: 1px solid #e9ecef;
             overflow: hidden;
@@ -317,6 +487,13 @@
             font-size: 13px;
             text-align: center;
             vertical-align: middle;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            hyphens: auto;
+            line-height: 1.2;
+            height: 100%;
+            display: table-cell;
         }
 
         /* Special styling for EM Field Feedback column */
@@ -326,7 +503,7 @@
 
         tr {
             position: relative; /* For row resize */
-            height: 25px; /* More compact default height */
+            height: 28px; /* Optimal height for centered text */
         }
 
         tr .row-resize-handle {
@@ -343,8 +520,8 @@
 
         tr .row-resize-handle:hover,
         tr .row-resize-handle.active {
-            background-color: rgba(74, 144, 226, 0.3);
-            border-bottom: 2px solid rgba(74, 144, 226, 0.6);
+            background-color: rgba(102, 126, 234, 0.3);
+            border-bottom: 2px solid rgba(102, 126, 234, 0.6);
         }
 
         tr.resizing {
@@ -357,35 +534,60 @@
         }
 
         tr:hover {
-            background: rgba(74, 144, 226, 0.1);
+            background: rgba(102, 126, 234, 0.12);
         }
 
         .editable {
             border: none;
             background: transparent;
             width: 100%;
-            padding: 2px 4px;
+            height: 100%;
+            padding: 2px;
             font-size: 14px;
             text-align: center;
-            height: 20px; /* More compact default height */
-            resize: none; /* Prevent manual resize, use row resize instead */
-            line-height: 16px; /* Adjusted for vertical centering */
+            resize: none;
+            line-height: 1.3;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+            box-sizing: border-box;
             vertical-align: middle;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 20px;
         }
 
         .editable:focus {
-            outline: 2px solid #4a90e2;
-            background: white;
-            border-radius: 4px;
+            outline: 2px solid #667eea;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Special styling for EM Field Feedback column */
         td.em-field-feedback {
             text-align: left !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+        }
+
+        th.em-field-feedback {
+            text-align: center !important;
         }
 
         .em-field-feedback .editable {
             text-align: left !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+            padding-left: 8px !important;
         }
 
         /* Custom scrollbar for edit boxes - Cross-browser */
@@ -420,30 +622,51 @@
             font-size: 12px;
             color: #6c757d;
             position: relative;
+            z-index: 2;
         }
 
         /* Dropdown menu styling */
         .dropdown-menu {
             display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-            padding: 15px;
-            min-width: 200px;
-            z-index: 1000;
-            margin-top: 5px;
+            position: absolute !important;
+            top: calc(100% + 8px) !important;
+            left: 0 !important;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 32px rgba(31, 38, 135, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            padding: 20px;
+            min-width: 220px;
+            z-index: 9999 !important;
+            animation: dropdownSlideIn 0.3s ease-out;
+            pointer-events: auto !important;
+            transform: translateZ(0) !important;
+            will-change: transform !important;
+        }
+
+        @keyframes dropdownSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95) translateZ(0);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1) translateZ(0);
+            }
         }
 
         .dropdown-menu.show {
-            display: block;
+            display: block !important;
+            transform: translateZ(0) !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
 
         .dropdown-section {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .dropdown-section:last-child {
@@ -497,19 +720,19 @@
             font-size: 12px;
         }
 
-        /* Center aligned tabs */
+        /* Center aligned tabs - Modern Style */
         .tabs {
             display: flex;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            background: rgba(248, 249, 250, 0.6);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(222, 226, 230, 0.5);
             overflow-x: auto;
             justify-content: center;
-            padding: 0 20px;
+            padding: 8px 20px;
+            gap: 8px;
         }
 
         .hub-site-field {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
-            border-left: 4px solid #f39c12 !important;
             font-weight: 600 !important;
             text-transform: uppercase !important;
             color: #2c3e50 !important;
@@ -518,7 +741,6 @@
         .hub-site-field:focus {
             outline: 2px solid #f39c12 !important;
             box-shadow: 0 0 15px rgba(243, 156, 18, 0.4);
-            background: linear-gradient(135deg, #fff9e6 0%, #ffebb3 100%) !important;
         }
 
         .hub-site-field::placeholder {
@@ -528,19 +750,14 @@
         }
 
         .auto-filled {
-            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%) !important;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
         }
 
-        .date-time-field {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important;
-            border-left: 3px solid #ff9800 !important;
-        }
+
 
         .date-time-field:focus {
             outline: 2px solid #ff9800 !important;
             box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
-            background: linear-gradient(135deg, #fff8e1 0%, #ffcc02 20%) !important;
         }
 
         .date-time-field::placeholder {
@@ -609,12 +826,24 @@
         }
 
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4a90e2;
+            width: 50px;
+            height: 50px;
+            position: relative;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            background: conic-gradient(from 0deg, #667eea, #764ba2, #f093fb, #667eea);
+            animation: spin 1.5s linear infinite;
+        }
+
+        .spinner::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            backdrop-filter: blur(10px);
         }
 
         @keyframes spin {
@@ -623,17 +852,56 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 20px;
+            }
+
+            .header {
+                padding: 30px 15px;
+            }
+
             .toolbar {
                 flex-direction: column;
                 align-items: stretch;
+                padding: 20px;
+                gap: 16px;
+            }
+
+            .toolbar-group {
+                border-right: none;
+                border-bottom: 1px solid rgba(222, 226, 230, 0.5);
+                padding-bottom: 16px;
+                margin-bottom: 12px;
+                gap: 8px;
+            }
+
+            .toolbar-group:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
             }
 
             .tabs {
-                flex-direction: column;
+                padding: 8px 12px;
+                gap: 6px;
+            }
+
+            .tab {
+                padding: 12px 20px;
+                font-size: 14px;
             }
 
             .tab-content {
                 height: 50vh;
+                padding: 8px;
+            }
+
+            .table-container {
+                border-radius: 12px;
             }
 
             table {
@@ -643,6 +911,28 @@
             th, td {
                 padding: 8px 4px;
             }
+
+            .btn {
+                padding: 14px 22px;
+                font-size: 13px;
+                gap: 10px;
+            }
+
+            .toast-container {
+                max-width: calc(100vw - 20px);
+                right: 10px;
+                left: 10px;
+            }
+        }
+
+        /* Enhanced glassmorphism effects */
+        .progress-bar {
+            background: rgba(233, 236, 239, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
         }
 
         /* Toast Notification System */
@@ -655,16 +945,19 @@
         }
 
         .toast {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-            margin-bottom: 10px;
-            padding: 16px 20px;
-            border-left: 4px solid #4a90e2;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 32px rgba(31, 38, 135, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+            margin-bottom: 12px;
+            padding: 20px 24px;
+            border-left: 4px solid #667eea;
             transform: translateX(450px);
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 0;
-            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .toast.show {
@@ -768,13 +1061,202 @@
         }
 
         .editable:focus {
-            outline: 2px solid #4a90e2;
-            background: white;
+            outline: 2px solid #667eea;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Fault Level container */
+        .fault-level-container {
+            position: relative;
+            width: 100%;
+            z-index: 1;
+        }
+
+        /* Fault Level input styling - matches normal table cells */
+        .fault-level-input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 2px;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+            min-height: 20px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.3;
+        }
+
+        .fault-level-input:focus {
+            outline: 2px solid #667eea;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom dropdown for fault levels */
+        .fault-level-dropdown {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 32px rgba(31, 38, 135, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            z-index: 10000 !important;
+            display: none;
+            max-height: 220px;
+            overflow-y: auto;
+            min-width: 160px;
+            animation: dropdownSlideIn 0.3s ease-out;
+        }
+
+        .fault-level-dropdown.show {
+            display: block;
+        }
+
+        .fault-level-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(222, 226, 230, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border-radius: 8px;
+            margin: 4px 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fault-level-option:last-child {
+            border-bottom: none;
+            margin-bottom: 8px;
+        }
+
+        .fault-level-option:first-child {
+            margin-top: 8px;
+        }
+
+        .fault-level-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .fault-level-option:hover::before {
+            left: 100%;
+        }
+
+        .fault-level-option:hover {
+            background: rgba(102, 126, 234, 0.12);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .fault-level-option.emergency {
+            color: #c62828;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border-left: 4px solid #c62828;
+        }
+
+        .fault-level-option.emergency:hover {
+            background: linear-gradient(135deg, #ffe8e8 0%, #ffb3ba 100%);
+            color: #b71c1c;
+            box-shadow: 0 4px 20px rgba(198, 40, 40, 0.3);
+        }
+
+        .fault-level-option.critical {
+            color: #ef6c00;
+            font-weight: bold;
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 4px solid #ef6c00;
+        }
+
+        .fault-level-option.critical:hover {
+            background: linear-gradient(135deg, #fff0e6 0%, #ffd699 100%);
+            color: #e65100;
+            box-shadow: 0 4px 20px rgba(239, 108, 0, 0.3);
+        }
+
+        .fault-level-option.major {
+            color: #f57f17;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%);
+            border-left: 4px solid #f57f17;
+        }
+
+        .fault-level-option.major:hover {
+            background: linear-gradient(135deg, #fffbf0 0%, #fff59d 100%);
+            color: #f57c00;
+            box-shadow: 0 4px 20px rgba(245, 127, 23, 0.3);
+        }
+
+        .fault-level-option.minor {
+            color: #7b1fa2;
+            font-weight: 500;
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border-left: 4px solid #7b1fa2;
+        }
+
+        .fault-level-option.minor:hover {
+            background: linear-gradient(135deg, #f0e6f7 0%, #dda0dd 100%);
+            color: #6a1b9a;
+            box-shadow: 0 4px 20px rgba(123, 31, 162, 0.3);
+        }
+
+        /* Custom scrollbar for fault level dropdown */
+        .fault-level-dropdown::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .fault-level-dropdown::-webkit-scrollbar-track {
+            background: rgba(241, 241, 241, 0.3);
             border-radius: 4px;
         }
 
+        .fault-level-dropdown::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .fault-level-dropdown::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #f093fb 100%);
+        }
+
         .editing {
-            background: rgba(74, 144, 226, 0.05) !important;
+            background: rgba(102, 126, 234, 0.08) !important;
+        }
+
+        /* Ensure table fills full width and columns distribute evenly */
+        table th,
+        table td {
+            width: calc(100% / 12); /* All 12 columns share width equally */
         }
     </style>
 </head>
@@ -787,20 +1269,20 @@
         <div class="toolbar">
             <div class="toolbar-group">
                 <button class="btn" id="downloadBtn">
-                    📥 Refresh
+                    🔄 Refresh
                 </button>
                 <button class="btn btn-secondary" id="saveBtn">
                     💾 Save
                 </button>
                 <button class="btn btn-info" id="exportBtn">
-                    📤 Export
+                    📋 Export
                 </button>
             </div>
             
             <div class="toolbar-group">
                 <div class="style-control">
                     <button class="btn btn-warning" id="databaseBtn">
-                        🗄️ Data Base
+                        🗃️ Data Base
                     </button>
                     <div class="dropdown-menu" id="databaseDropdown">
                         <div class="dropdown-section">
@@ -815,7 +1297,7 @@
                         </div>
                         <div class="dropdown-section">
                             <button class="btn btn-warning" id="autoFillBtn" style="width: 100%;">
-                                🔧 Auto Fill
+                                ⚡ Auto Fill
                             </button>
                         </div>
                     </div>
@@ -825,7 +1307,7 @@
             <div class="toolbar-group">
                 <div class="style-control">
                     <button class="btn btn-secondary" id="editRowBtn">
-                        ✏️ Edit Row
+                        📝 Edit Row
                     </button>
                     <div class="dropdown-menu" id="editRowDropdown">
                         <div class="dropdown-section">
@@ -845,7 +1327,7 @@
             <div class="toolbar-group">
                 <div class="style-control">
                     <button class="btn btn-info" id="formatBtn">
-                        📐 Format
+                        ⚙️ Format
                     </button>
                     <div class="dropdown-menu" id="formatDropdown">
                         <div class="dropdown-section">
@@ -999,6 +1481,8 @@
             ]
         };
 
+
+
         // XOR Encoding/Decoding Functions
         function xorEncode(token, key) {
             let result = '';
@@ -1125,9 +1609,7 @@
                 if (CONFIG.fallbackToken) {
                     CONFIG.githubToken = xorDecode(CONFIG.fallbackToken, CONFIG.encodingKey);
                     console.log('✅ Fallback token loaded successfully');
-                    showToast('Fallback Token', 
-                        'Using fallback token - remote sources unavailable. Consider checking network connectivity.', 
-                        'warning', 6000);
+                    // Fallback notification removed - silent fallback
                     return true;
                 } else {
                     throw new Error('No fallback token available');
@@ -1615,7 +2097,7 @@
             });
         }
         
-        // Export Excel file with fresh data and table formatting
+        // Export Excel file with fresh data and table formatting using ExcelJS
         async function exportExcelFile() {
             setLoading(true);
             
@@ -1629,51 +2111,42 @@
                 // Get current data from tables
                 updateWorkbookFromTables();
                 
-                // Create Excel workbook
-                const workbook = XLSX.utils.book_new();
+                // Create Excel workbook using ExcelJS
+                const workbook = new ExcelJS.Workbook();
+                
+                // Set workbook properties
+                workbook.creator = 'Excel Collaborator';
+                workbook.lastModifiedBy = 'Excel Collaborator';
+                workbook.created = new Date();
+                workbook.modified = new Date();
+                workbook.subject = 'Network Outages Management';
+                workbook.title = 'Active Outages';
                 
                 Object.entries(workbookData).forEach(([sheetName, data]) => {
                     if (data.length > 0) {
                         // Clean and validate data before creating worksheet
-                        const cleanData = data.map(row => 
-                            row.map(cell => {
-                                if (cell === null || cell === undefined) return '';
-                                if (typeof cell === 'string') return cell.trim();
-                                return cell;
-                            })
-                        );
-                        
-                        // Create worksheet from clean data
-                        const worksheet = XLSX.utils.aoa_to_sheet(cleanData);
-                        
-                        // Get the range for the table
-                        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-                        
-                        // Auto-fit columns based on content
-                        const colWidths = [];
-                        for (let col = range.s.c; col <= range.e.c; col++) {
-                            let maxWidth = 10; // Minimum width
-                            
-                            for (let row = range.s.r; row <= range.e.r; row++) {
-                                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-                                const cell = worksheet[cellAddress];
-                                if (cell && cell.v) {
-                                    const cellValue = String(cell.v);
-                                    const cellWidth = Math.min(cellValue.length * 1.2, 50); // Max width 50
-                                    maxWidth = Math.max(maxWidth, cellWidth);
+                        const maxColumns = Math.max(...data.map(row => row.length));
+                        const cleanData = data.map(row => {
+                            // Ensure all rows have the same number of columns
+                            const normalizedRow = new Array(maxColumns).fill('');
+                            for (let i = 0; i < row.length; i++) {
+                                const cell = row[i];
+                                if (cell === null || cell === undefined) {
+                                    normalizedRow[i] = '';
+                                } else if (typeof cell === 'string') {
+                                    normalizedRow[i] = cell.trim();
+                                } else {
+                                    normalizedRow[i] = String(cell);
                                 }
                             }
-                            
-                            colWidths[col] = { width: maxWidth };
-                        }
-                        worksheet['!cols'] = colWidths;
+                            return normalizedRow;
+                        });
                         
-                        // Auto-fit row heights
-                        const rowHeights = [];
-                        for (let row = range.s.r; row <= range.e.r; row++) {
-                            rowHeights[row] = { hpt: row === 0 ? 25 : 20 }; // Header taller
-                        }
-                        worksheet['!rows'] = rowHeights;
+                        // Create worksheet
+                        const worksheet = workbook.addWorksheet(sheetName);
+                        
+                        // Add data to worksheet
+                        worksheet.addRows(cleanData);
                         
                         // Identify date/time columns and EM Field Feedback column
                         const headers = cleanData[0] || [];
@@ -1686,132 +2159,105 @@
                                 headerLower.includes('date') ||
                                 headerLower.includes('fault first time') ||
                                 headerLower.includes('pcm created')) {
-                                dateColumns.push(index);
+                                dateColumns.push(index + 1); // ExcelJS uses 1-based indexing
                             }
                             if (headerLower.includes('em field feedback')) {
-                                emFieldFeedbackCol = index;
+                                emFieldFeedbackCol = index + 1; // ExcelJS uses 1-based indexing
                             }
                         });
                         
-                        // Apply formatting to all cells
-                        for (let row = range.s.r; row <= range.e.r; row++) {
-                            for (let col = range.s.c; col <= range.e.c; col++) {
-                                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-                                const cell = worksheet[cellAddress];
-                                
-                                if (!cell) {
-                                    // Create empty cell if it doesn't exist
-                                    worksheet[cellAddress] = { t: 's', v: '' };
+                        // Auto-fit columns based on content and apply formatting
+                        worksheet.columns.forEach((column, colIndex) => {
+                            let maxWidth = 10; // Minimum width
+                            
+                            // Calculate max width based on content
+                            column.eachCell((cell, rowNumber) => {
+                                if (cell.value) {
+                                    const cellValue = String(cell.value);
+                                    const cellWidth = Math.min(cellValue.length * 1.2, 50); // Max width 50
+                                    maxWidth = Math.max(maxWidth, cellWidth);
                                 }
-                                
-                                // Initialize cell style
-                                if (!worksheet[cellAddress].s) {
-                                    worksheet[cellAddress].s = {};
-                                }
-                                
-                                const cellStyle = {
-                                    border: {
-                                        top: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } },
-                                        bottom: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } },
-                                        left: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } },
-                                        right: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } }
-                                    }
+                            });
+                            
+                            column.width = maxWidth;
+                        });
+                        
+                        // Format cells
+                        worksheet.eachRow((row, rowNumber) => {
+                            row.height = rowNumber === 1 ? 25 : 20; // Header taller
+                            
+                            row.eachCell((cell, colNumber) => {
+                                // Common border style
+                                const borderStyle = {
+                                    top: { style: 'thin' },
+                                    bottom: { style: 'thin' },
+                                    left: { style: 'thin' },
+                                    right: { style: 'thin' }
                                 };
                                 
-                                if (row === 0) {
+                                if (rowNumber === 1) {
                                     // Header formatting
-                                    cellStyle.font = { bold: true, color: { rgb: "FFFFFF" }, size: 11 };
-                                    cellStyle.fill = { fgColor: { rgb: "4472C4" } };
-                                    cellStyle.alignment = { 
-                                        horizontal: "center", 
-                                        vertical: "center"
+                                    cell.style = {
+                                        font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
+                                        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
+                                        alignment: { horizontal: 'center', vertical: 'middle' },
+                                        border: borderStyle
                                     };
                                 } else {
                                     // Data cell formatting
-                                    cellStyle.font = { size: 10 };
-                                    cellStyle.alignment = { 
-                                        vertical: "center"
-                                    };
+                                    let alignment = { vertical: 'middle' };
                                     
                                     // Date column formatting - center alignment
-                                    if (dateColumns.includes(col)) {
-                                        cellStyle.alignment.horizontal = "center";
-                                        cellStyle.numFmt = "yyyy-mm-dd hh:mm:ss";
-                                        
-                                        // Try to parse date value
-                                        if (cell && cell.v) {
-                                            const dateValue = new Date(cell.v);
-                                            if (!isNaN(dateValue.getTime())) {
-                                                cell.t = 'd';
-                                                cell.v = dateValue;
-                                            }
-                                        }
-                                    } else if (col === emFieldFeedbackCol) {
+                                    if (dateColumns.includes(colNumber)) {
+                                        alignment.horizontal = 'center';
+                                        // Keep dates as text to avoid parsing issues
+                                    } else if (colNumber === emFieldFeedbackCol) {
                                         // EM Field Feedback column - left alignment
-                                        cellStyle.alignment.horizontal = "left";
+                                        alignment.horizontal = 'left';
                                     } else {
                                         // All other columns - center alignment
-                                        cellStyle.alignment.horizontal = "center";
+                                        alignment.horizontal = 'center';
                                     }
                                     
+                                    // Apply styling
+                                    cell.style = {
+                                        font: { size: 10 },
+                                        alignment: alignment,
+                                        border: borderStyle
+                                    };
+                                    
                                     // Alternate row coloring
-                                    if (row % 2 === 0) {
-                                        cellStyle.fill = { fgColor: { rgb: "F8F9FA" } };
+                                    if (rowNumber % 2 === 0) {
+                                        cell.style.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8F9FA' } };
                                     }
                                 }
-                                
-                                worksheet[cellAddress].s = cellStyle;
+                            });
+                        });
+                        
+                        // Add autofilter only (simpler and more reliable than tables)
+                        if (cleanData.length > 1 && headers.length > 0) {
+                            // Helper function to convert column number to Excel column letter
+                            function columnToLetter(column) {
+                                let temp, letter = '';
+                                while (column > 0) {
+                                    temp = (column - 1) % 26;
+                                    letter = String.fromCharCode(temp + 65) + letter;
+                                    column = (column - temp - 1) / 26;
+                                }
+                                return letter;
                             }
+                            
+                            const lastColumn = columnToLetter(headers.length);
+                            const lastRow = cleanData.length;
+                            
+                            // Set autofilter range (just the header row)
+                            worksheet.autoFilter = `A1:${lastColumn}${lastRow}`;
                         }
-                        
-                        // Add Excel table
-                        const tableRef = XLSX.utils.encode_range({
-                            s: { c: range.s.c, r: range.s.r },
-                            e: { c: range.e.c, r: range.e.r }
-                        });
-                        
-                        if (!worksheet['!tables']) worksheet['!tables'] = [];
-                        worksheet['!tables'].push({
-                            ref: tableRef,
-                            name: `Table${sheetName.replace(/[^A-Za-z0-9]/g, '')}`,
-                            headerRowCount: 1,
-                            style: {
-                                theme: 'TableStyleMedium2',
-                                showFirstColumn: false,
-                                showLastColumn: false,
-                                showRowStripes: true,
-                                showColumnStripes: false
-                            }
-                        });
-                        
-                        // Set autofilter
-                        worksheet['!autofilter'] = {
-                            ref: XLSX.utils.encode_range({
-                                s: { c: range.s.c, r: range.s.r },
-                                e: { c: range.e.c, r: range.s.r }
-                            })
-                        };
-                        
-                        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
                     }
                 });
                 
-                // Set workbook properties
-                workbook.Props = {
-                    Title: 'Active Outages',
-                    Subject: 'Network Outages Management',
-                    Author: 'Excel Collaborator',
-                    CreatedDate: new Date(),
-                    ModifiedDate: new Date()
-                };
-                
-                // Generate file with proper options
-                const excelBuffer = XLSX.write(workbook, { 
-                    type: 'array', 
-                    bookType: 'xlsx',
-                    compression: true,
-                    cellStyles: true
-                });
+                // Generate file buffer
+                const excelBuffer = await workbook.xlsx.writeBuffer();
                 
                 // Download file
                 const blob = new Blob([excelBuffer], { 
@@ -1831,7 +2277,7 @@
                 
                 setLoading(false);
                 showToast('Export Complete', 
-                    `Excel file exported with latest data and formatting`, 
+                    `Excel file exported with latest data and formatting using ExcelJS`, 
                     'success', 4000);
                 
             } catch (error) {
@@ -2082,9 +2528,9 @@
                         textarea.value = formattedDate;
                         
                         // Add visual feedback
-                        textarea.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)';
+                        textarea.classList.add('auto-filled');
                         setTimeout(() => {
-                            textarea.style.background = '';
+                            textarea.classList.remove('auto-filled');
                             textarea.classList.add('date-time-field'); // Restore original styling
                         }, 1000);
                     }
@@ -2129,22 +2575,26 @@
                     }
                 } else {
                     // Show error for invalid date
-                    textarea.style.background = 'linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%)';
+                    textarea.style.borderColor = '#dc3545';
+                    textarea.style.borderWidth = '2px';
                     setTimeout(() => {
-                        textarea.style.background = '';
+                        textarea.style.borderColor = '';
+                        textarea.style.borderWidth = '';
                         textarea.classList.add('date-time-field'); // Restore original styling
                     }, 2000);
                     console.log(`Failed to parse date: "${value}"`);
-                    showToast('Invalid Date', `Could not parse "${value}"`, 'warning', 3000);
+                    // Invalid date notification removed
                 }
             } catch (e) {
                 console.error('Error formatting date:', e);
-                textarea.style.background = 'linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%)';
+                textarea.style.borderColor = '#dc3545';
+                textarea.style.borderWidth = '2px';
                 setTimeout(() => {
-                    textarea.style.background = '';
+                    textarea.style.borderColor = '';
+                    textarea.style.borderWidth = '';
                     textarea.classList.add('date-time-field');
                 }, 2000);
-                showToast('Date Error', `Error processing date: ${e.message}`, 'error', 4000);
+                // Date error notification removed
             }
         }
 
@@ -2152,9 +2602,7 @@
         function showDateFormatHelp(textarea) {
             if (!textarea.hasShownHelp) {
                 textarea.hasShownHelp = true;
-                showToast('Date Formats', 
-                    'Supports: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, HH:MM AM/PM, "now"', 
-                    'info', 4000);
+                // Date format help notification removed
             }
         }
         // Format duration input to [h]:mm:ss format - Exactly like Excel
@@ -2287,6 +2735,30 @@
             });
         }
         
+        // Function to redistribute table width to eliminate free space
+        function redistributeTableWidth(table, sheetName) {
+            const headers = table.querySelectorAll('thead th');
+            if (headers.length === 0) return;
+            
+            const tableWidth = table.offsetWidth;
+            let totalUsedWidth = 0;
+            
+            // Calculate total width used by all columns except the last one
+            for (let i = 0; i < headers.length - 1; i++) {
+                totalUsedWidth += headers[i].offsetWidth;
+            }
+            
+            // Calculate remaining width for the last column
+            const lastColumnIndex = headers.length - 1;
+            const lastHeader = headers[lastColumnIndex];
+            const remainingWidth = Math.max(tableWidth - totalUsedWidth, 50); // Minimum 50px
+            
+            // Apply the remaining width to the last column
+            lastHeader.style.width = `${remainingWidth}px`;
+            lastHeader.style.minWidth = `${remainingWidth}px`;
+            columnWidths[sheetName][lastColumnIndex] = `${remainingWidth}px`;
+        }
+
         // Setup table resizing functionality
         function setupTableResizing(tableContainer, sheetName) {
             const table = tableContainer.querySelector('table');
@@ -2351,6 +2823,9 @@
                         currentHeader.style.width = `${width}px`;
                         currentHeader.style.minWidth = `${width}px`;
                         columnWidths[sheetName][index] = `${width}px`;
+                        
+                        // Auto-adjust last column to fill remaining space
+                        redistributeTableWidth(table, sheetName);
                         markAsModified();
                     }
                 }
@@ -2360,6 +2835,9 @@
                     if (currentHeader) {
                         currentHeader.classList.remove('resizing');
                         resizeHandle.classList.remove('active');
+                        
+                        // Final adjustment to ensure table fills full width
+                        redistributeTableWidth(table, sheetName);
                         currentHeader = null;
                     }
                     
@@ -2425,13 +2903,21 @@
                 
                 // Apply saved height
                 if (rowHeights[sheetName][index]) {
-                    tr.style.height = rowHeights[sheetName][index];
+                    const savedHeight = parseInt(rowHeights[sheetName][index]);
+                    tr.style.height = `${savedHeight}px`;
                     
                     // Update all textareas in this row to match the saved height
                     const textareas = tr.querySelectorAll('textarea.editable');
                     textareas.forEach(textarea => {
-                        const rowHeight = parseInt(rowHeights[sheetName][index]);
-                        textarea.style.height = `${rowHeight - 8}px`; // Account for padding
+                        textarea.style.height = `${savedHeight - 4}px`; // Account for reduced cell padding
+                        textarea.style.minHeight = `${savedHeight - 4}px`;
+                    });
+                    
+                    // Update fault level inputs in this row to match the saved height
+                    const faultLevelInputs = tr.querySelectorAll('.fault-level-input');
+                    faultLevelInputs.forEach(input => {
+                        input.style.height = `${savedHeight - 4}px`; // Account for reduced cell padding
+                        input.style.minHeight = `${savedHeight - 4}px`;
                     });
                 }
                 
@@ -2465,7 +2951,15 @@
                         // Update all textareas in this row to match the new height
                         const textareas = currentRow.querySelectorAll('textarea.editable');
                         textareas.forEach(textarea => {
-                            textarea.style.height = `${height - 8}px`; // Account for padding
+                            textarea.style.height = `${height - 4}px`; // Account for reduced cell padding
+                            textarea.style.minHeight = `${height - 4}px`;
+                        });
+                        
+                        // Update fault level inputs in this row to match the new height
+                        const faultLevelInputs = currentRow.querySelectorAll('.fault-level-input');
+                        faultLevelInputs.forEach(input => {
+                            input.style.height = `${height - 4}px`; // Account for reduced cell padding
+                            input.style.minHeight = `${height - 4}px`;
                         });
                         
                         rowHeights[sheetName][index] = `${height}px`;
@@ -2494,7 +2988,6 @@
         elements.autoFillBtn.addEventListener('click', autoFillColumns);
         elements.refreshTokenBtn.addEventListener('click', async () => {
             setLoading(true);
-            updateStatus('Refreshing API token...');
             
             // Add debug info
             console.log('=== TOKEN REFRESH DEBUG INFO ===');
@@ -2505,9 +2998,6 @@
             const success = await loadApiTokenFromRemote();
             if (success) {
                 showToast('Success', 'API token refreshed successfully', 'success', 3000);
-                updateStatus('Token refreshed - Ready');
-            } else {
-                updateStatus('Token refresh failed');
             }
             setLoading(false);
         });
@@ -2794,15 +3284,38 @@
                         }
                     }
                     
-                    // Successfully got the file, now process it
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    // Successfully got the file, now process it using ExcelJS
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(arrayBuffer);
                     
                     // Clear existing data
                     workbookData = {};
                     
-                    workbook.SheetNames.forEach(sheetName => {
-                        const worksheet = workbook.Sheets[sheetName];
-                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                    workbook.worksheets.forEach(worksheet => {
+                        const sheetName = worksheet.name;
+                        const data = [];
+                        
+                        // Convert worksheet to array of arrays
+                        worksheet.eachRow((row, rowNumber) => {
+                            const rowData = [];
+                            row.eachCell((cell, colNumber) => {
+                                let cellValue = '';
+                                if (cell.value !== null && cell.value !== undefined) {
+                                    if (cell.value instanceof Date) {
+                                        // Format dates as strings to match original behavior
+                                        cellValue = cell.value.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+                                    } else if (typeof cell.value === 'object' && cell.value.text) {
+                                        // Handle rich text
+                                        cellValue = cell.value.text;
+                                    } else {
+                                        cellValue = String(cell.value);
+                                    }
+                                }
+                                rowData[colNumber - 1] = cellValue; // ExcelJS uses 1-based indexing
+                            });
+                            data[rowNumber - 1] = rowData; // ExcelJS uses 1-based indexing
+                        });
+                        
                         workbookData[sheetName] = data;
                     });
                     
@@ -2856,15 +3369,17 @@
                 // Get current data from tables (optimized)
                 updateWorkbookFromTables();
                 
-                // Create Excel file
-                const workbook = XLSX.utils.book_new();
+                // Create Excel file using ExcelJS
+                const workbook = new ExcelJS.Workbook();
                 
                 Object.entries(workbookData).forEach(([sheetName, data]) => {
-                    const worksheet = XLSX.utils.aoa_to_sheet(data);
-                    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+                    const worksheet = workbook.addWorksheet(sheetName);
+                    if (data.length > 0) {
+                        worksheet.addRows(data);
+                    }
                 });
                 
-                const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+                const excelBuffer = await workbook.xlsx.writeBuffer();
                 const base64Content = btoa(String.fromCharCode(...new Uint8Array(excelBuffer)));
                 
                 // Get current file SHA
@@ -2976,12 +3491,32 @@
                         }
                     }
                     
-                    // Successfully got the lookup file, now process it
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    // Successfully got the lookup file, now process it using ExcelJS
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(arrayBuffer);
                     
-                    if (workbook.SheetNames.includes('Data')) {
-                        const worksheet = workbook.Sheets['Data'];
-                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                    const dataWorksheet = workbook.getWorksheet('Data');
+                    if (dataWorksheet) {
+                        const data = [];
+                        
+                        // Convert worksheet to array of arrays
+                        dataWorksheet.eachRow((row, rowNumber) => {
+                            const rowData = [];
+                            row.eachCell((cell, colNumber) => {
+                                let cellValue = '';
+                                if (cell.value !== null && cell.value !== undefined) {
+                                    if (cell.value instanceof Date) {
+                                        cellValue = cell.value.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+                                    } else if (typeof cell.value === 'object' && cell.value.text) {
+                                        cellValue = cell.value.text;
+                                    } else {
+                                        cellValue = String(cell.value);
+                                    }
+                                }
+                                rowData[colNumber - 1] = cellValue;
+                            });
+                            data[rowNumber - 1] = rowData;
+                        });
                         
                         if (data.length > 0) {
                             const headers = data[0];
@@ -3026,7 +3561,7 @@
                             throw new Error('Data sheet found but no data rows!');
                         }
                     } else {
-                        throw new Error(`'Data' sheet not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
+                        throw new Error(`'Data' sheet not found. Available sheets: ${workbook.worksheets.map(ws => ws.name).join(', ')}`);
                     }
                     
                 } catch (error) {
@@ -3227,66 +3762,10 @@
                         cell.classList.add('em-field-feedback');
                     }
                     
-                    const textarea = document.createElement('textarea');
-                    textarea.className = 'editable';
+                    // Create appropriate input element (textarea or select) based on column type
+                    const inputElement = createInputElement(headers[i], '', i, currentSheet, headers);
                     
-                    textarea.addEventListener('input', () => {
-                        textarea.classList.add('editing');
-                        setTimeout(() => textarea.classList.remove('editing'), 500);
-                        debouncedMarkModified();
-                    });
-                    
-                    const columnName = headers[i]?.toLowerCase() || '';
-                    
-                    // Add real-time lookup for Hub Site column
-                    if (columnName.includes('hub site')) {
-                        textarea.addEventListener('input', (e) => {
-                            e.target.classList.add('editing');
-                            setTimeout(() => e.target.classList.remove('editing'), 500);
-                            debouncedLookup(e.target, currentSheet);
-                        });
-                        textarea.addEventListener('paste', (e) => {
-                            setTimeout(() => {
-                                debouncedLookup(e.target, currentSheet);
-                            }, 10);
-                        });
-                        textarea.classList.add('hub-site-field');
-                    }
-                    
-                    // Format date/time columns in yyyy-mm-dd hh:mm:ss
-                    if (columnName.includes('creat fault first time') || 
-                        columnName.includes('pcm created') || 
-                        columnName.includes('created at') ||
-                        columnName.includes('fault first time') ||
-                        columnName.includes('first time occured')) {
-                        
-                        // Add multiple event listeners for comprehensive date formatting
-                        textarea.addEventListener('blur', (e) => formatDateTime(e.target));
-                        textarea.addEventListener('change', (e) => formatDateTime(e.target));
-                        textarea.addEventListener('paste', (e) => setTimeout(() => formatDateTime(e.target), 10));
-                        textarea.addEventListener('focus', (e) => showDateFormatHelp(e.target));
-                        textarea.addEventListener('input', (e) => {
-                            // Immediate clearing of duration when PCM field is emptied
-                            if (e.target.value.trim() === '') {
-                                formatDateTime(e.target); // Handle clearing immediately
-                            }
-                            // Debounced formatting to avoid excessive calls while typing
-                            clearTimeout(e.target.formatTimeout);
-                            e.target.formatTimeout = setTimeout(() => formatDateTime(e.target), 1000);
-                        });
-                        
-                        textarea.classList.add('date-time-field');
-                    }
-                    
-                    // Format elapsed duration column
-                    if (columnName.includes('elapsed duration')) {
-                        textarea.addEventListener('blur', (e) => formatDuration(e.target));
-                        textarea.addEventListener('paste', (e) => setTimeout(() => formatDuration(e.target), 10));
-                        textarea.readOnly = true;
-                        textarea.classList.add('elapsed-duration-live');
-                    }
-                    
-                    cell.appendChild(textarea);
+                    cell.appendChild(inputElement);
                 }
                 
                 debouncedMarkModified();
@@ -3330,7 +3809,15 @@
                         // Update all textareas in this row to match the new height
                         const textareas = currentRow.querySelectorAll('textarea.editable');
                         textareas.forEach(textarea => {
-                            textarea.style.height = `${height - 8}px`; // Account for padding
+                            textarea.style.height = `${height - 4}px`; // Account for reduced cell padding
+                            textarea.style.minHeight = `${height - 4}px`;
+                        });
+                        
+                        // Update fault level inputs in this row to match the new height
+                        const faultLevelInputs = currentRow.querySelectorAll('.fault-level-input');
+                        faultLevelInputs.forEach(input => {
+                            input.style.height = `${height - 4}px`; // Account for reduced cell padding
+                            input.style.minHeight = `${height - 4}px`;
                         });
                         
                         if (!rowHeights[currentSheet]) {
@@ -3522,76 +4009,126 @@
             }
         }
 
-        // Optimized workbook data loading
-        function loadWorkbookData() {
-            // Clear existing tabs
-            elements.tabsHeader.innerHTML = '';
-            elements.tabsContent.innerHTML = '';
+        // Helper function to create appropriate input element based on column type
+        function createInputElement(columnName, cellValue, colIndex, sheetName, headers) {
+            const colName = columnName?.toLowerCase() || '';
             
-            let isFirst = true;
-            
-            Object.entries(workbookData).forEach(([sheetName, data]) => {
-                // Create tab button
-                const tab = document.createElement('button');
-                tab.className = 'tab' + (isFirst ? ' active' : '');
-                tab.textContent = sheetName;
-                tab.addEventListener('click', () => switchTab(sheetName));
-                elements.tabsHeader.appendChild(tab);
+            // Check if this is a Fault Level column
+            if (colName.includes('fault level')) {
+                // Create container for input and dropdown
+                const container = document.createElement('div');
+                container.className = 'fault-level-container';
                 
-                // Create tab content
-                const tabContent = document.createElement('div');
-                tabContent.className = 'tab-content' + (isFirst ? ' active' : '');
-                tabContent.id = `tab-${sheetName}`;
+                // Create input for Fault Level
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'editable fault-level-input';
+                input.value = cellValue || '';
+                input.setAttribute('autocomplete', 'off');
                 
-                if (data.length > 0) {
-                    const tableContainer = document.createElement('div');
-                    tableContainer.className = 'table-container';
-                    
-                    const table = document.createElement('table');
-                    
-                    // Create header
-                    const thead = document.createElement('thead');
-                    const headerRow = document.createElement('tr');
-                    
-                    const headers = data[0];
-                    headers.forEach(header => {
-                        const th = document.createElement('th');
-                        th.textContent = header || '';
-                        headerRow.appendChild(th);
+                // Create custom dropdown
+                const dropdown = document.createElement('div');
+                dropdown.className = 'fault-level-dropdown';
+                
+                const options = ['Emergency', 'Critical', 'Major', 'Minor'];
+                options.forEach(optionValue => {
+                    const option = document.createElement('div');
+                    option.className = `fault-level-option ${optionValue.toLowerCase()}`;
+                    option.textContent = optionValue;
+                    option.addEventListener('click', () => {
+                        input.value = optionValue;
+                        dropdown.classList.remove('show');
+                        input.classList.add('editing');
+                        setTimeout(() => input.classList.remove('editing'), 500);
+                        debouncedMarkModified();
+                        input.blur(); // Remove focus after selection
                     });
-                    
-                    thead.appendChild(headerRow);
-                    table.appendChild(thead);
-                    
-                    // Find Hub Site column index for real-time lookup
-                    const hubSiteColIndex = headers.findIndex(h => h && h.toLowerCase().includes('hub site'));
-                    const emFieldFeedbackColIndex = headers.findIndex(h => h && h.toLowerCase().includes('em field feedback'));
-                    
-                    // Create body
-                    const tbody = document.createElement('tbody');
-                    
-                    for (let i = 1; i < data.length; i++) {
-                        const row = document.createElement('tr');
-                        
-                        data[i].forEach((cellValue, colIndex) => {
-                            const td = document.createElement('td');
-                            
-                            // Add special class for EM Field Feedback column
-                            if (colIndex === emFieldFeedbackColIndex) {
-                                td.classList.add('em-field-feedback');
-                            }
-                            
+                    dropdown.appendChild(option);
+                });
+                
+                // Add event listeners for input
+                input.addEventListener('input', (e) => {
+                    e.target.classList.add('editing');
+                    setTimeout(() => e.target.classList.remove('editing'), 500);
+                    debouncedMarkModified();
+                });
+                
+                input.addEventListener('change', (e) => {
+                    e.target.classList.add('editing');
+                    setTimeout(() => e.target.classList.remove('editing'), 500);
+                    debouncedMarkModified();
+                });
+                
+                // Function to position dropdown relative to input
+                function positionDropdown() {
+                    const rect = input.getBoundingClientRect();
+                    dropdown.style.top = `${rect.bottom + 2}px`;
+                    dropdown.style.left = `${rect.left}px`;
+                    dropdown.style.width = `${Math.max(rect.width, 150)}px`;
+                }
+                
+                // Show dropdown on focus/click
+                input.addEventListener('focus', () => {
+                    positionDropdown();
+                    dropdown.classList.add('show');
+                });
+                
+                input.addEventListener('click', () => {
+                    positionDropdown();
+                    dropdown.classList.add('show');
+                });
+                
+                // Hide dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!container.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+                
+                // Hide dropdown on blur (with slight delay for option clicks)
+                input.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        dropdown.classList.remove('show');
+                    }, 150);
+                });
+                
+                // Reposition dropdown on scroll or resize
+                function hideDropdownOnMove() {
+                    dropdown.classList.remove('show');
+                }
+                
+                window.addEventListener('scroll', hideDropdownOnMove, true);
+                window.addEventListener('resize', hideDropdownOnMove);
+                
+                // Cleanup function to remove dropdown when element is removed
+                container.addEventListener('remove', () => {
+                    if (dropdown.parentNode) {
+                        dropdown.parentNode.removeChild(dropdown);
+                    }
+                });
+                
+                container.appendChild(input);
+                
+                // Append dropdown to body for fixed positioning
+                document.body.appendChild(dropdown);
+                
+                return container;
+            } else {
+                // Create regular textarea for all other columns
                             const textarea = document.createElement('textarea');
                             textarea.className = 'editable';
                             
-                            // Normalize Hub Site values to uppercase
+                // Find Hub Site column index for real-time lookup
+                const hubSiteColIndex = headers.findIndex(h => h && h.toLowerCase().includes('hub site'));
+                
+                // Set value with special handling for Hub Site
                             if (colIndex === hubSiteColIndex && cellValue) {
                                 textarea.value = String(cellValue).trim().toUpperCase();
                             } else {
                                 textarea.value = cellValue || '';
                             }
                             
-                            // Optimized input handling with debouncing (no auto-resize)
+                // Add input event listener
                             textarea.addEventListener('input', (e) => {
                                 e.target.classList.add('editing');
                                 setTimeout(() => e.target.classList.remove('editing'), 500);
@@ -3614,7 +4151,6 @@
                             }
                             
                             // Format date/time columns in yyyy-mm-dd hh:mm:ss
-                            const colName = headers[colIndex]?.toLowerCase() || '';
                             if (colName.includes('creat fault first time') || 
                                 colName.includes('pcm created') || 
                                 colName.includes('created at') ||
@@ -3645,10 +4181,94 @@
                                 textarea.addEventListener('paste', (e) => setTimeout(() => formatDuration(e.target), 10));
                                 textarea.readOnly = true;
                                 textarea.classList.add('elapsed-duration-live');
-                                // Skip initial formatting - will be handled by live updates for accuracy
+                }
+                
+                return textarea;
+            }
+        }
+
+        // Clean up existing fault level dropdowns
+        function cleanupFaultLevelDropdowns() {
+            const existingDropdowns = document.querySelectorAll('.fault-level-dropdown');
+            existingDropdowns.forEach(dropdown => {
+                if (dropdown.parentNode) {
+                    dropdown.parentNode.removeChild(dropdown);
+                }
+            });
+        }
+
+        // Optimized workbook data loading
+        function loadWorkbookData() {
+            // Clear existing tabs and cleanup dropdowns
+            elements.tabsHeader.innerHTML = '';
+            elements.tabsContent.innerHTML = '';
+            cleanupFaultLevelDropdowns();
+            
+            let isFirst = true;
+            
+            Object.entries(workbookData).forEach(([sheetName, data]) => {
+                // Create tab button
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (isFirst ? ' active' : '');
+                tab.textContent = sheetName;
+                tab.addEventListener('click', () => switchTab(sheetName));
+                elements.tabsHeader.appendChild(tab);
+                
+                // Create tab content
+                const tabContent = document.createElement('div');
+                tabContent.className = 'tab-content' + (isFirst ? ' active' : '');
+                tabContent.id = `tab-${sheetName}`;
+                
+                if (data.length > 0) {
+                    const tableContainer = document.createElement('div');
+                    tableContainer.className = 'table-container';
+                    
+                    const table = document.createElement('table');
+                    
+                    // Create header
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    
+                    const headers = data[0];
+                    const emFieldFeedbackHeaderIndex = headers.findIndex(h => h && h.toLowerCase().includes('em field feedback'));
+                    
+                    headers.forEach((header, index) => {
+                        const th = document.createElement('th');
+                        th.textContent = header || '';
+                        
+                        // Add special class for EM Field Feedback column header
+                        if (index === emFieldFeedbackHeaderIndex) {
+                            th.classList.add('em-field-feedback');
+                        }
+                        
+                        headerRow.appendChild(th);
+                    });
+                    
+                    thead.appendChild(headerRow);
+                    table.appendChild(thead);
+                    
+                    // Find Hub Site column index for real-time lookup
+                    const hubSiteColIndex = headers.findIndex(h => h && h.toLowerCase().includes('hub site'));
+                    const emFieldFeedbackColIndex = headers.findIndex(h => h && h.toLowerCase().includes('em field feedback'));
+                    
+                    // Create body
+                    const tbody = document.createElement('tbody');
+                    
+                    for (let i = 1; i < data.length; i++) {
+                        const row = document.createElement('tr');
+                        
+                        data[i].forEach((cellValue, colIndex) => {
+                            const td = document.createElement('td');
+                            
+                            // Add special class for EM Field Feedback column
+                            if (colIndex === emFieldFeedbackColIndex) {
+                                td.classList.add('em-field-feedback');
                             }
                             
-                            td.appendChild(textarea);
+                            // Create appropriate input element (textarea or select) based on column type
+                            const inputElement = createInputElement(headers[colIndex], cellValue, colIndex, sheetName, headers);
+                            
+                            td.appendChild(inputElement);
                             row.appendChild(td);
                         });
                         
@@ -3662,8 +4282,11 @@
                     // Setup table resizing functionality
                     setupTableResizing(tableContainer, sheetName);
                     
-                    // Apply current styling
-                    setTimeout(() => applyTableStyling(), 100);
+                    // Apply current styling and redistribute width
+                    setTimeout(() => {
+                        applyTableStyling();
+                        redistributeTableWidth(table, sheetName);
+                    }, 100);
                 } else {
                     tabContent.innerHTML = '<p>No data available</p>';
                 }
@@ -3690,8 +4313,14 @@
             
             currentSheet = sheetName;
             
-            // Apply current styling to the newly active sheet
-            setTimeout(() => applyTableStyling(), 100);
+            // Apply current styling and redistribute width to the newly active sheet
+            setTimeout(() => {
+                applyTableStyling();
+                const table = document.querySelector(`#tab-${sheetName} table`);
+                if (table) {
+                    redistributeTableWidth(table, sheetName);
+                }
+            }, 100);
         }
 
         function updateWorkbookFromTables() {
@@ -3708,9 +4337,17 @@
                     const rows = table.querySelectorAll('tbody tr');
                     rows.forEach(row => {
                         const rowData = [];
-                        const textareas = row.querySelectorAll('textarea');
-                        textareas.forEach(textarea => {
-                            rowData.push(textarea.value);
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            // Check if cell contains a fault level container or regular input
+                            const container = cell.querySelector('.fault-level-container');
+                            if (container) {
+                                const input = container.querySelector('.fault-level-input');
+                                rowData.push(input ? input.value : '');
+                            } else {
+                                const input = cell.querySelector('.editable');
+                                rowData.push(input ? input.value : '');
+                            }
                         });
                         data.push(rowData);
                     });
@@ -3738,7 +4375,6 @@
             
             try {
                 // Step 1: Load API token from remote JSON first
-                updateStatus('Loading API token...');
                 const tokenLoaded = await loadApiTokenFromRemote();
                 
                 if (!tokenLoaded) {
@@ -3748,7 +4384,6 @@
                 }
                 
                 // Step 2: Auto-load both files simultaneously after token is loaded
-                updateStatus('Loading data files...');
                 const [mainFileResult, lookupResult] = await Promise.allSettled([
                     downloadFromGitHub(false),
                     refreshLookupData(false)
@@ -3758,7 +4393,6 @@
                     showToast('Success', 
                         `Data loaded! ${Object.keys(workbookData).length} sheets ready`, 
                         'success', 3000);
-                    updateStatus('Ready');
                     setLoading(false);
                     
                     // Start live updates for elapsed duration
@@ -3777,12 +4411,10 @@
                     showToast('Warning', 
                         `Some files failed to load: ${errorMessages.join(', ')}`, 
                         'warning', 6000);
-                    updateStatus('Partial load completed');
                     setLoading(false);
                 }
             } catch (error) {
                 showToast('Error', `Failed to load data: ${error.message}`, 'error', 5000);
-                updateStatus('Error loading data');
                 setLoading(false);
             }
         });
