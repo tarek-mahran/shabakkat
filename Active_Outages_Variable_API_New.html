@@ -1,0 +1,3800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Outages</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 98vw;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .toolbar {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            border-right: 1px solid #dee2e6;
+            padding-right: 10px;
+            margin-right: 5px;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-bar {
+            flex: 1;
+            text-align: right;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .progress-container {
+            padding: 0 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #357abd);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: loading 2s infinite;
+        }
+
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .tabs-container {
+            background: white;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            color: #4a90e2;
+            border-bottom-color: #4a90e2;
+            background: white;
+        }
+
+        .tab:hover {
+            color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 10px;
+            height: 60vh;
+            overflow: auto;
+            width: 100%;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: auto;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-height: 55vh;
+            border: 1px solid #e9ecef;
+        }
+
+        /* Custom scrollbar styling for table container */
+        .table-container::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #357abd 0%, #2c5aa0 100%);
+        }
+
+        .table-container::-webkit-scrollbar-corner {
+            background: #f1f1f1;
+        }
+
+        /* Firefox scrollbar styling */
+        .table-container {
+            scrollbar-width: auto;
+            scrollbar-color: #4a90e2 #f1f1f1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 14px;
+            table-layout: auto;
+            max-width: 100%;
+        }
+
+        th {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: white;
+            padding: 8px 6px;
+            text-align: center;
+            font-weight: 600;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            position: relative; /* For resize handle */
+            font-size: 13px;
+        }
+
+        th.resizing {
+            cursor: col-resize;
+            user-select: none;
+        }
+
+        th .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 1;
+            background: transparent;
+            border-right: 2px solid transparent;
+        }
+
+        th .resize-handle:hover,
+        th .resize-handle.active {
+            background-color: rgba(255, 255, 255, 0.4);
+            border-right: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        th .header-resize-handle {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            cursor: row-resize;
+            z-index: 1;
+            background: transparent;
+            border-bottom: 2px solid transparent;
+        }
+
+        th .header-resize-handle:hover,
+        th .header-resize-handle.active {
+            background-color: rgba(255, 255, 255, 0.4);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #e9ecef;
+            border-right: 1px solid #e9ecef;
+            overflow: hidden;
+            position: relative; /* For row resize */
+            font-size: 13px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Special styling for EM Field Feedback column */
+        td.em-field-feedback {
+            text-align: left !important;
+        }
+
+        tr {
+            position: relative; /* For row resize */
+            height: 25px; /* More compact default height */
+        }
+
+        tr .row-resize-handle {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 6px;
+            width: 100%;
+            cursor: row-resize;
+            z-index: 1;
+            background: transparent;
+            border-bottom: 2px solid transparent;
+        }
+
+        tr .row-resize-handle:hover,
+        tr .row-resize-handle.active {
+            background-color: rgba(74, 144, 226, 0.3);
+            border-bottom: 2px solid rgba(74, 144, 226, 0.6);
+        }
+
+        tr.resizing {
+            cursor: row-resize;
+            user-select: none;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        tr:hover {
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .editable {
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 2px 4px;
+            font-size: 14px;
+            text-align: center;
+            height: 20px; /* More compact default height */
+            resize: none; /* Prevent manual resize, use row resize instead */
+            line-height: 16px; /* Adjusted for vertical centering */
+            vertical-align: middle;
+        }
+
+        .editable:focus {
+            outline: 2px solid #4a90e2;
+            background: white;
+            border-radius: 4px;
+        }
+
+        /* Special styling for EM Field Feedback column */
+        td.em-field-feedback {
+            text-align: left !important;
+        }
+
+        .em-field-feedback .editable {
+            text-align: left !important;
+        }
+
+        /* Custom scrollbar for edit boxes - Cross-browser */
+        .editable::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .editable::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .editable::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .editable::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Firefox scrollbar styling */
+        .editable {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+
+        /* Table styling controls */
+        .style-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #6c757d;
+            position: relative;
+        }
+
+        /* Dropdown menu styling */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            padding: 15px;
+            min-width: 200px;
+            z-index: 1000;
+            margin-top: 5px;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-section {
+            margin-bottom: 15px;
+        }
+
+        .dropdown-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .dropdown-section label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 12px;
+        }
+
+        .dropdown-section select,
+        .dropdown-section input[type="color"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .dropdown-section input[type="color"] {
+            height: 35px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .style-control label {
+            font-weight: 600;
+            min-width: 90px;
+        }
+
+        .style-control input[type="range"] {
+            width: 80px;
+        }
+
+        .style-control input[type="color"] {
+            width: 30px;
+            height: 25px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .style-control select {
+            padding: 4px 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* Center aligned tabs */
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            overflow-x: auto;
+            justify-content: center;
+            padding: 0 20px;
+        }
+
+        .hub-site-field {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+            border-left: 4px solid #f39c12 !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            color: #2c3e50 !important;
+        }
+
+        .hub-site-field:focus {
+            outline: 2px solid #f39c12 !important;
+            box-shadow: 0 0 15px rgba(243, 156, 18, 0.4);
+            background: linear-gradient(135deg, #fff9e6 0%, #ffebb3 100%) !important;
+        }
+
+        .hub-site-field::placeholder {
+            color: #8b7355 !important;
+            font-weight: normal !important;
+            text-transform: none !important;
+        }
+
+        .auto-filled {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%) !important;
+            transition: background 0.3s ease;
+        }
+
+        .date-time-field {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important;
+            border-left: 3px solid #ff9800 !important;
+        }
+
+        .date-time-field:focus {
+            outline: 2px solid #ff9800 !important;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+            background: linear-gradient(135deg, #fff8e1 0%, #ffcc02 20%) !important;
+        }
+
+        .date-time-field::placeholder {
+            color: #bf6900 !important;
+            font-style: italic;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .modal p {
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4a90e2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-content {
+                height: 50vh;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px 4px;
+            }
+        }
+
+        /* Toast Notification System */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            margin-bottom: 10px;
+            padding: 16px 20px;
+            border-left: 4px solid #4a90e2;
+            transform: translateX(450px);
+            transition: all 0.3s ease;
+            opacity: 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+        }
+
+        .toast.error {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #fff8f8 0%, #ffe6e6 100%);
+        }
+
+        .toast.warning {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #fffef8 0%, #fff3cd 100%);
+        }
+
+        .toast.info {
+            border-left-color: #17a2b8;
+            background: linear-gradient(135deg, #f8fdff 0%, #e1f5fe 100%);
+        }
+
+        .toast-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .toast-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: #2c3e50;
+        }
+
+        .toast-message {
+            color: #4a5568;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(74, 144, 226, 0.3);
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+        }
+
+        .toast-progress-bar {
+            height: 100%;
+            background: #4a90e2;
+            width: 100%;
+            transform-origin: left;
+            animation: shrink 5s linear forwards;
+        }
+
+        @keyframes shrink {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+
+        /* Optimized input styling */
+        .editable {
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 4px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .editable:focus {
+            outline: 2px solid #4a90e2;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .editing {
+            background: rgba(74, 144, 226, 0.05) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Active Outages</h1>
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn" id="downloadBtn">
+                    📥 Refresh
+                </button>
+                <button class="btn btn-secondary" id="saveBtn">
+                    💾 Save
+                </button>
+                <button class="btn btn-info" id="exportBtn">
+                    📤 Export
+                </button>
+            </div>
+            
+            <div class="toolbar-group">
+                <div class="style-control">
+                    <button class="btn btn-warning" id="databaseBtn">
+                        🗄️ Data Base
+                    </button>
+                    <div class="dropdown-menu" id="databaseDropdown">
+                        <div class="dropdown-section">
+                            <button class="btn btn-info" id="refreshTokenBtn" style="width: 100%; margin-bottom: 8px;">
+                                🔑 Refresh Token
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-info" id="refreshLookupBtn" style="width: 100%; margin-bottom: 8px;">
+                                🔄 Refresh DB
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-warning" id="autoFillBtn" style="width: 100%;">
+                                🔧 Auto Fill
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar-group">
+                <div class="style-control">
+                    <button class="btn btn-secondary" id="editRowBtn">
+                        ✏️ Edit Row
+                    </button>
+                    <div class="dropdown-menu" id="editRowDropdown">
+                        <div class="dropdown-section">
+                            <button class="btn btn-secondary" id="addRowBtn" style="width: 100%; margin-bottom: 8px;">
+                                ➕ Add Row
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-secondary" id="deleteRowBtn" style="width: 100%;">
+                                ➖ Delete Row
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar-group">
+                <div class="style-control">
+                    <button class="btn btn-info" id="formatBtn">
+                        📐 Format
+                    </button>
+                    <div class="dropdown-menu" id="formatDropdown">
+                        <div class="dropdown-section">
+                            <button class="btn btn-secondary" id="autoFitWidthBtn" style="width: 100%; margin-bottom: 8px;">
+                                📏 Auto-Fit Width
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-secondary" id="autoFitHeightBtn" style="width: 100%; margin-bottom: 8px;">
+                                📐 Auto-Fit Height
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-info" id="saveFormatBtn" style="width: 100%; margin-bottom: 8px;">
+                                💾 Save Format
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-warning" id="resetDefaultBtn" style="width: 100%;">
+                                🔄 Reset Default
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar-group">
+                <div class="style-control">
+                    <button class="btn btn-secondary" id="tableStyleBtn">
+                        🎨 Table Style
+                    </button>
+                    <div class="dropdown-menu" id="tableStyleDropdown">
+                        <div class="dropdown-section">
+                            <label>Table Text Size:</label>
+                            <select id="textSizeSelect">
+                                <option value="10px">10px</option>
+                                <option value="12px">12px</option>
+                                <option value="14px" selected>14px</option>
+                                <option value="16px">16px</option>
+                                <option value="18px">18px</option>
+                                <option value="20px">20px</option>
+                            </select>
+                        </div>
+                        <div class="dropdown-section">
+                            <label>Header Text Size:</label>
+                            <select id="headerSizeSelect">
+                                <option value="10px">10px</option>
+                                <option value="11px">11px</option>
+                                <option value="12px">12px</option>
+                                <option value="13px" selected>13px</option>
+                                <option value="14px">14px</option>
+                                <option value="15px">15px</option>
+                                <option value="16px">16px</option>
+                            </select>
+                        </div>
+                        <div class="dropdown-section">
+                            <label>Table Text Color:</label>
+                            <input type="color" id="textColorPicker" value="#000000">
+                        </div>
+                        <div class="dropdown-section">
+                            <label>Header Text Color:</label>
+                            <input type="color" id="headerTextColorPicker" value="#ffffff">
+                        </div>
+                        <div class="dropdown-section">
+                            <label>Header Background:</label>
+                            <input type="color" id="headerColorPicker" value="#4a90e2">
+                        </div>
+                        <div class="dropdown-section">
+                            <label>Table Background:</label>
+                            <input type="color" id="tableColorPicker" value="#ffffff">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <span id="statusText">Ready</span>
+                <div id="liveUpdateIndicator" style="margin-left: 10px; color: #28a745; display: none;">
+                    🔴 Live Updates Active
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs" id="tabsHeader"></div>
+            <div id="tabsContent"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // Configuration with multiple download sources
+        const CONFIG = {
+            // Dynamic token loading from GitLab JSON with XOR encoding
+            tokenApiUrl: "https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json",
+            encodingKey: "SecureKey2024!@#",
+            githubToken: null, // Will be loaded dynamically
+            // Fallback encoded token (XOR encoded) - only used if remote loading fails
+            fallbackToken: "NA0TKgQfByYvAXRld0MRWSdcUhIxCDgjMgZGBVpMCWUfElMzJBwyDg==",
+            repoOwner: "tarek-mahran",
+            repoName: "shabakkat",
+            filePath: "Active_Outages.xlsx",
+            // Multiple download sources for main file (try in order)
+            downloadSources: [
+                {
+                    name: "Source 1",
+                    url: "https://tarek-mahran.github.io/shabakkat/Active_Outages.xlsx",
+                    method: "direct"
+                },
+                {
+                    name: "Source 2",
+                    url: "https://api.github.com/repos/tarek-mahran/shabakkat/contents/Active_Outages.xlsx",
+                    method: "api"
+                },
+                {
+                    name: "Source 3",
+                    url: "https://cors-anywhere.herokuapp.com/https://raw.githubusercontent.com/tarek-mahran/shabakkat/refs/heads/main/Active_Outages.xlsx",
+                    method: "proxy"
+                }
+            ],
+            // Multiple lookup sources for Zain & LATIS database (try in order)
+            lookupSources: [
+                {
+                    name: "Source 1",
+                    url: "https://cors-anywhere.herokuapp.com/https://raw.githubusercontent.com/tarek-mahran/shabakkat/refs/heads/main/Zain%20%26%20LATIS%20Data%20Base.xlsx",
+                    method: "proxy"
+                },
+                {
+                    name: "Source 2",
+                    url: "https://tarek-mahran.github.io/shabakkat/Zain%20%26%20LATIS%20Data%20Base.xlsx",
+                    method: "direct"
+                },
+                {
+                    name: "Source 3",
+                    url: "https://api.github.com/repos/tarek-mahran/shabakkat/contents/Zain%20%26%20LATIS%20Data%20Base.xlsx",
+                    method: "api"
+                }
+            ]
+        };
+
+        // XOR Encoding/Decoding Functions
+        function xorEncode(token, key) {
+            let result = '';
+            for (let i = 0; i < token.length; i++) {
+                result += String.fromCharCode(
+                    token.charCodeAt(i) ^ key.charCodeAt(i % key.length)
+                );
+            }
+            return btoa(result);
+        }
+
+        function xorDecode(encodedToken, key) {
+            const xorResult = atob(encodedToken);
+            let result = '';
+            for (let i = 0; i < xorResult.length; i++) {
+                result += String.fromCharCode(
+                    xorResult.charCodeAt(i) ^ key.charCodeAt(i % key.length)
+                );
+            }
+            return result;
+        }
+
+        // Dynamic Token Loading Function with multiple fallback methods
+        async function loadApiTokenFromRemote() {
+            const tokenSources = [
+                {
+                    name: "GitLab Raw",
+                    url: "https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json",
+                    method: "direct"
+                },
+                {
+                    name: "GitLab API",
+                    url: "https://gitlab.com/api/v4/projects/shabakkat%2Fshabakkat-project/repository/files/GitHub_API.json/raw?ref=main",
+                    method: "api"
+                },
+                {
+                    name: "CORS Proxy",
+                    url: "https://cors-anywhere.herokuapp.com/https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json",
+                    method: "proxy"
+                }
+            ];
+            
+            for (let i = 0; i < tokenSources.length; i++) {
+                const source = tokenSources[i];
+                
+                try {
+                    console.log(`Attempting to load token from: ${source.name} - ${source.url}`);
+                    
+                    // Add cache busting to ensure fresh token
+                    const timestamp = new Date().getTime();
+                    const urlWithTimestamp = `${source.url}${source.url.includes('?') ? '&' : '?'}t=${timestamp}`;
+                    
+                    const fetchOptions = {
+                        cache: 'no-cache',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0'
+                        }
+                    };
+                    
+                    // Add specific headers for GitLab API if needed
+                    if (source.method === "api") {
+                        fetchOptions.headers['Accept'] = 'application/json';
+                    }
+                    
+                    const response = await fetch(urlWithTimestamp, fetchOptions);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    let tokenData;
+                    
+                    if (source.method === "api") {
+                        // GitLab API returns base64 encoded content
+                        const rawData = await response.text();
+                        try {
+                            // Try parsing as JSON first (in case it's already decoded)
+                            tokenData = JSON.parse(rawData);
+                        } catch {
+                            // If that fails, assume it's base64 encoded
+                            const decodedData = atob(rawData);
+                            tokenData = JSON.parse(decodedData);
+                        }
+                    } else {
+                        // Direct raw file access
+                        tokenData = await response.json();
+                    }
+                    
+                    console.log('Token data received:', { hasAPI: !!tokenData.API, keys: Object.keys(tokenData) });
+                    
+                    if (!tokenData.API) {
+                        throw new Error('API token not found in JSON response');
+                    }
+                    
+                    // XOR encode the token for security
+                    const encodedToken = xorEncode(tokenData.API, CONFIG.encodingKey);
+                    
+                    // Store encoded token and decode when needed
+                    CONFIG.githubToken = xorDecode(encodedToken, CONFIG.encodingKey);
+                    
+                    console.log(`✅ API token loaded successfully from: ${source.name}`);
+                    showToast('Token Loaded', 
+                        `API token loaded from ${source.name}`, 
+                        'success', 3000);
+                    return true;
+                    
+                } catch (error) {
+                    console.warn(`❌ Failed to load from ${source.name}:`, error.message);
+                    
+                    // If this isn't the last source, continue to next
+                    if (i < tokenSources.length - 1) {
+                        console.log(`Trying next source...`);
+                        continue;
+                    }
+                }
+            }
+            
+            // All sources failed - try fallback token
+            console.warn('❌ All remote token sources failed, using fallback token');
+            
+            try {
+                if (CONFIG.fallbackToken) {
+                    CONFIG.githubToken = xorDecode(CONFIG.fallbackToken, CONFIG.encodingKey);
+                    console.log('✅ Fallback token loaded successfully');
+                    showToast('Fallback Token', 
+                        'Using fallback token - remote sources unavailable. Consider checking network connectivity.', 
+                        'warning', 6000);
+                    return true;
+                } else {
+                    throw new Error('No fallback token available');
+                }
+            } catch (fallbackError) {
+                console.error('❌ Fallback token also failed:', fallbackError);
+                showToast('Token Error', 
+                    `Failed to load API token from all sources and fallback failed. Application cannot proceed.`, 
+                    'error', 10000);
+                return false;
+            }
+        }
+
+        // Debug function - accessible from browser console
+        window.testTokenAccess = async function() {
+            console.log('=== TESTING TOKEN ACCESS ===');
+            const testUrl = "https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json";
+            
+            try {
+                console.log('Testing direct fetch to:', testUrl);
+                const response = await fetch(testUrl);
+                console.log('Response status:', response.status, response.statusText);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    console.log('Raw response text:', text);
+                    
+                    try {
+                        const json = JSON.parse(text);
+                        console.log('Parsed JSON:', json);
+                        console.log('API token found:', !!json.API);
+                        return { success: true, data: json };
+                    } catch (e) {
+                        console.error('JSON parse error:', e);
+                        return { success: false, error: 'Invalid JSON', raw: text };
+                    }
+                } else {
+                    console.error('HTTP Error:', response.status, response.statusText);
+                    return { success: false, error: `HTTP ${response.status}` };
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return { success: false, error: error.message };
+            }
+        };
+
+        // Global state
+        let workbookData = {};
+        let lookupData = {};
+        let isModified = false;
+        let currentSheet = null;
+        let liveUpdateInterval = null;
+        
+        // For table resizing
+        let columnWidths = {};
+        let rowHeights = {};
+        let headerHeight = {};
+
+        // DOM elements
+        const elements = {
+            downloadBtn: document.getElementById('downloadBtn'),
+            saveBtn: document.getElementById('saveBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            autoFillBtn: document.getElementById('autoFillBtn'),
+            refreshTokenBtn: document.getElementById('refreshTokenBtn'),
+            refreshLookupBtn: document.getElementById('refreshLookupBtn'),
+            addRowBtn: document.getElementById('addRowBtn'),
+            deleteRowBtn: document.getElementById('deleteRowBtn'),
+            autoFitWidthBtn: document.getElementById('autoFitWidthBtn'),
+            autoFitHeightBtn: document.getElementById('autoFitHeightBtn'),
+            saveFormatBtn: document.getElementById('saveFormatBtn'),
+            resetDefaultBtn: document.getElementById('resetDefaultBtn'),
+            statusText: document.getElementById('statusText'),
+            liveUpdateIndicator: document.getElementById('liveUpdateIndicator'),
+            progressBar: document.getElementById('progressBar'),
+            tabsHeader: document.getElementById('tabsHeader'),
+            tabsContent: document.getElementById('tabsContent'),
+            toastContainer: document.getElementById('toastContainer'),
+            loadingSpinner: document.getElementById('loadingSpinner'),
+            tableStyleBtn: document.getElementById('tableStyleBtn'),
+            tableStyleDropdown: document.getElementById('tableStyleDropdown'),
+            textSizeSelect: document.getElementById('textSizeSelect'),
+            headerSizeSelect: document.getElementById('headerSizeSelect'),
+            textColorPicker: document.getElementById('textColorPicker'),
+            headerTextColorPicker: document.getElementById('headerTextColorPicker'),
+            headerColorPicker: document.getElementById('headerColorPicker'),
+            tableColorPicker: document.getElementById('tableColorPicker'),
+            // New dropdown button elements
+            databaseBtn: document.getElementById('databaseBtn'),
+            databaseDropdown: document.getElementById('databaseDropdown'),
+            editRowBtn: document.getElementById('editRowBtn'),
+            editRowDropdown: document.getElementById('editRowDropdown'),
+            formatBtn: document.getElementById('formatBtn'),
+            formatDropdown: document.getElementById('formatDropdown')
+        };
+
+        // Debounce function for performance optimization
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Save current format (column widths and row heights)
+        function saveFormat() {
+            if (!currentSheet) {
+                showToast('Warning', 'No active sheet selected!', 'warning', 3000);
+                return;
+            }
+            
+            try {
+                const formatData = {
+                    columnWidths: columnWidths,
+                    rowHeights: rowHeights,
+                    headerHeight: headerHeight,
+                    timestamp: new Date().toISOString(),
+                    currentSheet: currentSheet
+                };
+                
+                // Save to localStorage if available (for persistence across sessions)
+                try {
+                    localStorage.setItem('tableviewerFormat', JSON.stringify(formatData));
+                } catch (e) {
+                    // localStorage not available, just continue
+                }
+                
+                markAsModified();
+                showToast('Success', `Format saved for ${currentSheet} sheet`, 'success', 3000);
+                
+            } catch (error) {
+                showToast('Error', `Save format failed: ${error.message}`, 'error', 4000);
+            }
+        }
+
+        // Load saved format settings
+        function loadSavedFormat() {
+            try {
+                const saved = localStorage.getItem('tableviewerFormat');
+                if (saved) {
+                    const formatData = JSON.parse(saved);
+                    columnWidths = formatData.columnWidths || {};
+                    rowHeights = formatData.rowHeights || {};
+                    headerHeight = formatData.headerHeight || {};
+                    return true;
+                }
+            } catch (e) {
+                // Error loading, continue with defaults
+            }
+            return false;
+        }
+        function autoFitColumnWidths() {
+            if (!currentSheet) {
+                showToast('Warning', 'No active sheet selected!', 'warning', 3000);
+                return;
+            }
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (!table) return;
+            
+            // Create a temporary table to measure content
+            const tempTable = table.cloneNode(true);
+            tempTable.style.position = 'absolute';
+            tempTable.style.visibility = 'hidden';
+            tempTable.style.width = 'auto';
+            tempTable.style.tableLayout = 'auto';
+            
+            // Remove width constraints
+            tempTable.querySelectorAll('th, td').forEach(cell => {
+                cell.style.width = 'auto';
+                cell.style.minWidth = '50px';
+                cell.style.maxWidth = '300px';
+            });
+            
+            document.body.appendChild(tempTable);
+            
+            // Measure and apply widths
+            const headers = table.querySelectorAll('thead th');
+            const tempHeaders = tempTable.querySelectorAll('thead th');
+            
+            headers.forEach((th, index) => {
+                if (tempHeaders[index]) {
+                    const width = Math.min(Math.max(tempHeaders[index].offsetWidth + 20, 60), 300);
+                    th.style.width = `${width}px`;
+                    if (!columnWidths[currentSheet]) columnWidths[currentSheet] = {};
+                    columnWidths[currentSheet][index] = `${width}px`;
+                }
+            });
+            
+            document.body.removeChild(tempTable);
+            markAsModified();
+            showToast('Success', 'Column widths auto-fitted', 'success', 2000);
+        }
+
+        // Auto-fit row heights
+        function autoFitRowHeights() {
+            if (!currentSheet) {
+                showToast('Warning', 'No active sheet selected!', 'warning', 3000);
+                return;
+            }
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach((row, index) => {
+                // Reset height to auto to measure content
+                row.style.height = 'auto';
+                
+                // Measure natural height
+                const naturalHeight = Math.max(row.offsetHeight, 30);
+                
+                // Apply height
+                row.style.height = `${naturalHeight}px`;
+                if (!rowHeights[currentSheet]) rowHeights[currentSheet] = {};
+                rowHeights[currentSheet][index] = `${naturalHeight}px`;
+            });
+            
+            markAsModified();
+            showToast('Success', 'Row heights auto-fitted', 'success', 2000);
+        }
+
+        // Table styling controls
+        function updateTableTextSize() {
+            const size = elements.textSizeSelect.value;
+            if (!currentSheet) return;
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (table) {
+                table.style.fontSize = size;
+                table.querySelectorAll('textarea.editable').forEach(textarea => {
+                    textarea.style.fontSize = size;
+                });
+            }
+        }
+
+        function updateHeaderTextSize() {
+            const size = elements.headerSizeSelect.value;
+            if (!currentSheet) return;
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (table) {
+                table.querySelectorAll('th').forEach(th => {
+                    th.style.fontSize = size;
+                });
+            }
+        }
+
+        function updateTextColor() {
+            const color = elements.textColorPicker.value;
+            if (!currentSheet) return;
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (table) {
+                table.querySelectorAll('td, textarea.editable').forEach(element => {
+                    element.style.color = color;
+                });
+            }
+        }
+
+        function updateHeaderTextColor() {
+            const color = elements.headerTextColorPicker.value;
+            if (!currentSheet) return;
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (table) {
+                table.querySelectorAll('th').forEach(th => {
+                    th.style.color = color;
+                });
+            }
+        }
+
+        function updateHeaderColor() {
+            const color = elements.headerColorPicker.value;
+            if (!currentSheet) return;
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (table) {
+                table.querySelectorAll('th').forEach(th => {
+                    th.style.background = color;
+                });
+            }
+        }
+
+        function updateTableColor() {
+            const color = elements.tableColorPicker.value;
+            if (!currentSheet) return;
+            
+            const tableContainer = document.querySelector(`#tab-${currentSheet} .table-container`);
+            if (tableContainer) {
+                tableContainer.style.background = color;
+                const table = tableContainer.querySelector('table');
+                if (table) {
+                    table.style.background = color;
+                    table.querySelectorAll('td, tr').forEach(element => {
+                        element.style.background = color;
+                    });
+                }
+            }
+        }
+
+        // Reset to default - removes saved format settings
+        function resetToDefault() {
+            try {
+                // Clear saved format data
+                columnWidths = {};
+                rowHeights = {};
+                headerHeight = {};
+                
+                // Remove saved format from localStorage
+                try {
+                    localStorage.removeItem('tableviewerFormat');
+                } catch (e) {
+                    // localStorage not available, continue
+                }
+                
+                // Apply default dimensions to current sheet
+                if (currentSheet) {
+                    const table = document.querySelector(`#tab-${currentSheet} table`);
+                    if (table) {
+                        // Reset header dimensions
+                        table.querySelectorAll('th').forEach(th => {
+                            th.style.width = 'auto';
+                            th.style.height = 'auto';
+                            th.style.minWidth = 'auto';
+                        });
+                        
+                        // Reset row heights
+                        table.querySelectorAll('tbody tr').forEach(tr => {
+                            tr.style.height = 'auto';
+                            const textareas = tr.querySelectorAll('textarea.editable');
+                            textareas.forEach(textarea => {
+                                textarea.style.height = 'auto';
+                            });
+                        });
+                    }
+                }
+                
+                markAsModified();
+                showToast('Success', 'Saved format settings removed - format reset to default', 'success', 3000);
+                
+            } catch (error) {
+                showToast('Error', `Reset failed: ${error.message}`, 'error', 3000);
+            }
+        }
+
+        function applyTableStyling() {
+            updateTableTextSize();
+            updateHeaderTextSize();
+            updateTextColor();
+            updateHeaderTextColor();
+            updateHeaderColor();
+            updateTableColor();
+        }
+        function updateElapsedDurations() {
+            if (!currentSheet) return;
+            
+            const table = document.querySelector(`#tab-${currentSheet} table`);
+            if (!table) return;
+            
+            const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+            const pcmCreatedColIndex = headers.findIndex(h => h.toLowerCase().includes('pcm created'));
+            const elapsedDurationColIndex = headers.findIndex(h => h.toLowerCase().includes('elapsed duration'));
+            
+            if (pcmCreatedColIndex >= 0 && elapsedDurationColIndex >= 0) {
+                const rows = table.querySelectorAll('tbody tr');
+                let updatedCount = 0;
+                
+                rows.forEach((row) => {
+                    const pcmCell = row.querySelectorAll('td')[pcmCreatedColIndex];
+                    const durationCell = row.querySelectorAll('td')[elapsedDurationColIndex];
+                    
+                    if (pcmCell && durationCell) {
+                        const pcmInput = pcmCell.querySelector('textarea');
+                        const durationInput = durationCell.querySelector('textarea');
+                        
+                        if (pcmInput && durationInput && pcmInput.value.trim()) {
+                            try {
+                                const pcmDate = new Date(pcmInput.value.trim());
+                                if (!isNaN(pcmDate.getTime())) {
+                                    const now = new Date();
+                                    
+                                    // Calculate time difference exactly like Excel
+                                    const MS_PER_SECOND = 1000;
+                                    const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+                                    const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+                                    
+                                    const msDiff = now - pcmDate;
+                                    
+                                    if (msDiff >= 0) { // Only positive durations
+                                        const totalHours = Math.floor(msDiff / MS_PER_HOUR);
+                                        const remainingMs = msDiff % MS_PER_HOUR;
+                                        const totalMinutes = Math.floor(remainingMs / MS_PER_MINUTE);
+                                        const totalSeconds = Math.floor((remainingMs % MS_PER_MINUTE) / MS_PER_SECOND);
+                                        
+                                        const formattedHours = totalHours;
+                                        const formattedMinutes = String(totalMinutes).padStart(2, '0');
+                                        const formattedSeconds = String(totalSeconds).padStart(2, '0');
+                                        const newDuration = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+                                        
+                                        if (durationInput.value !== newDuration) {
+                                            durationInput.value = newDuration;
+                                            durationInput.classList.add('elapsed-duration-live');
+                                            updatedCount++;
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // Ignore invalid dates
+                            }
+                        } else if (durationInput && pcmInput && !pcmInput.value.trim()) {
+                            // Clear duration if PCM Created At is empty
+                            if (durationInput.value) {
+                                durationInput.value = '';
+                                durationInput.classList.remove('elapsed-duration-live');
+                                updatedCount++;
+                            }
+                        }
+                    }
+                });
+                
+                if (updatedCount > 0) {
+                    markAsModified();
+                }
+            }
+        }
+
+        // Start/stop live updates
+        function startLiveUpdates() {
+            if (liveUpdateInterval) return; // Already running
+            
+            liveUpdateInterval = setInterval(updateElapsedDurations, 30000); // Update every 30 seconds
+            elements.liveUpdateIndicator.style.display = 'inline';
+            updateElapsedDurations(); // Initial update
+        }
+
+        function stopLiveUpdates() {
+            if (liveUpdateInterval) {
+                clearInterval(liveUpdateInterval);
+                liveUpdateInterval = null;
+            }
+            elements.liveUpdateIndicator.style.display = 'none';
+            
+            // Remove live styling from duration cells
+            document.querySelectorAll('.elapsed-duration-live').forEach(textarea => {
+                textarea.classList.remove('elapsed-duration-live');
+            });
+        }
+        
+        // Clean elapsed duration fields where PCM Created At is empty (for export)
+        function cleanElapsedDurationForExport() {
+            Object.keys(workbookData).forEach(sheetName => {
+                const table = document.querySelector(`#tab-${sheetName} table`);
+                if (!table) return;
+                
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                const pcmCreatedColIndex = headers.findIndex(h => h.toLowerCase().includes('pcm created'));
+                const elapsedDurationColIndex = headers.findIndex(h => h.toLowerCase().includes('elapsed duration'));
+                
+                if (pcmCreatedColIndex >= 0 && elapsedDurationColIndex >= 0) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    
+                    rows.forEach((row) => {
+                        const pcmCell = row.querySelectorAll('td')[pcmCreatedColIndex];
+                        const durationCell = row.querySelectorAll('td')[elapsedDurationColIndex];
+                        
+                        if (pcmCell && durationCell) {
+                            const pcmTextarea = pcmCell.querySelector('textarea');
+                            const durationTextarea = durationCell.querySelector('textarea');
+                            
+                            // If PCM Created At is empty, clear the elapsed duration
+                            if (pcmTextarea && durationTextarea && !pcmTextarea.value.trim()) {
+                                durationTextarea.value = '';
+                                durationTextarea.classList.remove('elapsed-duration-live');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Export Excel file with fresh data and table formatting
+        async function exportExcelFile() {
+            setLoading(true);
+            
+            try {
+                // First, refresh data to get latest changes
+                await downloadFromGitHub(false);
+                
+                // Clean elapsed duration fields where PCM Created At is empty
+                cleanElapsedDurationForExport();
+                
+                // Get current data from tables
+                updateWorkbookFromTables();
+                
+                // Create Excel workbook
+                const workbook = XLSX.utils.book_new();
+                
+                Object.entries(workbookData).forEach(([sheetName, data]) => {
+                    if (data.length > 0) {
+                        // Clean and validate data before creating worksheet
+                        const cleanData = data.map(row => 
+                            row.map(cell => {
+                                if (cell === null || cell === undefined) return '';
+                                if (typeof cell === 'string') return cell.trim();
+                                return cell;
+                            })
+                        );
+                        
+                        // Create worksheet from clean data
+                        const worksheet = XLSX.utils.aoa_to_sheet(cleanData);
+                        
+                        // Get the range for the table
+                        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+                        
+                        // Auto-fit columns based on content
+                        const colWidths = [];
+                        for (let col = range.s.c; col <= range.e.c; col++) {
+                            let maxWidth = 10; // Minimum width
+                            
+                            for (let row = range.s.r; row <= range.e.r; row++) {
+                                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                                const cell = worksheet[cellAddress];
+                                if (cell && cell.v) {
+                                    const cellValue = String(cell.v);
+                                    const cellWidth = Math.min(cellValue.length * 1.2, 50); // Max width 50
+                                    maxWidth = Math.max(maxWidth, cellWidth);
+                                }
+                            }
+                            
+                            colWidths[col] = { width: maxWidth };
+                        }
+                        worksheet['!cols'] = colWidths;
+                        
+                        // Auto-fit row heights
+                        const rowHeights = [];
+                        for (let row = range.s.r; row <= range.e.r; row++) {
+                            rowHeights[row] = { hpt: row === 0 ? 25 : 20 }; // Header taller
+                        }
+                        worksheet['!rows'] = rowHeights;
+                        
+                        // Identify date/time columns and EM Field Feedback column
+                        const headers = cleanData[0] || [];
+                        const dateColumns = [];
+                        let emFieldFeedbackCol = -1;
+                        headers.forEach((header, index) => {
+                            const headerLower = String(header).toLowerCase();
+                            if (headerLower.includes('created') || 
+                                headerLower.includes('time') || 
+                                headerLower.includes('date') ||
+                                headerLower.includes('fault first time') ||
+                                headerLower.includes('pcm created')) {
+                                dateColumns.push(index);
+                            }
+                            if (headerLower.includes('em field feedback')) {
+                                emFieldFeedbackCol = index;
+                            }
+                        });
+                        
+                        // Apply formatting to all cells
+                        for (let row = range.s.r; row <= range.e.r; row++) {
+                            for (let col = range.s.c; col <= range.e.c; col++) {
+                                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                                const cell = worksheet[cellAddress];
+                                
+                                if (!cell) {
+                                    // Create empty cell if it doesn't exist
+                                    worksheet[cellAddress] = { t: 's', v: '' };
+                                }
+                                
+                                // Initialize cell style
+                                if (!worksheet[cellAddress].s) {
+                                    worksheet[cellAddress].s = {};
+                                }
+                                
+                                const cellStyle = {
+                                    border: {
+                                        top: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } },
+                                        bottom: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } },
+                                        left: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } },
+                                        right: { style: "thin", color: { rgb: row === 0 ? "FFFFFF" : "D0D0D0" } }
+                                    }
+                                };
+                                
+                                if (row === 0) {
+                                    // Header formatting
+                                    cellStyle.font = { bold: true, color: { rgb: "FFFFFF" }, size: 11 };
+                                    cellStyle.fill = { fgColor: { rgb: "4472C4" } };
+                                    cellStyle.alignment = { 
+                                        horizontal: "center", 
+                                        vertical: "center"
+                                    };
+                                } else {
+                                    // Data cell formatting
+                                    cellStyle.font = { size: 10 };
+                                    cellStyle.alignment = { 
+                                        vertical: "center"
+                                    };
+                                    
+                                    // Date column formatting - center alignment
+                                    if (dateColumns.includes(col)) {
+                                        cellStyle.alignment.horizontal = "center";
+                                        cellStyle.numFmt = "yyyy-mm-dd hh:mm:ss";
+                                        
+                                        // Try to parse date value
+                                        if (cell && cell.v) {
+                                            const dateValue = new Date(cell.v);
+                                            if (!isNaN(dateValue.getTime())) {
+                                                cell.t = 'd';
+                                                cell.v = dateValue;
+                                            }
+                                        }
+                                    } else if (col === emFieldFeedbackCol) {
+                                        // EM Field Feedback column - left alignment
+                                        cellStyle.alignment.horizontal = "left";
+                                    } else {
+                                        // All other columns - center alignment
+                                        cellStyle.alignment.horizontal = "center";
+                                    }
+                                    
+                                    // Alternate row coloring
+                                    if (row % 2 === 0) {
+                                        cellStyle.fill = { fgColor: { rgb: "F8F9FA" } };
+                                    }
+                                }
+                                
+                                worksheet[cellAddress].s = cellStyle;
+                            }
+                        }
+                        
+                        // Add Excel table
+                        const tableRef = XLSX.utils.encode_range({
+                            s: { c: range.s.c, r: range.s.r },
+                            e: { c: range.e.c, r: range.e.r }
+                        });
+                        
+                        if (!worksheet['!tables']) worksheet['!tables'] = [];
+                        worksheet['!tables'].push({
+                            ref: tableRef,
+                            name: `Table${sheetName.replace(/[^A-Za-z0-9]/g, '')}`,
+                            headerRowCount: 1,
+                            style: {
+                                theme: 'TableStyleMedium2',
+                                showFirstColumn: false,
+                                showLastColumn: false,
+                                showRowStripes: true,
+                                showColumnStripes: false
+                            }
+                        });
+                        
+                        // Set autofilter
+                        worksheet['!autofilter'] = {
+                            ref: XLSX.utils.encode_range({
+                                s: { c: range.s.c, r: range.s.r },
+                                e: { c: range.e.c, r: range.s.r }
+                            })
+                        };
+                        
+                        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+                    }
+                });
+                
+                // Set workbook properties
+                workbook.Props = {
+                    Title: 'Active Outages',
+                    Subject: 'Network Outages Management',
+                    Author: 'Excel Collaborator',
+                    CreatedDate: new Date(),
+                    ModifiedDate: new Date()
+                };
+                
+                // Generate file with proper options
+                const excelBuffer = XLSX.write(workbook, { 
+                    type: 'array', 
+                    bookType: 'xlsx',
+                    compression: true,
+                    cellStyles: true
+                });
+                
+                // Download file
+                const blob = new Blob([excelBuffer], { 
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                link.download = `Active_Outages_${timestamp}.xlsx`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                setLoading(false);
+                showToast('Export Complete', 
+                    `Excel file exported with latest data and formatting`, 
+                    'success', 4000);
+                
+            } catch (error) {
+                setLoading(false);
+                showToast('Export Error', `Failed to export Excel file: ${error.message}`, 'error', 6000);
+                console.error('Export error:', error);
+            }
+        }
+        function formatDateTime(textarea) {
+            const value = textarea.value.trim();
+            
+            // Handle empty value - clear corresponding duration field
+            if (!value) {
+                // Check if this is a PCM Created AT field and clear duration
+                if (textarea.closest('td').cellIndex !== undefined) {
+                    const row = textarea.closest('tr');
+                    const cells = row.querySelectorAll('td');
+                    const headers = Array.from(row.closest('table').querySelectorAll('th')).map(th => th.textContent);
+                    
+                    // Find PCM Created and Elapsed Duration columns
+                    const pcmCreatedCol = headers.findIndex(h => h.toLowerCase().includes('pcm created'));
+                    const elapsedDurationCol = headers.findIndex(h => h.toLowerCase().includes('elapsed duration'));
+                    
+                    if (pcmCreatedCol >= 0 && elapsedDurationCol >= 0 && 
+                        textarea.closest('td').cellIndex === pcmCreatedCol) {
+                        // Clear the duration field
+                        const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
+                        if (durationTextarea) {
+                            durationTextarea.value = '';
+                            durationTextarea.dataset.rawHours = '';
+                            durationTextarea.classList.remove('elapsed-duration-live');
+                            markAsModified();
+                        }
+                    }
+                }
+                return;
+            }
+            
+            try {
+                let dateObj = null;
+                
+                // Handle AM/PM time formats
+                function parseTimeWithAMPM(timeStr) {
+                    const ampmMatch = timeStr.match(/(\d{1,2}):(\d{1,2}):?(\d{1,2})?\s*(AM|PM)/i);
+                    if (ampmMatch) {
+                        let hours = parseInt(ampmMatch[1]);
+                        const minutes = parseInt(ampmMatch[2]);
+                        const seconds = parseInt(ampmMatch[3] || '0');
+                        const ampm = ampmMatch[4].toUpperCase();
+                        
+                        // Convert to 24-hour format
+                        if (ampm === 'PM' && hours !== 12) {
+                            hours += 12;
+                        } else if (ampm === 'AM' && hours === 12) {
+                            hours = 0;
+                        }
+                        
+                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                    return null;
+                }
+                
+                // Handle various input formats
+                if (/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(value)) {
+                    // MM/DD/YYYY, DD/MM/YYYY with optional time (including AM/PM)
+                    // Split by date separators first to get the date part
+                    const mainParts = value.split(/\s+/);
+                    const datePart = mainParts[0];
+                    const timePart = mainParts.slice(1).join(' ');
+                    
+                    console.log(`Parsing: "${value}" -> datePart: "${datePart}", timePart: "${timePart}"`);
+                    
+                    // Parse the date part
+                    const dateParts = datePart.split(/[\/\-\.]/);
+                    if (dateParts.length === 3) {
+                        let part1 = parseInt(dateParts[0]); // First number
+                        let part2 = parseInt(dateParts[1]); // Second number  
+                        let year = parseInt(dateParts[2]);  // Year
+                        
+                        console.log(`Date parts: part1=${part1}, part2=${part2}, year=${year}`);
+                        
+                        // Handle 2-digit years
+                        if (year < 100) {
+                            if (year < 50) {
+                                year = 2000 + year;
+                            } else {
+                                year = 1900 + year;
+                            }
+                        }
+                        
+                        // Handle time part (including AM/PM)
+                        let formattedTime = '00:00:00';
+                        if (timePart) {
+                            const ampmTime = parseTimeWithAMPM(timePart);
+                            if (ampmTime) {
+                                formattedTime = ampmTime;
+                            } else {
+                                // Regular time format without AM/PM
+                                const timeMatch = timePart.match(/(\d{1,2}):(\d{1,2}):?(\d{1,2})?/);
+                                if (timeMatch) {
+                                    const hours = parseInt(timeMatch[1]).toString().padStart(2, '0');
+                                    const minutes = parseInt(timeMatch[2]).toString().padStart(2, '0');
+                                    const seconds = parseInt(timeMatch[3] || '0').toString().padStart(2, '0');
+                                    formattedTime = `${hours}:${minutes}:${seconds}`;
+                                }
+                            }
+                        }
+                        
+                        console.log(`Formatted time: ${formattedTime}`);
+                        
+                        // Determine if it's MM/DD/YYYY or DD/MM/YYYY format
+                        let month, day;
+                        
+                        if (part1 > 12 && part2 <= 12) {
+                            // Must be DD/MM/YYYY format (day > 12, month <= 12)
+                            day = part1;
+                            month = part2;
+                            console.log(`Detected DD/MM/YYYY: day=${day}, month=${month}`);
+                        } else if (part2 > 12 && part1 <= 12) {
+                            // Must be MM/DD/YYYY format (month <= 12, day > 12)
+                            month = part1;
+                            day = part2;
+                            console.log(`Detected MM/DD/YYYY: month=${month}, day=${day}`);
+                        } else if (part1 <= 12 && part2 <= 12) {
+                            // Ambiguous case - use MM/DD/YYYY as default (US format)
+                            month = part1;
+                            day = part2;
+                            console.log(`Ambiguous, defaulting to MM/DD/YYYY: month=${month}, day=${day}`);
+                        } else {
+                            // Both > 12, invalid
+                            throw new Error('Invalid date: both month and day > 12');
+                        }
+                        
+                        // Validate ranges
+                        if (month < 1 || month > 12 || day < 1 || day > 31) {
+                            throw new Error(`Invalid date ranges: month=${month}, day=${day}`);
+                        }
+                        
+                        // Construct the date string
+                        const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${formattedTime}`;
+                        console.log(`Constructing date: "${dateString}"`);
+                        
+                        dateObj = new Date(dateString);
+                        
+                        // Verify the date was constructed correctly
+                        if (isNaN(dateObj.getTime())) {
+                            throw new Error(`Invalid date object from: ${dateString}`);
+                        }
+                        
+                        console.log(`Successfully created date object: ${dateObj.toISOString()}`);
+                    }
+                } else if (/^\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}/.test(value)) {
+                    // YYYY/MM/DD format with optional time
+                    const dateTimeMatch = value.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})(?:\s+(.+))?/);
+                    if (dateTimeMatch) {
+                        const year = parseInt(dateTimeMatch[1]);
+                        const month = parseInt(dateTimeMatch[2]);
+                        const day = parseInt(dateTimeMatch[3]);
+                        const timeStr = dateTimeMatch[4] || '';
+                        
+                        let formattedTime = '00:00:00';
+                        if (timeStr) {
+                            const ampmTime = parseTimeWithAMPM(timeStr);
+                            if (ampmTime) {
+                                formattedTime = ampmTime;
+                            } else {
+                                const timeMatch = timeStr.match(/(\d{1,2}):(\d{1,2}):?(\d{1,2})?/);
+                                if (timeMatch) {
+                                    const hours = parseInt(timeMatch[1]).toString().padStart(2, '0');
+                                    const minutes = parseInt(timeMatch[2]).toString().padStart(2, '0');
+                                    const seconds = parseInt(timeMatch[3] || '0').toString().padStart(2, '0');
+                                    formattedTime = `${hours}:${minutes}:${seconds}`;
+                                }
+                            }
+                        }
+                        
+                        dateObj = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${formattedTime}`);
+                    }
+                } else if (/^\d{1,2}:\d{1,2}/.test(value) || /\d{1,2}:\d{1,2}.*[AP]M/i.test(value)) {
+                    // Time only format (with or without AM/PM) - use today's date
+                    const today = new Date();
+                    let formattedTime = '00:00:00';
+                    
+                    const ampmTime = parseTimeWithAMPM(value);
+                    if (ampmTime) {
+                        formattedTime = ampmTime;
+                    } else {
+                        const timeMatch = value.match(/(\d{1,2}):(\d{1,2}):?(\d{1,2})?/);
+                        if (timeMatch) {
+                            const hours = parseInt(timeMatch[1]).toString().padStart(2, '0');
+                            const minutes = parseInt(timeMatch[2]).toString().padStart(2, '0');
+                            const seconds = parseInt(timeMatch[3] || '0').toString().padStart(2, '0');
+                            formattedTime = `${hours}:${minutes}:${seconds}`;
+                        }
+                    }
+                    
+                    dateObj = new Date(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}T${formattedTime}`);
+                } else if (/^\d{8}/.test(value)) {
+                    // YYYYMMDD format
+                    const year = parseInt(value.substring(0, 4));
+                    const month = parseInt(value.substring(4, 6));
+                    const day = parseInt(value.substring(6, 8));
+                    let timeStr = '00:00:00';
+                    
+                    if (value.length > 8) {
+                        const remainingStr = value.substring(8).trim();
+                        const ampmTime = parseTimeWithAMPM(remainingStr);
+                        if (ampmTime) {
+                            timeStr = ampmTime;
+                        } else {
+                            const timeMatch = remainingStr.match(/(\d{1,2}):?(\d{1,2}):?(\d{1,2})?/);
+                            if (timeMatch) {
+                                const hours = parseInt(timeMatch[1] || '0').toString().padStart(2, '0');
+                                const minutes = parseInt(timeMatch[2] || '0').toString().padStart(2, '0');
+                                const seconds = parseInt(timeMatch[3] || '0').toString().padStart(2, '0');
+                                timeStr = `${hours}:${minutes}:${seconds}`;
+                            }
+                        }
+                    }
+                    
+                    dateObj = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${timeStr}`);
+                } else {
+                    // Try standard JavaScript parsing
+                    dateObj = new Date(value);
+                    
+                    // If still invalid, try parsing as "now" for current timestamp
+                    if (isNaN(dateObj.getTime()) && (value.toLowerCase() === 'now' || value.toLowerCase() === 'today')) {
+                        dateObj = new Date();
+                    }
+                }
+                
+                // Check if date is valid
+                if (!isNaN(dateObj.getTime())) {
+                    // Format as yyyy-mm-dd hh:mm:ss
+                    const year = dateObj.getFullYear();
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    const hours = String(dateObj.getHours()).padStart(2, '0');
+                    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                    const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+                    
+                    const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    
+                    console.log(`Final formatted date: "${formattedDate}"`);
+                    
+                    // Only update if different to avoid cursor jumping
+                    if (textarea.value !== formattedDate) {
+                        textarea.value = formattedDate;
+                        
+                        // Add visual feedback
+                        textarea.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)';
+                        setTimeout(() => {
+                            textarea.style.background = '';
+                            textarea.classList.add('date-time-field'); // Restore original styling
+                        }, 1000);
+                    }
+                    
+                    // Calculate duration if this is PCM Created
+                    if (textarea.closest('td').cellIndex !== undefined) {
+                        const row = textarea.closest('tr');
+                        const cells = row.querySelectorAll('td');
+                        const headers = Array.from(row.closest('table').querySelectorAll('th')).map(th => th.textContent);
+                        
+                        // Find PCM Created and Elapsed Duration columns
+                        const pcmCreatedCol = headers.findIndex(h => h.toLowerCase().includes('pcm created'));
+                        const elapsedDurationCol = headers.findIndex(h => h.toLowerCase().includes('elapsed duration'));
+                        
+                        if (pcmCreatedCol >= 0 && elapsedDurationCol >= 0 && 
+                            textarea.closest('td').cellIndex === pcmCreatedCol) {
+                            // Calculate and update duration - Excel style
+                            const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
+                            if (durationTextarea) {
+                                const now = new Date();
+                                
+                                // Calculate time difference exactly like Excel
+                                const MS_PER_SECOND = 1000;
+                                const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+                                const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+                                
+                                const msDiff = now - dateObj;
+                                
+                                const totalHours = Math.floor(msDiff / MS_PER_HOUR);
+                                const remainingMs = msDiff % MS_PER_HOUR;
+                                const totalMinutes = Math.floor(remainingMs / MS_PER_MINUTE);
+                                const totalSeconds = Math.floor((remainingMs % MS_PER_MINUTE) / MS_PER_SECOND);
+                                
+                                const durationHours = totalHours + (totalMinutes / 60) + (totalSeconds / 3600);
+                                
+                                durationTextarea.dataset.rawHours = durationHours;
+                                durationTextarea.value = durationHours.toString();
+                                formatDuration(durationTextarea);
+                                markAsModified();
+                            }
+                        }
+                    }
+                } else {
+                    // Show error for invalid date
+                    textarea.style.background = 'linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%)';
+                    setTimeout(() => {
+                        textarea.style.background = '';
+                        textarea.classList.add('date-time-field'); // Restore original styling
+                    }, 2000);
+                    console.log(`Failed to parse date: "${value}"`);
+                    showToast('Invalid Date', `Could not parse "${value}"`, 'warning', 3000);
+                }
+            } catch (e) {
+                console.error('Error formatting date:', e);
+                textarea.style.background = 'linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%)';
+                setTimeout(() => {
+                    textarea.style.background = '';
+                    textarea.classList.add('date-time-field');
+                }, 2000);
+                showToast('Date Error', `Error processing date: ${e.message}`, 'error', 4000);
+            }
+        }
+
+        // Show date format help on first focus
+        function showDateFormatHelp(textarea) {
+            if (!textarea.hasShownHelp) {
+                textarea.hasShownHelp = true;
+                showToast('Date Formats', 
+                    'Supports: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, HH:MM AM/PM, "now"', 
+                    'info', 4000);
+            }
+        }
+        // Format duration input to [h]:mm:ss format - Exactly like Excel
+        function formatDuration(textarea) {
+            const value = textarea.value.trim();
+            if (!value) return;
+            
+            try {
+                // If already in [h]:mm:ss format, don't format again
+                if (value.includes(':') && /^\d+:\d{2}:\d{2}$/.test(value)) {
+                    return;
+                }
+                
+                // Get hours value - use raw value from dataset if available for better precision
+                let hours = textarea.dataset.rawHours ? parseFloat(textarea.dataset.rawHours) : parseFloat(value);
+                if (isNaN(hours)) return;
+                
+                // Calculate with Excel-precision
+                // Calculate total hours (integer part)
+                const totalHours = Math.floor(hours);
+                
+                // Calculate total minutes from decimal part
+                const decimalHours = hours - totalHours;
+                const minutesDecimal = decimalHours * 60;
+                const minutes = Math.floor(minutesDecimal);
+                
+                // Calculate seconds with extra precision
+                const secondsDecimal = (minutesDecimal - minutes) * 60;
+                // Round to nearest second to exactly match Excel
+                const seconds = Math.round(secondsDecimal);
+                
+                // Handle overflow with proper cascading
+                let adjustedHours = totalHours;
+                let adjustedMinutes = minutes;
+                let adjustedSeconds = seconds;
+                
+                if (adjustedSeconds === 60) {
+                    adjustedSeconds = 0;
+                    adjustedMinutes++;
+                    
+                    if (adjustedMinutes === 60) {
+                        adjustedMinutes = 0;
+                        adjustedHours++;
+                    }
+                }
+                
+                // Format with padded minutes and seconds
+                const formattedMinutes = String(adjustedMinutes).padStart(2, '0');
+                const formattedSeconds = String(adjustedSeconds).padStart(2, '0');
+                
+                // Set the visual formatted value
+                textarea.value = `${adjustedHours}:${formattedMinutes}:${formattedSeconds}`;
+            } catch (e) {
+                console.error('Error formatting duration:', e);
+            }
+        }
+        
+        // Format all duration cells in all sheets
+        function formatAllDurationCells() {
+            Object.keys(workbookData).forEach(sheetName => {
+                const table = document.querySelector(`#tab-${sheetName} table`);
+                if (!table) return;
+                
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                const durationColIndex = headers.findIndex(h => h.toLowerCase().includes('elapsed duration'));
+                const pcmCreatedColIndex = headers.findIndex(h => h.toLowerCase().includes('pcm created'));
+                
+                if (durationColIndex >= 0 && pcmCreatedColIndex >= 0) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach((row, rowIndex) => {
+                        const pcmCell = row.querySelectorAll('td')[pcmCreatedColIndex];
+                        const durationCell = row.querySelectorAll('td')[durationColIndex];
+                        
+                        if (pcmCell && durationCell) {
+                            const pcmTextarea = pcmCell.querySelector('textarea');
+                            const durationTextarea = durationCell.querySelector('textarea');
+                            
+                            if (pcmTextarea && durationTextarea && pcmTextarea.value) {
+                                // Recalculate duration from PCM date for accuracy
+                                try {
+                                    const pcmDate = new Date(pcmTextarea.value);
+                                    if (!isNaN(pcmDate.getTime())) {
+                                        const now = new Date();
+                                        
+                                        // Calculate time difference exactly like Excel
+                                        const MS_PER_SECOND = 1000;
+                                        const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+                                        const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+                                        
+                                        // Get total milliseconds difference
+                                        const msDiff = now - pcmDate;
+                                        
+                                        // Calculate hours, minutes, seconds precisely 
+                                        const totalHours = Math.floor(msDiff / MS_PER_HOUR);
+                                        const remainingMs = msDiff % MS_PER_HOUR;
+                                        const totalMinutes = Math.floor(remainingMs / MS_PER_MINUTE);
+                                        const totalSeconds = Math.floor((remainingMs % MS_PER_MINUTE) / MS_PER_SECOND);
+                                        
+                                        // Store exact values for formatting
+                                        const durationHours = totalHours + (totalMinutes / 60) + (totalSeconds / 3600);
+                                        durationTextarea.dataset.rawHours = durationHours;
+                                        
+                                        // Format directly rather than setting raw value first
+                                        const formattedHours = totalHours;
+                                        const formattedMinutes = String(totalMinutes).padStart(2, '0');
+                                        const formattedSeconds = String(totalSeconds).padStart(2, '0');
+                                        durationTextarea.value = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+                                    } else if (durationTextarea.value) {
+                                        // If date is invalid but duration has a value, just format it
+                                        formatDuration(durationTextarea);
+                                    }
+                                } catch (e) {
+                                    console.error('Error calculating duration:', e);
+                                    // Fallback to simple formatting
+                                    if (durationTextarea.value) {
+                                        formatDuration(durationTextarea);
+                                    }
+                                }
+                            } else if (durationTextarea && !pcmTextarea.value) {
+                                // Clear duration if PCM Created At is empty
+                                durationTextarea.value = '';
+                                durationTextarea.classList.remove('elapsed-duration-live');
+                            } else if (durationTextarea && durationTextarea.value) {
+                                // Just format existing duration values
+                                formatDuration(durationTextarea);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Setup table resizing functionality
+        function setupTableResizing(tableContainer, sheetName) {
+            const table = tableContainer.querySelector('table');
+            if (!table) return;
+            
+            // Initialize states
+            if (!columnWidths[sheetName]) columnWidths[sheetName] = {};
+            if (!rowHeights[sheetName]) rowHeights[sheetName] = {};
+            if (!headerHeight[sheetName]) headerHeight[sheetName] = {};
+            
+            // Add column resize handles to all table headers
+            const headers = table.querySelectorAll('thead th');
+            headers.forEach((th, index) => {
+                // Create column resize handle
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle';
+                resizeHandle.title = 'Drag to resize column width';
+                th.appendChild(resizeHandle);
+                
+                // Create header row resize handle
+                const headerResizeHandle = document.createElement('div');
+                headerResizeHandle.className = 'header-resize-handle';
+                headerResizeHandle.title = 'Drag to resize header height';
+                th.appendChild(headerResizeHandle);
+                
+                // Apply saved widths
+                if (columnWidths[sheetName][index]) {
+                    th.style.width = columnWidths[sheetName][index];
+                    th.style.minWidth = columnWidths[sheetName][index];
+                }
+                
+                // Apply saved header height
+                if (headerHeight[sheetName] && Object.keys(headerHeight[sheetName]).length > 0) {
+                    th.style.height = headerHeight[sheetName][0] || 'auto';
+                }
+                
+                // Column resize functionality
+                let startX, startWidth, currentHeader;
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    startX = e.clientX;
+                    currentHeader = th;
+                    startWidth = th.offsetWidth;
+                    
+                    document.body.style.cursor = 'col-resize';
+                    th.classList.add('resizing');
+                    resizeHandle.classList.add('active');
+                    
+                    document.addEventListener('mousemove', handleColumnResize);
+                    document.addEventListener('mouseup', stopColumnResize);
+                });
+                
+                function handleColumnResize(e) {
+                    if (!currentHeader) return;
+                    
+                    const width = startWidth + (e.clientX - startX);
+                    const minWidth = 50;
+                    
+                    if (width >= minWidth) {
+                        currentHeader.style.width = `${width}px`;
+                        currentHeader.style.minWidth = `${width}px`;
+                        columnWidths[sheetName][index] = `${width}px`;
+                        markAsModified();
+                    }
+                }
+                
+                function stopColumnResize() {
+                    document.body.style.cursor = '';
+                    if (currentHeader) {
+                        currentHeader.classList.remove('resizing');
+                        resizeHandle.classList.remove('active');
+                        currentHeader = null;
+                    }
+                    
+                    document.removeEventListener('mousemove', handleColumnResize);
+                    document.removeEventListener('mouseup', stopColumnResize);
+                }
+                
+                // Header row resize functionality
+                let startY, startHeight, isResizingHeader;
+                headerResizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    startY = e.clientY;
+                    startHeight = th.offsetHeight;
+                    isResizingHeader = true;
+                    
+                    document.body.style.cursor = 'row-resize';
+                    th.classList.add('resizing-header');
+                    headerResizeHandle.classList.add('active');
+                    
+                    document.addEventListener('mousemove', handleHeaderResize);
+                    document.addEventListener('mouseup', stopHeaderResize);
+                });
+                
+                function handleHeaderResize(e) {
+                    if (!isResizingHeader) return;
+                    
+                    const height = startHeight + (e.clientY - startY);
+                    const minHeight = 25;
+                    
+                    if (height >= minHeight) {
+                        // Apply to all headers in the row
+                        headers.forEach(header => {
+                            header.style.height = `${height}px`;
+                        });
+                        headerHeight[sheetName][0] = `${height}px`;
+                        markAsModified();
+                    }
+                }
+                
+                function stopHeaderResize() {
+                    document.body.style.cursor = '';
+                    if (isResizingHeader) {
+                        th.classList.remove('resizing-header');
+                        headerResizeHandle.classList.remove('active');
+                        isResizingHeader = false;
+                    }
+                    
+                    document.removeEventListener('mousemove', handleHeaderResize);
+                    document.removeEventListener('mouseup', stopHeaderResize);
+                }
+            });
+            
+            // Add row resize handles to all table rows
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach((tr, index) => {
+                // Create row resize handle
+                const rowResizeHandle = document.createElement('div');
+                rowResizeHandle.className = 'row-resize-handle';
+                rowResizeHandle.title = 'Drag to resize row height';
+                tr.appendChild(rowResizeHandle);
+                
+                // Apply saved height
+                if (rowHeights[sheetName][index]) {
+                    tr.style.height = rowHeights[sheetName][index];
+                    
+                    // Update all textareas in this row to match the saved height
+                    const textareas = tr.querySelectorAll('textarea.editable');
+                    textareas.forEach(textarea => {
+                        const rowHeight = parseInt(rowHeights[sheetName][index]);
+                        textarea.style.height = `${rowHeight - 8}px`; // Account for padding
+                    });
+                }
+                
+                // Row resize functionality
+                let startY, startHeight, currentRow;
+                rowResizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    startY = e.clientY;
+                    currentRow = tr;
+                    startHeight = tr.offsetHeight;
+                    
+                    document.body.style.cursor = 'row-resize';
+                    tr.classList.add('resizing');
+                    rowResizeHandle.classList.add('active');
+                    
+                    document.addEventListener('mousemove', handleRowResize);
+                    document.addEventListener('mouseup', stopRowResize);
+                });
+                
+                function handleRowResize(e) {
+                    if (!currentRow) return;
+                    
+                    const height = startHeight + (e.clientY - startY);
+                    const minHeight = 28; // Match default row height
+                    
+                    if (height >= minHeight) {
+                        currentRow.style.height = `${height}px`;
+                        
+                        // Update all textareas in this row to match the new height
+                        const textareas = currentRow.querySelectorAll('textarea.editable');
+                        textareas.forEach(textarea => {
+                            textarea.style.height = `${height - 8}px`; // Account for padding
+                        });
+                        
+                        rowHeights[sheetName][index] = `${height}px`;
+                        markAsModified();
+                    }
+                }
+                
+                function stopRowResize() {
+                    document.body.style.cursor = '';
+                    if (currentRow) {
+                        currentRow.classList.remove('resizing');
+                        rowResizeHandle.classList.remove('active');
+                        currentRow = null;
+                    }
+                    
+                    document.removeEventListener('mousemove', handleRowResize);
+                    document.removeEventListener('mouseup', stopRowResize);
+                }
+            });
+        }
+
+        // Event listeners
+        elements.downloadBtn.addEventListener('click', () => downloadFromGitHub(true));
+        elements.saveBtn.addEventListener('click', saveToGitHub);
+        elements.exportBtn.addEventListener('click', exportExcelFile);
+        elements.autoFillBtn.addEventListener('click', autoFillColumns);
+        elements.refreshTokenBtn.addEventListener('click', async () => {
+            setLoading(true);
+            updateStatus('Refreshing API token...');
+            
+            // Add debug info
+            console.log('=== TOKEN REFRESH DEBUG INFO ===');
+            console.log('Current time:', new Date().toISOString());
+            console.log('Config encoding key:', CONFIG.encodingKey);
+            console.log('Fallback token available:', !!CONFIG.fallbackToken);
+            
+            const success = await loadApiTokenFromRemote();
+            if (success) {
+                showToast('Success', 'API token refreshed successfully', 'success', 3000);
+                updateStatus('Token refreshed - Ready');
+            } else {
+                updateStatus('Token refresh failed');
+            }
+            setLoading(false);
+        });
+        elements.refreshLookupBtn.addEventListener('click', () => refreshLookupData(true));
+        elements.addRowBtn.addEventListener('click', addRow);
+        elements.deleteRowBtn.addEventListener('click', deleteRow);
+        elements.autoFitWidthBtn.addEventListener('click', autoFitColumnWidths);
+        elements.autoFitHeightBtn.addEventListener('click', autoFitRowHeights);
+        elements.saveFormatBtn.addEventListener('click', saveFormat);
+        elements.resetDefaultBtn.addEventListener('click', resetToDefault);
+        
+        // Dropdown controls for main buttons
+        elements.tableStyleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown(elements.tableStyleDropdown);
+        });
+        
+        elements.databaseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown(elements.databaseDropdown);
+        });
+        
+        elements.editRowBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown(elements.editRowDropdown);
+        });
+        
+        elements.formatBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown(elements.formatDropdown);
+        });
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', () => {
+            closeAllDropdowns();
+        });
+        
+        // Prevent dropdowns from closing when clicking inside
+        elements.tableStyleDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        elements.databaseDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        elements.editRowDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        elements.formatDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Styling control event listeners
+        elements.textSizeSelect.addEventListener('change', () => {
+            updateTableTextSize();
+            showToast('Text Size Changed', `Table: ${elements.textSizeSelect.value}`, 'success', 2000);
+        });
+        elements.headerSizeSelect.addEventListener('change', () => {
+            updateHeaderTextSize();
+            showToast('Header Size Changed', `Header: ${elements.headerSizeSelect.value}`, 'success', 2000);
+        });
+        elements.textColorPicker.addEventListener('change', () => {
+            updateTextColor();
+            showToast('Text Color Changed', 'Table text color updated', 'success', 2000);
+        });
+        elements.headerTextColorPicker.addEventListener('change', () => {
+            updateHeaderTextColor();
+            showToast('Header Text Changed', 'Header text color updated', 'success', 2000);
+        });
+        elements.headerColorPicker.addEventListener('change', () => {
+            updateHeaderColor();
+            showToast('Header Background Changed', 'Header background updated', 'success', 2000);
+        });
+        elements.tableColorPicker.addEventListener('change', () => {
+            updateTableColor();
+            showToast('Table Background Changed', 'Table background updated', 'success', 2000);
+        });
+
+        // Dropdown control functions
+        function toggleDropdown(dropdown) {
+            const isVisible = dropdown.classList.contains('show');
+            closeAllDropdowns();
+            if (!isVisible) {
+                dropdown.classList.add('show');
+            }
+        }
+        
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+        }
+        function setLoading(loading, message = '') {
+            elements.progressBar.style.display = loading ? 'block' : 'none';
+            elements.loadingSpinner.style.display = loading ? 'block' : 'none';
+            
+            // Disable/enable buttons (including new dropdown buttons)
+            const buttons = [elements.downloadBtn, elements.saveBtn, elements.exportBtn, 
+                           elements.databaseBtn, elements.editRowBtn, elements.formatBtn, 
+                           elements.tableStyleBtn, elements.autoFillBtn, elements.refreshTokenBtn,
+                           elements.refreshLookupBtn, elements.addRowBtn, elements.deleteRowBtn, 
+                           elements.autoFitWidthBtn, elements.autoFitHeightBtn, elements.saveFormatBtn, 
+                           elements.resetDefaultBtn];
+            buttons.forEach(btn => {
+                if (btn) btn.disabled = loading;
+            });
+            
+            // Don't update status at all - preserve Live Updates indicator
+        }
+
+        function updateStatus(message) {
+            elements.statusText.textContent = message;
+        }
+
+        // Toast Notification System
+        function showToast(title, message, type = 'info', duration = 5000) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <div class="toast-title">
+                        <span>${icons[type] || icons.info}</span>
+                        ${title}
+                    </div>
+                    <button class="toast-close">&times;</button>
+                </div>
+                <div class="toast-message">${message}</div>
+                <div class="toast-progress">
+                    <div class="toast-progress-bar" style="animation-duration: ${duration}ms;"></div>
+                </div>
+            `;
+            
+            elements.toastContainer.appendChild(toast);
+            
+            // Show toast with animation
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Close functionality
+            const closeBtn = toast.querySelector('.toast-close');
+            const closeToast = () => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            };
+            
+            closeBtn.addEventListener('click', closeToast);
+            
+            // Auto close
+            if (duration > 0) {
+                setTimeout(closeToast, duration);
+            }
+            
+            return toast;
+        }
+
+        function askConfirmation(title, message) {
+            return new Promise((resolve) => {
+                const toast = document.createElement('div');
+                toast.className = 'toast warning';
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <div class="toast-title">
+                            <span>❓</span>
+                            ${title}
+                        </div>
+                    </div>
+                    <div class="toast-message">${message}</div>
+                    <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn" style="padding: 6px 12px; font-size: 12px;" data-action="yes">Yes</button>
+                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" data-action="no">No</button>
+                    </div>
+                `;
+                
+                elements.toastContainer.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                
+                const handleClick = (e) => {
+                    const action = e.target.getAttribute('data-action');
+                    if (action) {
+                        toast.classList.remove('show');
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                toast.parentNode.removeChild(toast);
+                            }
+                        }, 300);
+                        resolve(action === 'yes');
+                    }
+                };
+                
+                toast.addEventListener('click', handleClick);
+            });
+        }
+
+        // Modal-like function using toasts for confirmation
+        function showModal(title, message, showButtons = false) {
+            return new Promise((resolve) => {
+                if (showButtons) {
+                    askConfirmation(title, message).then(resolve);
+                } else {
+                    showToast(title, message, 'info', 5000);
+                    resolve(true);
+                }
+            });
+        }
+
+        function markAsModified() {
+            isModified = true;
+            document.title = "Excel Collaborator - Active Outages *";
+        }
+
+        // Optimized input handling with debouncing
+        const debouncedMarkModified = debounce(markAsModified, 100);
+        const debouncedLookup = debounce((input, sheetName) => {
+            performRealTimeLookup(input, sheetName);
+        }, 300);
+
+        // Excel file handling with multiple source fallback
+        async function downloadFromGitHub(showSuccessToast = true) {
+            setLoading(true);
+            
+            let lastError = null;
+            
+            // Try each download source in order
+            for (let i = 0; i < CONFIG.downloadSources.length; i++) {
+                const source = CONFIG.downloadSources[i];
+                
+                try {
+                    console.log(`Attempting download from: ${source.name} - ${source.url}`);
+                    
+                    let arrayBuffer;
+                    
+                    if (source.method === "api") {
+                        // GitHub API method
+                        const response = await fetch(source.url, {
+                            headers: {
+                                'Authorization': `token ${CONFIG.githubToken}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            },
+                            cache: 'no-cache'
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            // GitHub API returns base64 encoded content
+                            const base64Content = data.content.replace(/\n/g, '');
+                            const binaryString = atob(base64Content);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) {
+                                bytes[j] = binaryString.charCodeAt(j);
+                            }
+                            arrayBuffer = bytes.buffer;
+                        } else {
+                            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                        }
+                    } else {
+                        // Direct fetch method (for GitHub Pages and proxy)
+                        const timestamp = new Date().getTime();
+                        const urlWithTimestamp = `${source.url}?t=${timestamp}`;
+                        
+                        const response = await fetch(urlWithTimestamp, {
+                            cache: 'no-cache',
+                            headers: {
+                                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                'Pragma': 'no-cache',
+                                'Expires': '0'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            arrayBuffer = await response.arrayBuffer();
+                        } else {
+                            throw new Error(`${source.name}: ${response.status} ${response.statusText}`);
+                        }
+                    }
+                    
+                    // Successfully got the file, now process it
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    
+                    // Clear existing data
+                    workbookData = {};
+                    
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                        workbookData[sheetName] = data;
+                    });
+                    
+                    loadWorkbookData();
+                    isModified = false;
+                    document.title = "Excel Collaborator - Active Outages";
+                    
+                    // Recalculate and format all duration cells with Excel precision
+                    setTimeout(() => formatAllDurationCells(), 100);
+                    setLoading(false);
+                    
+                    if (showSuccessToast) {
+                        showToast('Success', 
+                            `File downloaded from ${source.name}`, 
+                            'success', 3000);
+                    }
+                    
+                    console.log(`✅ Successfully downloaded from: ${source.name}`);
+                    return true;
+                    
+                } catch (error) {
+                    console.warn(`❌ Failed to download from ${source.name}:`, error.message);
+                    lastError = error;
+                    
+                    // If this isn't the last source, continue to next
+                    if (i < CONFIG.downloadSources.length - 1) {
+                        continue;
+                    }
+                }
+            }
+            
+            // All sources failed
+            setLoading(false);
+            if (showSuccessToast) {
+                showToast('Download Error', 
+                    `Failed to download file from all sources. Last error: ${lastError?.message || 'Unknown error'}. Please check your internet connection and try again.`, 
+                    'error', 8000);
+            }
+            throw lastError || new Error('All download sources failed');
+        }
+
+        async function saveToGitHub() {
+            if (Object.keys(workbookData).length === 0) {
+                showToast('Warning', 'No data to save!', 'warning', 3000);
+                return;
+            }
+            
+            setLoading(true);
+            
+            try {
+                // Get current data from tables (optimized)
+                updateWorkbookFromTables();
+                
+                // Create Excel file
+                const workbook = XLSX.utils.book_new();
+                
+                Object.entries(workbookData).forEach(([sheetName, data]) => {
+                    const worksheet = XLSX.utils.aoa_to_sheet(data);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+                });
+                
+                const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+                const base64Content = btoa(String.fromCharCode(...new Uint8Array(excelBuffer)));
+                
+                // Get current file SHA
+                const getUrl = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}/contents/${CONFIG.filePath}`;
+                const getResponse = await fetch(getUrl, {
+                    headers: {
+                        'Authorization': `token ${CONFIG.githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                let sha = null;
+                if (getResponse.ok) {
+                    const fileData = await getResponse.json();
+                    sha = fileData.sha;
+                }
+                
+                // Upload file
+                const uploadData = {
+                    message: `Update Active_Outages.xlsx - ${new Date().toLocaleString()}`,
+                    content: base64Content,
+                    branch: 'main'
+                };
+                
+                if (sha) {
+                    uploadData.sha = sha;
+                }
+                
+                const uploadResponse = await fetch(getUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${CONFIG.githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(uploadData)
+                });
+                
+                if (uploadResponse.ok) {
+                    isModified = false;
+                    document.title = "Excel Collaborator - Active Outages";
+                    setLoading(false);
+                    showToast('Success', 'File saved successfully', 'success', 2000);
+                } else {
+                    throw new Error(`HTTP ${uploadResponse.status}: ${uploadResponse.statusText}`);
+                }
+                
+            } catch (error) {
+                setLoading(false);
+                showToast('Save Error', `Failed to save file: ${error.message}`, 'error', 6000);
+            }
+        }
+
+        async function refreshLookupData(showSuccessToast = true) {
+            setLoading(true);
+            
+            let lastError = null;
+            
+            // Try each lookup source in order
+            for (let i = 0; i < CONFIG.lookupSources.length; i++) {
+                const source = CONFIG.lookupSources[i];
+                
+                try {
+                    console.log(`Attempting lookup download from: ${source.name} - ${source.url}`);
+                    
+                    let arrayBuffer;
+                    
+                    if (source.method === "api") {
+                        // GitHub API method
+                        const response = await fetch(source.url, {
+                            headers: {
+                                'Authorization': `token ${CONFIG.githubToken}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            },
+                            cache: 'no-cache'
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            // GitHub API returns base64 encoded content
+                            const base64Content = data.content.replace(/\n/g, '');
+                            const binaryString = atob(base64Content);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) {
+                                bytes[j] = binaryString.charCodeAt(j);
+                            }
+                            arrayBuffer = bytes.buffer;
+                        } else {
+                            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                        }
+                    } else {
+                        // Direct fetch method (for GitHub Pages and proxy)
+                        const timestamp = new Date().getTime();
+                        const urlWithTimestamp = `${source.url}?t=${timestamp}`;
+                        
+                        const response = await fetch(urlWithTimestamp, {
+                            cache: 'no-cache',
+                            headers: {
+                                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                'Pragma': 'no-cache',
+                                'Expires': '0'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            arrayBuffer = await response.arrayBuffer();
+                        } else {
+                            throw new Error(`${source.name}: ${response.status} ${response.statusText}`);
+                        }
+                    }
+                    
+                    // Successfully got the lookup file, now process it
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    
+                    if (workbook.SheetNames.includes('Data')) {
+                        const worksheet = workbook.Sheets['Data'];
+                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                        
+                        if (data.length > 0) {
+                            const headers = data[0];
+                            
+                            // Find column indices
+                            const siteIdCol = headers.findIndex(h => h && h.includes('Site ID Code'));
+                            const regionCol = headers.findIndex(h => h && h.trim() === 'Region');
+                            const powerTypeCol = headers.findIndex(h => h && h.includes('Power Type'));
+                            const bbStatusCol = headers.findIndex(h => h && h.includes('BB Status'));
+                            const siteOwnerCol = headers.findIndex(h => h && h.includes('Site Owner'));
+                            
+                            console.log('Lookup column mapping:', { siteIdCol, regionCol, powerTypeCol, bbStatusCol, siteOwnerCol });
+                            
+                            // Build lookup dictionary with case-insensitive keys (optimized)
+                            lookupData = {};
+                            for (let k = 1; k < data.length; k++) {
+                                const row = data[k];
+                                if (siteIdCol >= 0 && row[siteIdCol]) {
+                                    const siteId = String(row[siteIdCol]).trim().toUpperCase();
+                                    if (siteId) {
+                                        lookupData[siteId] = {
+                                            Region: regionCol >= 0 ? row[regionCol] || '' : '',
+                                            'Power Type': powerTypeCol >= 0 ? row[powerTypeCol] || '' : '',
+                                            'BB Status': bbStatusCol >= 0 ? row[bbStatusCol] || '' : '',
+                                            'Site Owner': siteOwnerCol >= 0 ? row[siteOwnerCol] || '' : ''
+                                        };
+                                    }
+                                }
+                            }
+                            
+                            setLoading(false);
+                            
+                            if (showSuccessToast) {
+                                showToast('Success', 
+                                    `Lookup data refreshed from ${source.name}`, 
+                                    'success', 3000);
+                            }
+                            
+                            console.log(`✅ Successfully downloaded lookup data from: ${source.name}`);
+                            return true;
+                        } else {
+                            throw new Error('Data sheet found but no data rows!');
+                        }
+                    } else {
+                        throw new Error(`'Data' sheet not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
+                    }
+                    
+                } catch (error) {
+                    console.warn(`❌ Failed to download lookup data from ${source.name}:`, error.message);
+                    lastError = error;
+                    
+                    // If this isn't the last source, continue to next
+                    if (i < CONFIG.lookupSources.length - 1) {
+                        continue;
+                    }
+                }
+            }
+            
+            // All lookup sources failed
+            setLoading(false);
+            if (showSuccessToast) {
+                showToast('Lookup Error', 
+                    `Failed to download lookup data from all sources. Last error: ${lastError?.message || 'Unknown error'}. Please check your internet connection and try again.`, 
+                    'error', 8000);
+            }
+            throw lastError || new Error('All lookup sources failed');
+        }
+
+        async function autoFillColumns() {
+            if (Object.keys(lookupData).length === 0) {
+                const shouldRefresh = await showModal('No Lookup Data', 
+                    'Lookup data not loaded. Would you like to download it first?', true);
+                if (shouldRefresh) {
+                    await refreshLookupData(true);
+                }
+                return;
+            }
+            
+            if (!currentSheet) {
+                await showModal('Warning', 'No active sheet selected!');
+                return;
+            }
+            
+            setLoading(true);
+            
+            try {
+                const table = document.querySelector(`#tab-${currentSheet} table`);
+                if (!table) {
+                    throw new Error('Table not found');
+                }
+                
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                
+                // Find column indices
+                const hubSiteCol = headers.findIndex(h => h.toLowerCase().includes('hub site'));
+                const pcmCreatedCol = headers.findIndex(h => h.toLowerCase().includes('pcm created'));
+                const elapsedDurationCol = headers.findIndex(h => h.toLowerCase().includes('elapsed duration'));
+                const regionCol = headers.findIndex(h => h.toLowerCase() === 'region');
+                const powerSourceCol = headers.findIndex(h => h.toLowerCase().includes('power source'));
+                const bbStatusCol = headers.findIndex(h => h.toLowerCase().includes('battery backup status'));
+                const siteOwnerCol = headers.findIndex(h => h.toLowerCase().includes('site owner'));
+                
+                console.log('Column mapping:', { hubSiteCol, pcmCreatedCol, elapsedDurationCol, regionCol, powerSourceCol, bbStatusCol, siteOwnerCol });
+                
+                let filledCount = 0;
+                const rows = table.querySelectorAll('tbody tr');
+                
+                rows.forEach((row, rowIndex) => {
+                    const cells = row.querySelectorAll('td');
+                    
+                    // Get Hub Site ID for lookup
+                    let hubSiteId = null;
+                    if (hubSiteCol >= 0 && cells[hubSiteCol]) {
+                        const textarea = cells[hubSiteCol].querySelector('textarea');
+                        hubSiteId = textarea ? textarea.value.trim() : cells[hubSiteCol].textContent.trim();
+                    }
+                    
+                    // Calculate Elapsed Duration - only if PCM Created At has a value
+                    if (elapsedDurationCol >= 0 && pcmCreatedCol >= 0 && cells[pcmCreatedCol] && cells[elapsedDurationCol]) {
+                        const pcmTextarea = cells[pcmCreatedCol].querySelector('textarea');
+                        const pcmText = pcmTextarea ? pcmTextarea.value.trim() : cells[pcmCreatedCol].textContent.trim();
+                        
+                        if (pcmText) {
+                            try {
+                                const pcmDate = new Date(pcmText);
+                                if (!isNaN(pcmDate.getTime())) {
+                                    const now = new Date();
+                                    
+                                    // Calculate time difference exactly like Excel
+                                    const MS_PER_SECOND = 1000;
+                                    const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+                                    const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+                                    
+                                    // Get total milliseconds difference
+                                    const msDiff = now - pcmDate;
+                                    
+                                    // Calculate hours, minutes, seconds precisely 
+                                    const totalHours = Math.floor(msDiff / MS_PER_HOUR);
+                                    const remainingMs = msDiff % MS_PER_HOUR;
+                                    const totalMinutes = Math.floor(remainingMs / MS_PER_MINUTE);
+                                    const totalSeconds = Math.floor((remainingMs % MS_PER_MINUTE) / MS_PER_SECOND);
+                                    
+                                    // Store exact values for formatting
+                                    const durationHours = totalHours + (totalMinutes / 60) + (totalSeconds / 3600);
+                                    
+                                    const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
+                                    if (durationTextarea) {
+                                        // Store raw hours for precise calculations
+                                        durationTextarea.dataset.rawHours = durationHours;
+                                        durationTextarea.value = durationHours.toString();
+                                        formatDuration(durationTextarea);
+                                        filledCount++;
+                                    }
+                                }
+                            } catch (e) {
+                                console.log(`Error calculating duration for row ${rowIndex}:`, e);
+                            }
+                        } else {
+                            // Clear duration if PCM Created At is empty
+                            const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
+                            if (durationTextarea && durationTextarea.value) {
+                                durationTextarea.value = '';
+                                durationTextarea.classList.remove('elapsed-duration-live');
+                                filledCount++;
+                            }
+                        }
+                    }
+                    
+                    // Lookup values if Hub Site ID exists
+                    if (hubSiteId && lookupData[hubSiteId]) {
+                        const lookupRecord = lookupData[hubSiteId];
+                        
+                        // Fill Region
+                        if (regionCol >= 0 && cells[regionCol] && lookupRecord.Region) {
+                            const regionTextarea = cells[regionCol].querySelector('textarea');
+                            if (regionTextarea) {
+                                regionTextarea.value = lookupRecord.Region;
+                                filledCount++;
+                            }
+                        }
+                        
+                        // Fill Power Source
+                        if (powerSourceCol >= 0 && cells[powerSourceCol] && lookupRecord['Power Type']) {
+                            const powerTextarea = cells[powerSourceCol].querySelector('textarea');
+                            if (powerTextarea) {
+                                powerTextarea.value = lookupRecord['Power Type'];
+                                filledCount++;
+                            }
+                        }
+                        
+                        // Fill Battery Backup Status
+                        if (bbStatusCol >= 0 && cells[bbStatusCol] && lookupRecord['BB Status']) {
+                            const bbTextarea = cells[bbStatusCol].querySelector('textarea');
+                            if (bbTextarea) {
+                                bbTextarea.value = lookupRecord['BB Status'];
+                                filledCount++;
+                            }
+                        }
+                        
+                        // Fill Site Owner
+                        if (siteOwnerCol >= 0 && cells[siteOwnerCol] && lookupRecord['Site Owner']) {
+                            const ownerTextarea = cells[siteOwnerCol].querySelector('textarea');
+                            if (ownerTextarea) {
+                                ownerTextarea.value = lookupRecord['Site Owner'];
+                                filledCount++;
+                            }
+                        }
+                    }
+                });
+                
+                markAsModified();
+                setLoading(false);
+                
+                await showModal('Auto-Fill Complete', 
+                    `Auto-fill completed for ${currentSheet}. Filled ${filledCount} cells.`);
+                
+            } catch (error) {
+                setLoading(false);
+                await showModal('Error', `Error during auto-fill:\n${error.message}`);
+            }
+        }
+
+        function addRow() {
+            if (!currentSheet) {
+                showToast('Warning', 'No active sheet selected!', 'warning', 3000);
+                return;
+            }
+            
+            const table = document.querySelector(`#tab-${currentSheet} table tbody`);
+            if (table) {
+                const headerCount = document.querySelectorAll(`#tab-${currentSheet} table th`).length;
+                const row = table.insertRow();
+                
+                // Get headers to identify special columns
+                const headers = Array.from(document.querySelectorAll(`#tab-${currentSheet} table th`)).map(th => th.textContent);
+                const emFieldFeedbackColIndex = headers.findIndex(h => h && h.toLowerCase().includes('em field feedback'));
+                
+                for (let i = 0; i < headerCount; i++) {
+                    const cell = row.insertCell();
+                    
+                    // Add special class for EM Field Feedback column
+                    if (i === emFieldFeedbackColIndex) {
+                        cell.classList.add('em-field-feedback');
+                    }
+                    
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'editable';
+                    
+                    textarea.addEventListener('input', () => {
+                        textarea.classList.add('editing');
+                        setTimeout(() => textarea.classList.remove('editing'), 500);
+                        debouncedMarkModified();
+                    });
+                    
+                    const columnName = headers[i]?.toLowerCase() || '';
+                    
+                    // Add real-time lookup for Hub Site column
+                    if (columnName.includes('hub site')) {
+                        textarea.addEventListener('input', (e) => {
+                            e.target.classList.add('editing');
+                            setTimeout(() => e.target.classList.remove('editing'), 500);
+                            debouncedLookup(e.target, currentSheet);
+                        });
+                        textarea.addEventListener('paste', (e) => {
+                            setTimeout(() => {
+                                debouncedLookup(e.target, currentSheet);
+                            }, 10);
+                        });
+                        textarea.classList.add('hub-site-field');
+                    }
+                    
+                    // Format date/time columns in yyyy-mm-dd hh:mm:ss
+                    if (columnName.includes('creat fault first time') || 
+                        columnName.includes('pcm created') || 
+                        columnName.includes('created at') ||
+                        columnName.includes('fault first time') ||
+                        columnName.includes('first time occured')) {
+                        
+                        // Add multiple event listeners for comprehensive date formatting
+                        textarea.addEventListener('blur', (e) => formatDateTime(e.target));
+                        textarea.addEventListener('change', (e) => formatDateTime(e.target));
+                        textarea.addEventListener('paste', (e) => setTimeout(() => formatDateTime(e.target), 10));
+                        textarea.addEventListener('focus', (e) => showDateFormatHelp(e.target));
+                        textarea.addEventListener('input', (e) => {
+                            // Immediate clearing of duration when PCM field is emptied
+                            if (e.target.value.trim() === '') {
+                                formatDateTime(e.target); // Handle clearing immediately
+                            }
+                            // Debounced formatting to avoid excessive calls while typing
+                            clearTimeout(e.target.formatTimeout);
+                            e.target.formatTimeout = setTimeout(() => formatDateTime(e.target), 1000);
+                        });
+                        
+                        textarea.classList.add('date-time-field');
+                    }
+                    
+                    // Format elapsed duration column
+                    if (columnName.includes('elapsed duration')) {
+                        textarea.addEventListener('blur', (e) => formatDuration(e.target));
+                        textarea.addEventListener('paste', (e) => setTimeout(() => formatDuration(e.target), 10));
+                        textarea.readOnly = true;
+                        textarea.classList.add('elapsed-duration-live');
+                    }
+                    
+                    cell.appendChild(textarea);
+                }
+                
+                debouncedMarkModified();
+                
+                // Add row resize handle for the new row
+                const rowIndex = table.rows.length - 1;
+                const newRow = table.rows[rowIndex];
+                
+                const rowResizeHandle = document.createElement('div');
+                rowResizeHandle.className = 'row-resize-handle';
+                rowResizeHandle.title = 'Drag to resize row';
+                newRow.appendChild(rowResizeHandle);
+                
+                // Add row resize functionality
+                let startY, startHeight, currentRow;
+                rowResizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    startY = e.clientY;
+                    currentRow = newRow;
+                    startHeight = newRow.offsetHeight;
+                    
+                    document.body.style.cursor = 'row-resize';
+                    newRow.classList.add('resizing');
+                    rowResizeHandle.classList.add('active');
+                    
+                    document.addEventListener('mousemove', handleRowResize);
+                    document.addEventListener('mouseup', stopRowResize);
+                });
+                
+                function handleRowResize(e) {
+                    if (!currentRow) return;
+                    
+                    const height = startHeight + (e.clientY - startY);
+                    const minHeight = 28; // Match default row height
+                    
+                    if (height >= minHeight) {
+                        currentRow.style.height = `${height}px`;
+                        
+                        // Update all textareas in this row to match the new height
+                        const textareas = currentRow.querySelectorAll('textarea.editable');
+                        textareas.forEach(textarea => {
+                            textarea.style.height = `${height - 8}px`; // Account for padding
+                        });
+                        
+                        if (!rowHeights[currentSheet]) {
+                            rowHeights[currentSheet] = {};
+                        }
+                        rowHeights[currentSheet][rowIndex] = `${height}px`;
+                        markAsModified();
+                    }
+                }
+                
+                function stopRowResize() {
+                    document.body.style.cursor = '';
+                    if (currentRow) {
+                        currentRow.classList.remove('resizing');
+                        rowResizeHandle.classList.remove('active');
+                        currentRow = null;
+                    }
+                    
+                    document.removeEventListener('mousemove', handleRowResize);
+                    document.removeEventListener('mouseup', stopRowResize);
+                }
+                
+                showToast('Success', 'New row added', 'success', 2000);
+            }
+        }
+
+        function deleteRow() {
+            if (!currentSheet) {
+                showToast('Warning', 'No active sheet selected!', 'warning', 3000);
+                return;
+            }
+            
+            const table = document.querySelector(`#tab-${currentSheet} table tbody`);
+            if (table && table.rows.length > 0) {
+                table.deleteRow(-1); // Delete last row
+                debouncedMarkModified();
+                showToast('Success', 'Last row deleted', 'success', 2000);
+            } else {
+                showToast('Warning', 'No rows to delete!', 'warning', 3000);
+            }
+        }
+
+        // Optimized real-time lookup functionality
+        function performRealTimeLookup(hubSiteInput, sheetName) {
+            // Convert to uppercase automatically
+            const originalValue = hubSiteInput.value;
+            const hubSiteId = originalValue.trim().toUpperCase();
+            
+            // Update the input field to show uppercase
+            if (originalValue !== hubSiteId) {
+                hubSiteInput.value = hubSiteId;
+            }
+            
+            // Clear if empty
+            if (!hubSiteId) {
+                clearRelatedFields(hubSiteInput, sheetName);
+                return;
+            }
+            
+            // Case-insensitive lookup
+            let lookupRecord = null;
+            const lookupKeys = Object.keys(lookupData);
+            
+            // First try exact match
+            if (lookupData[hubSiteId]) {
+                lookupRecord = lookupData[hubSiteId];
+            } else {
+                // Try case-insensitive search
+                const foundKey = lookupKeys.find(key => key.toUpperCase() === hubSiteId);
+                if (foundKey) {
+                    lookupRecord = lookupData[foundKey];
+                }
+            }
+            
+            if (!lookupRecord) {
+                // Show hint if partial match exists
+                const partialMatches = lookupKeys.filter(key => 
+                    key.toUpperCase().includes(hubSiteId) || hubSiteId.includes(key.toUpperCase())
+                ).slice(0, 3);
+                
+                if (partialMatches.length > 0 && hubSiteId.length > 2) {
+                    // Similar sites found but don't show status message
+                } else if (hubSiteId.length > 3) {
+                    // Hub site not found but don't show status message
+                }
+                clearRelatedFields(hubSiteInput, sheetName);
+                return;
+            }
+            
+            try {
+                // Find the row containing this input
+                const row = hubSiteInput.closest('tr');
+                if (!row) return;
+                
+                // Get headers to find column indices
+                const headers = Array.from(document.querySelectorAll(`#tab-${sheetName} table th`)).map(th => th.textContent);
+                
+                // Find column indices
+                const regionCol = headers.findIndex(h => h.toLowerCase() === 'region');
+                const powerSourceCol = headers.findIndex(h => h.toLowerCase().includes('power source'));
+                const bbStatusCol = headers.findIndex(h => h.toLowerCase().includes('battery backup status'));
+                const siteOwnerCol = headers.findIndex(h => h.toLowerCase().includes('site owner'));
+                
+                const cells = row.querySelectorAll('td');
+                let filledCount = 0;
+                
+                // Fill Region
+                if (regionCol >= 0 && cells[regionCol] && lookupRecord.Region) {
+                    const regionTextarea = cells[regionCol].querySelector('textarea');
+                    if (regionTextarea && regionTextarea.value !== lookupRecord.Region) {
+                        regionTextarea.value = lookupRecord.Region;
+                        regionTextarea.classList.add('auto-filled');
+                        setTimeout(() => regionTextarea.classList.remove('auto-filled'), 3000);
+                        filledCount++;
+                    }
+                }
+                
+                // Fill Power Source
+                if (powerSourceCol >= 0 && cells[powerSourceCol] && lookupRecord['Power Type']) {
+                    const powerTextarea = cells[powerSourceCol].querySelector('textarea');
+                    if (powerTextarea && powerTextarea.value !== lookupRecord['Power Type']) {
+                        powerTextarea.value = lookupRecord['Power Type'];
+                        powerTextarea.classList.add('auto-filled');
+                        setTimeout(() => powerTextarea.classList.remove('auto-filled'), 3000);
+                        filledCount++;
+                    }
+                }
+                
+                // Fill Battery Backup Status
+                if (bbStatusCol >= 0 && cells[bbStatusCol] && lookupRecord['BB Status']) {
+                    const bbTextarea = cells[bbStatusCol].querySelector('textarea');
+                    if (bbTextarea && bbTextarea.value !== lookupRecord['BB Status']) {
+                        bbTextarea.value = lookupRecord['BB Status'];
+                        bbTextarea.classList.add('auto-filled');
+                        setTimeout(() => bbTextarea.classList.remove('auto-filled'), 3000);
+                        filledCount++;
+                    }
+                }
+                
+                // Fill Site Owner
+                if (siteOwnerCol >= 0 && cells[siteOwnerCol] && lookupRecord['Site Owner']) {
+                    const ownerTextarea = cells[siteOwnerCol].querySelector('textarea');
+                    if (ownerTextarea && ownerTextarea.value !== lookupRecord['Site Owner']) {
+                        ownerTextarea.value = lookupRecord['Site Owner'];
+                        ownerTextarea.classList.add('auto-filled');
+                        setTimeout(() => ownerTextarea.classList.remove('auto-filled'), 3000);
+                        filledCount++;
+                    }
+                }
+                
+                if (filledCount > 0) {
+                    debouncedMarkModified();
+                    // Auto-filled fields but don't show status message
+                } else {
+                    // Hub site verified but don't show status message
+                }
+                
+            } catch (error) {
+                console.error('Error in real-time lookup:', error);
+                // Error during lookup but don't show status message
+            }
+        }
+
+        function clearRelatedFields(hubSiteInput, sheetName) {
+            try {
+                const row = hubSiteInput.closest('tr');
+                if (!row) return;
+                
+                const headers = Array.from(document.querySelectorAll(`#tab-${sheetName} table th`)).map(th => th.textContent);
+                const regionCol = headers.findIndex(h => h.toLowerCase() === 'region');
+                const powerSourceCol = headers.findIndex(h => h.toLowerCase().includes('power source'));
+                const bbStatusCol = headers.findIndex(h => h.toLowerCase().includes('battery backup status'));
+                const siteOwnerCol = headers.findIndex(h => h.toLowerCase().includes('site owner'));
+                
+                const cells = row.querySelectorAll('td');
+                
+                // Clear related fields when Hub Site is empty or invalid
+                [regionCol, powerSourceCol, bbStatusCol, siteOwnerCol].forEach(colIndex => {
+                    if (colIndex >= 0 && cells[colIndex]) {
+                        const textarea = cells[colIndex].querySelector('textarea');
+                        if (textarea && textarea.value) {
+                            textarea.value = '';
+                            textarea.classList.remove('auto-filled');
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error clearing related fields:', error);
+            }
+        }
+
+        // Optimized workbook data loading
+        function loadWorkbookData() {
+            // Clear existing tabs
+            elements.tabsHeader.innerHTML = '';
+            elements.tabsContent.innerHTML = '';
+            
+            let isFirst = true;
+            
+            Object.entries(workbookData).forEach(([sheetName, data]) => {
+                // Create tab button
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (isFirst ? ' active' : '');
+                tab.textContent = sheetName;
+                tab.addEventListener('click', () => switchTab(sheetName));
+                elements.tabsHeader.appendChild(tab);
+                
+                // Create tab content
+                const tabContent = document.createElement('div');
+                tabContent.className = 'tab-content' + (isFirst ? ' active' : '');
+                tabContent.id = `tab-${sheetName}`;
+                
+                if (data.length > 0) {
+                    const tableContainer = document.createElement('div');
+                    tableContainer.className = 'table-container';
+                    
+                    const table = document.createElement('table');
+                    
+                    // Create header
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    
+                    const headers = data[0];
+                    headers.forEach(header => {
+                        const th = document.createElement('th');
+                        th.textContent = header || '';
+                        headerRow.appendChild(th);
+                    });
+                    
+                    thead.appendChild(headerRow);
+                    table.appendChild(thead);
+                    
+                    // Find Hub Site column index for real-time lookup
+                    const hubSiteColIndex = headers.findIndex(h => h && h.toLowerCase().includes('hub site'));
+                    const emFieldFeedbackColIndex = headers.findIndex(h => h && h.toLowerCase().includes('em field feedback'));
+                    
+                    // Create body
+                    const tbody = document.createElement('tbody');
+                    
+                    for (let i = 1; i < data.length; i++) {
+                        const row = document.createElement('tr');
+                        
+                        data[i].forEach((cellValue, colIndex) => {
+                            const td = document.createElement('td');
+                            
+                            // Add special class for EM Field Feedback column
+                            if (colIndex === emFieldFeedbackColIndex) {
+                                td.classList.add('em-field-feedback');
+                            }
+                            
+                            const textarea = document.createElement('textarea');
+                            textarea.className = 'editable';
+                            
+                            // Normalize Hub Site values to uppercase
+                            if (colIndex === hubSiteColIndex && cellValue) {
+                                textarea.value = String(cellValue).trim().toUpperCase();
+                            } else {
+                                textarea.value = cellValue || '';
+                            }
+                            
+                            // Optimized input handling with debouncing (no auto-resize)
+                            textarea.addEventListener('input', (e) => {
+                                e.target.classList.add('editing');
+                                setTimeout(() => e.target.classList.remove('editing'), 500);
+                                debouncedMarkModified();
+                            });
+                            
+                            // Add real-time lookup for Hub Site column
+                            if (colIndex === hubSiteColIndex) {
+                                textarea.addEventListener('input', (e) => {
+                                    e.target.classList.add('editing');
+                                    setTimeout(() => e.target.classList.remove('editing'), 500);
+                                    debouncedLookup(e.target, sheetName);
+                                });
+                                textarea.addEventListener('paste', (e) => {
+                                    setTimeout(() => {
+                                        debouncedLookup(e.target, sheetName);
+                                    }, 10);
+                                });
+                                textarea.classList.add('hub-site-field');
+                            }
+                            
+                            // Format date/time columns in yyyy-mm-dd hh:mm:ss
+                            const colName = headers[colIndex]?.toLowerCase() || '';
+                            if (colName.includes('creat fault first time') || 
+                                colName.includes('pcm created') || 
+                                colName.includes('created at') ||
+                                colName.includes('fault first time') ||
+                                colName.includes('first time occured')) {
+                                
+                                // Add multiple event listeners for comprehensive date formatting
+                                textarea.addEventListener('blur', (e) => formatDateTime(e.target));
+                                textarea.addEventListener('change', (e) => formatDateTime(e.target));
+                                textarea.addEventListener('paste', (e) => setTimeout(() => formatDateTime(e.target), 10));
+                                textarea.addEventListener('focus', (e) => showDateFormatHelp(e.target));
+                                textarea.addEventListener('input', (e) => {
+                                    // Immediate clearing of duration when PCM field is emptied
+                                    if (e.target.value.trim() === '') {
+                                        formatDateTime(e.target); // Handle clearing immediately
+                                    }
+                                    // Debounced formatting to avoid excessive calls while typing
+                                    clearTimeout(e.target.formatTimeout);
+                                    e.target.formatTimeout = setTimeout(() => formatDateTime(e.target), 1000);
+                                });
+                                
+                                textarea.classList.add('date-time-field');
+                            }
+                            
+                            // Format elapsed duration column
+                            if (colName.includes('elapsed duration')) {
+                                textarea.addEventListener('blur', (e) => formatDuration(e.target));
+                                textarea.addEventListener('paste', (e) => setTimeout(() => formatDuration(e.target), 10));
+                                textarea.readOnly = true;
+                                textarea.classList.add('elapsed-duration-live');
+                                // Skip initial formatting - will be handled by live updates for accuracy
+                            }
+                            
+                            td.appendChild(textarea);
+                            row.appendChild(td);
+                        });
+                        
+                        tbody.appendChild(row);
+                    }
+                    
+                    table.appendChild(tbody);
+                    tableContainer.appendChild(table);
+                    tabContent.appendChild(tableContainer);
+                    
+                    // Setup table resizing functionality
+                    setupTableResizing(tableContainer, sheetName);
+                    
+                    // Apply current styling
+                    setTimeout(() => applyTableStyling(), 100);
+                } else {
+                    tabContent.innerHTML = '<p>No data available</p>';
+                }
+                
+                elements.tabsContent.appendChild(tabContent);
+                
+                if (isFirst) {
+                    currentSheet = sheetName;
+                    isFirst = false;
+                }
+            });
+        }
+
+        function switchTab(sheetName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.textContent === sheetName);
+            });
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${sheetName}`);
+            });
+            
+            currentSheet = sheetName;
+            
+            // Apply current styling to the newly active sheet
+            setTimeout(() => applyTableStyling(), 100);
+        }
+
+        function updateWorkbookFromTables() {
+            Object.keys(workbookData).forEach(sheetName => {
+                const table = document.querySelector(`#tab-${sheetName} table`);
+                if (table) {
+                    const data = [];
+                    
+                    // Get headers
+                    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                    data.push(headers);
+                    
+                    // Get data rows
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const rowData = [];
+                        const textareas = row.querySelectorAll('textarea');
+                        textareas.forEach(textarea => {
+                            rowData.push(textarea.value);
+                        });
+                        data.push(rowData);
+                    });
+                    
+                    workbookData[sheetName] = data;
+                }
+            });
+        }
+
+        // Auto-sync every 30 seconds
+        setInterval(async () => {
+            if (!isModified && Object.keys(workbookData).length > 0) {
+                console.log('Auto-syncing...');
+                // Only download if no modifications to avoid conflicts
+                // await downloadFromGitHub();
+            }
+        }, 30000);
+
+        // Initialize app - Auto load all data immediately
+        window.addEventListener('load', async () => {
+            setLoading(true);
+            
+            // Load saved format settings first
+            loadSavedFormat();
+            
+            try {
+                // Step 1: Load API token from remote JSON first
+                updateStatus('Loading API token...');
+                const tokenLoaded = await loadApiTokenFromRemote();
+                
+                if (!tokenLoaded) {
+                    showToast('Error', 'Failed to load API token. Cannot proceed.', 'error', 8000);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Step 2: Auto-load both files simultaneously after token is loaded
+                updateStatus('Loading data files...');
+                const [mainFileResult, lookupResult] = await Promise.allSettled([
+                    downloadFromGitHub(false),
+                    refreshLookupData(false)
+                ]);
+                
+                if (mainFileResult.status === 'fulfilled' && lookupResult.status === 'fulfilled') {
+                    showToast('Success', 
+                        `Data loaded! ${Object.keys(workbookData).length} sheets ready`, 
+                        'success', 3000);
+                    updateStatus('Ready');
+                    setLoading(false);
+                    
+                    // Start live updates for elapsed duration
+                    startLiveUpdates();
+                    
+                } else {
+                    // Handle partial failures
+                    let errorMessages = [];
+                    if (mainFileResult.status === 'rejected') {
+                        errorMessages.push(`Main file: ${mainFileResult.reason}`);
+                    }
+                    if (lookupResult.status === 'rejected') {
+                        errorMessages.push(`Lookup data: ${lookupResult.reason}`);
+                    }
+                    
+                    showToast('Warning', 
+                        `Some files failed to load: ${errorMessages.join(', ')}`, 
+                        'warning', 6000);
+                    updateStatus('Partial load completed');
+                    setLoading(false);
+                }
+            } catch (error) {
+                showToast('Error', `Failed to load data: ${error.message}`, 'error', 5000);
+                updateStatus('Error loading data');
+                setLoading(false);
+            }
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', (e) => {
+            stopLiveUpdates(); // Clean up intervals
+            if (isModified) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+    </script>
+</body>
+</html>
