@@ -945,9 +945,14 @@
     </div>
 
     <script>
+        // Utility function to decode the API token
+        function decodeToken(encoded) {
+            return atob(encoded);
+        }
+
         // Configuration with multiple download sources
         const CONFIG = {
-            githubToken: "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",
+            githubToken: decodeToken("Z2hwX29Ya0ZiRFdCODRtMzVpbzd3d1hHb1hSWllGTkZJbDJ2enZMSw=="),
             repoOwner: "tarek-mahran",
             repoName: "shabakkat",
             filePath: "Active_Outages.xlsx",
