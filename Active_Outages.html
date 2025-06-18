@@ -804,6 +804,11 @@
                     </button>
                     <div class="dropdown-menu" id="databaseDropdown">
                         <div class="dropdown-section">
+                            <button class="btn btn-info" id="refreshTokenBtn" style="width: 100%; margin-bottom: 8px;">
+                                🔑 Refresh Token
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
                             <button class="btn btn-info" id="refreshLookupBtn" style="width: 100%; margin-bottom: 8px;">
                                 🔄 Refresh DB
                             </button>
@@ -947,25 +952,12 @@
     <script>
         // Configuration with multiple download sources
         const CONFIG = {
-            // XOR Encoded token for security
-            githubToken: (() => {
-                const encoded = "NA0TKgQfByYvAXRld0MRWSdcUhIxCDgjMgZGBVpMCWUfElMzJBwyDg==";
-                const key = "SecureKey2024!@#";
-                
-                // XOR decode function
-                function xorDecode(encodedToken, key) {
-                    const xorResult = atob(encodedToken);
-                    let result = '';
-                    for (let i = 0; i < xorResult.length; i++) {
-                        result += String.fromCharCode(
-                            xorResult.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-                        );
-                    }
-                    return result;
-                }
-                
-                return xorDecode(encoded, key);
-            })(),
+            // Dynamic token loading from GitLab JSON with XOR encoding
+            tokenApiUrl: "https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json",
+            encodingKey: "SecureKey2024!@#",
+            githubToken: null, // Will be loaded dynamically
+            // Fallback encoded token (XOR encoded) - only used if remote loading fails
+            fallbackToken: "NA0TKgQfByYvAXRld0MRWSdcUhIxCDgjMgZGBVpMCWUfElMzJBwyDg==",
             repoOwner: "tarek-mahran",
             repoName: "shabakkat",
             filePath: "Active_Outages.xlsx",
@@ -1007,6 +999,182 @@
             ]
         };
 
+        // XOR Encoding/Decoding Functions
+        function xorEncode(token, key) {
+            let result = '';
+            for (let i = 0; i < token.length; i++) {
+                result += String.fromCharCode(
+                    token.charCodeAt(i) ^ key.charCodeAt(i % key.length)
+                );
+            }
+            return btoa(result);
+        }
+
+        function xorDecode(encodedToken, key) {
+            const xorResult = atob(encodedToken);
+            let result = '';
+            for (let i = 0; i < xorResult.length; i++) {
+                result += String.fromCharCode(
+                    xorResult.charCodeAt(i) ^ key.charCodeAt(i % key.length)
+                );
+            }
+            return result;
+        }
+
+        // Dynamic Token Loading Function with multiple fallback methods
+        async function loadApiTokenFromRemote() {
+            const tokenSources = [
+                {
+                    name: "GitLab Raw",
+                    url: "https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json",
+                    method: "direct"
+                },
+                {
+                    name: "GitLab API",
+                    url: "https://gitlab.com/api/v4/projects/shabakkat%2Fshabakkat-project/repository/files/GitHub_API.json/raw?ref=main",
+                    method: "api"
+                },
+                {
+                    name: "CORS Proxy",
+                    url: "https://cors-anywhere.herokuapp.com/https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json",
+                    method: "proxy"
+                }
+            ];
+            
+            for (let i = 0; i < tokenSources.length; i++) {
+                const source = tokenSources[i];
+                
+                try {
+                    console.log(`Attempting to load token from: ${source.name} - ${source.url}`);
+                    
+                    // Add cache busting to ensure fresh token
+                    const timestamp = new Date().getTime();
+                    const urlWithTimestamp = `${source.url}${source.url.includes('?') ? '&' : '?'}t=${timestamp}`;
+                    
+                    const fetchOptions = {
+                        cache: 'no-cache',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0'
+                        }
+                    };
+                    
+                    // Add specific headers for GitLab API if needed
+                    if (source.method === "api") {
+                        fetchOptions.headers['Accept'] = 'application/json';
+                    }
+                    
+                    const response = await fetch(urlWithTimestamp, fetchOptions);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    let tokenData;
+                    
+                    if (source.method === "api") {
+                        // GitLab API returns base64 encoded content
+                        const rawData = await response.text();
+                        try {
+                            // Try parsing as JSON first (in case it's already decoded)
+                            tokenData = JSON.parse(rawData);
+                        } catch {
+                            // If that fails, assume it's base64 encoded
+                            const decodedData = atob(rawData);
+                            tokenData = JSON.parse(decodedData);
+                        }
+                    } else {
+                        // Direct raw file access
+                        tokenData = await response.json();
+                    }
+                    
+                    console.log('Token data received:', { hasAPI: !!tokenData.API, keys: Object.keys(tokenData) });
+                    
+                    if (!tokenData.API) {
+                        throw new Error('API token not found in JSON response');
+                    }
+                    
+                    // XOR encode the token for security
+                    const encodedToken = xorEncode(tokenData.API, CONFIG.encodingKey);
+                    
+                    // Store encoded token and decode when needed
+                    CONFIG.githubToken = xorDecode(encodedToken, CONFIG.encodingKey);
+                    
+                    console.log(`✅ API token loaded successfully from: ${source.name}`);
+                    showToast('Token Loaded', 
+                        `API token loaded from ${source.name}`, 
+                        'success', 3000);
+                    return true;
+                    
+                } catch (error) {
+                    console.warn(`❌ Failed to load from ${source.name}:`, error.message);
+                    
+                    // If this isn't the last source, continue to next
+                    if (i < tokenSources.length - 1) {
+                        console.log(`Trying next source...`);
+                        continue;
+                    }
+                }
+            }
+            
+            // All sources failed - try fallback token
+            console.warn('❌ All remote token sources failed, using fallback token');
+            
+            try {
+                if (CONFIG.fallbackToken) {
+                    CONFIG.githubToken = xorDecode(CONFIG.fallbackToken, CONFIG.encodingKey);
+                    console.log('✅ Fallback token loaded successfully');
+                    showToast('Fallback Token', 
+                        'Using fallback token - remote sources unavailable. Consider checking network connectivity.', 
+                        'warning', 6000);
+                    return true;
+                } else {
+                    throw new Error('No fallback token available');
+                }
+            } catch (fallbackError) {
+                console.error('❌ Fallback token also failed:', fallbackError);
+                showToast('Token Error', 
+                    `Failed to load API token from all sources and fallback failed. Application cannot proceed.`, 
+                    'error', 10000);
+                return false;
+            }
+        }
+
+        // Debug function - accessible from browser console
+        window.testTokenAccess = async function() {
+            console.log('=== TESTING TOKEN ACCESS ===');
+            const testUrl = "https://gitlab.com/shabakkat/shabakkat-project/-/raw/main/GitHub_API.json";
+            
+            try {
+                console.log('Testing direct fetch to:', testUrl);
+                const response = await fetch(testUrl);
+                console.log('Response status:', response.status, response.statusText);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    console.log('Raw response text:', text);
+                    
+                    try {
+                        const json = JSON.parse(text);
+                        console.log('Parsed JSON:', json);
+                        console.log('API token found:', !!json.API);
+                        return { success: true, data: json };
+                    } catch (e) {
+                        console.error('JSON parse error:', e);
+                        return { success: false, error: 'Invalid JSON', raw: text };
+                    }
+                } else {
+                    console.error('HTTP Error:', response.status, response.statusText);
+                    return { success: false, error: `HTTP ${response.status}` };
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return { success: false, error: error.message };
+            }
+        };
+
         // Global state
         let workbookData = {};
         let lookupData = {};
@@ -1025,6 +1193,7 @@
             saveBtn: document.getElementById('saveBtn'),
             exportBtn: document.getElementById('exportBtn'),
             autoFillBtn: document.getElementById('autoFillBtn'),
+            refreshTokenBtn: document.getElementById('refreshTokenBtn'),
             refreshLookupBtn: document.getElementById('refreshLookupBtn'),
             addRowBtn: document.getElementById('addRowBtn'),
             deleteRowBtn: document.getElementById('deleteRowBtn'),
@@ -2323,6 +2492,25 @@
         elements.saveBtn.addEventListener('click', saveToGitHub);
         elements.exportBtn.addEventListener('click', exportExcelFile);
         elements.autoFillBtn.addEventListener('click', autoFillColumns);
+        elements.refreshTokenBtn.addEventListener('click', async () => {
+            setLoading(true);
+            updateStatus('Refreshing API token...');
+            
+            // Add debug info
+            console.log('=== TOKEN REFRESH DEBUG INFO ===');
+            console.log('Current time:', new Date().toISOString());
+            console.log('Config encoding key:', CONFIG.encodingKey);
+            console.log('Fallback token available:', !!CONFIG.fallbackToken);
+            
+            const success = await loadApiTokenFromRemote();
+            if (success) {
+                showToast('Success', 'API token refreshed successfully', 'success', 3000);
+                updateStatus('Token refreshed - Ready');
+            } else {
+                updateStatus('Token refresh failed');
+            }
+            setLoading(false);
+        });
         elements.refreshLookupBtn.addEventListener('click', () => refreshLookupData(true));
         elements.addRowBtn.addEventListener('click', addRow);
         elements.deleteRowBtn.addEventListener('click', deleteRow);
@@ -2418,9 +2606,10 @@
             // Disable/enable buttons (including new dropdown buttons)
             const buttons = [elements.downloadBtn, elements.saveBtn, elements.exportBtn, 
                            elements.databaseBtn, elements.editRowBtn, elements.formatBtn, 
-                           elements.tableStyleBtn, elements.autoFillBtn, elements.refreshLookupBtn, 
-                           elements.addRowBtn, elements.deleteRowBtn, elements.autoFitWidthBtn, 
-                           elements.autoFitHeightBtn, elements.saveFormatBtn, elements.resetDefaultBtn];
+                           elements.tableStyleBtn, elements.autoFillBtn, elements.refreshTokenBtn,
+                           elements.refreshLookupBtn, elements.addRowBtn, elements.deleteRowBtn, 
+                           elements.autoFitWidthBtn, elements.autoFitHeightBtn, elements.saveFormatBtn, 
+                           elements.resetDefaultBtn];
             buttons.forEach(btn => {
                 if (btn) btn.disabled = loading;
             });
@@ -3548,7 +3737,18 @@
             loadSavedFormat();
             
             try {
-                // Auto-load both files simultaneously without waiting for user interaction
+                // Step 1: Load API token from remote JSON first
+                updateStatus('Loading API token...');
+                const tokenLoaded = await loadApiTokenFromRemote();
+                
+                if (!tokenLoaded) {
+                    showToast('Error', 'Failed to load API token. Cannot proceed.', 'error', 8000);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Step 2: Auto-load both files simultaneously after token is loaded
+                updateStatus('Loading data files...');
                 const [mainFileResult, lookupResult] = await Promise.allSettled([
                     downloadFromGitHub(false),
                     refreshLookupData(false)
@@ -3558,6 +3758,7 @@
                     showToast('Success', 
                         `Data loaded! ${Object.keys(workbookData).length} sheets ready`, 
                         'success', 3000);
+                    updateStatus('Ready');
                     setLoading(false);
                     
                     // Start live updates for elapsed duration
@@ -3565,19 +3766,23 @@
                     
                 } else {
                     // Handle partial failures
-                    let errorMessage = 'Some files failed to load:\n\n';
+                    let errorMessages = [];
                     if (mainFileResult.status === 'rejected') {
-                        errorMessage += `❌ Main file: ${mainFileResult.reason}\n`;
+                        errorMessages.push(`Main file: ${mainFileResult.reason}`);
                     }
                     if (lookupResult.status === 'rejected') {
-                        errorMessage += `❌ Lookup data: ${lookupResult.reason}\n`;
+                        errorMessages.push(`Lookup data: ${lookupResult.reason}`);
                     }
                     
-                    showToast('Warning', 'Some files failed to load', 'warning', 4000);
+                    showToast('Warning', 
+                        `Some files failed to load: ${errorMessages.join(', ')}`, 
+                        'warning', 6000);
+                    updateStatus('Partial load completed');
                     setLoading(false);
                 }
             } catch (error) {
                 showToast('Error', `Failed to load data: ${error.message}`, 'error', 5000);
+                updateStatus('Error loading data');
                 setLoading(false);
             }
         });
