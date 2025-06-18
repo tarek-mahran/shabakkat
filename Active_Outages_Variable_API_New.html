@@ -479,7 +479,7 @@
         }
 
         td {
-            padding: 4px 2px;
+            padding: 6px 4px;
             border-bottom: 1px solid #e9ecef;
             border-right: 1px solid #e9ecef;
             overflow: hidden;
@@ -503,7 +503,7 @@
 
         tr {
             position: relative; /* For row resize */
-            height: 28px; /* Optimal height for centered text */
+            height: 25px; /* More compact default height */
         }
 
         tr .row-resize-handle {
@@ -542,21 +542,17 @@
             background: transparent;
             width: 100%;
             height: 100%;
-            padding: 2px;
+            padding: 8px 4px;
             font-size: 14px;
             text-align: center;
             resize: none;
-            line-height: 1.3;
+            line-height: 1.4;
             word-wrap: break-word;
             word-break: break-word;
             white-space: normal;
             overflow-wrap: break-word;
             box-sizing: border-box;
             vertical-align: middle;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 20px;
         }
 
         .editable:focus {
@@ -1082,7 +1078,7 @@
             border: none;
             background: transparent;
             width: 100%;
-            padding: 2px;
+            padding: 4px;
             font-size: 14px;
             text-align: center;
             transition: all 0.2s ease;
@@ -1098,7 +1094,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            line-height: 1.3;
         }
 
         .fault-level-input:focus {
@@ -2097,8 +2092,27 @@
             });
         }
         
+        // Prevent multiple simultaneous exports
+        let isExporting = false;
+        let lastExportTime = 0;
+        
         // Export Excel file with fresh data and table formatting using ExcelJS
         async function exportExcelFile() {
+            // Prevent multiple simultaneous exports
+            if (isExporting) {
+                showToast('Export in Progress', 'Please wait for the current export to complete', 'warning', 3000);
+                return;
+            }
+            
+            // Prevent rapid successive exports (debounce)
+            const currentTime = Date.now();
+            if (currentTime - lastExportTime < 2000) { // 2 second minimum between exports
+                showToast('Export Rate Limited', 'Please wait a moment before exporting again', 'warning', 3000);
+                return;
+            }
+            
+            isExporting = true;
+            lastExportTime = currentTime;
             setLoading(true);
             
             try {
@@ -2259,33 +2273,465 @@
                 // Generate file buffer
                 const excelBuffer = await workbook.xlsx.writeBuffer();
                 
-                // Download file
+                // Create download blob
                 const blob = new Blob([excelBuffer], { 
                     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
                 });
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
                 
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                link.download = `Active_Outages_${timestamp}.xlsx`;
+                const fileName = `Active_Outages_${timestamp}.xlsx`;
                 
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
+                // Multiple download strategies for iframe compatibility
+                const downloadSuccess = await downloadFileIframe(blob, fileName);
                 
                 setLoading(false);
-                showToast('Export Complete', 
-                    `Excel file exported with latest data and formatting using ExcelJS`, 
-                    'success', 4000);
+                
+                if (downloadSuccess) {
+                    showToast('Export Complete', 
+                        `Excel file exported with latest data and formatting`, 
+                        'success', 4000);
+                } else {
+                    showToast('Export Notice', 
+                        `File prepared. If download didn't start automatically, please check for a manual download option.`, 
+                        'info', 6000);
+                }
                 
             } catch (error) {
                 setLoading(false);
                 showToast('Export Error', `Failed to export Excel file: ${error.message}`, 'error', 6000);
                 console.error('Export error:', error);
+            } finally {
+                // Always reset the export flag
+                isExporting = false;
             }
         }
+
+        // Enhanced download function that works in iframe environments
+        async function downloadFileIframe(blob, fileName) {
+            try {
+                console.log('Attempting download in iframe-safe mode...');
+                
+                // Check if we're in an iframe first
+                const isInIframe = window !== window.top;
+                console.log(`Environment: ${isInIframe ? 'iframe' : 'regular page'}`);
+                
+                // Strategy 1: Try the standard download approach first (only if not in iframe)
+                if (!isInIframe) {
+                    console.log('Trying standard download...');
+                    if (await tryStandardDownload(blob, fileName)) {
+                        console.log('✅ Standard download successful');
+                        return true;
+                    }
+                    console.log('❌ Standard download failed');
+                    // Small delay before next strategy
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
+                // Strategy 2: Try using data URL in new tab (works in most iframes)
+                console.log('Trying data URL download...');
+                if (await tryDataUrlDownload(blob, fileName)) {
+                    console.log('✅ Data URL download successful');
+                    return true;
+                }
+                console.log('❌ Data URL download failed');
+                // Small delay before next strategy
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Strategy 3: Try opening in new window/tab with target="_blank"
+                console.log('Trying new window download...');
+                if (await tryNewWindowDownload(blob, fileName)) {
+                    console.log('✅ New window download successful');
+                    return true;
+                }
+                console.log('❌ New window download failed');
+                
+                // Strategy 4: Try posting message to parent (if same origin and in iframe)
+                if (isInIframe) {
+                    console.log('Trying parent window message...');
+                    if (await tryParentWindowDownload(blob, fileName)) {
+                        console.log('✅ Parent window download successful');
+                        return true;
+                    }
+                    console.log('❌ Parent window message failed');
+                }
+                
+                // Strategy 5: Last resort - show manual download link
+                console.log('⚠️ Using manual download fallback');
+                tryManualDownload(blob, fileName);
+                return false;
+                
+            } catch (error) {
+                console.error('All download strategies failed:', error);
+                showToast('Download Error', 
+                    `Unable to download file: ${error.message}`, 
+                    'error', 8000);
+                return false;
+            }
+        }
+
+        // Strategy 1: Standard download (works in regular pages)
+        async function tryStandardDownload(blob, fileName) {
+            return new Promise((resolve) => {
+                try {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    link.style.display = 'none';
+                    
+                    // Simple download attempt for non-iframe environments
+                    document.body.appendChild(link);
+                    
+                    // Create and dispatch click event
+                    const event = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    
+                    const clicked = link.dispatchEvent(event);
+                    
+                    // Clean up immediately
+                    setTimeout(() => {
+                        if (link.parentNode) {
+                            document.body.removeChild(link);
+                        }
+                        window.URL.revokeObjectURL(url);
+                        
+                        // In regular pages, if click was dispatched successfully, 
+                        // assume download worked
+                        resolve(clicked);
+                    }, 50);
+                    
+                } catch (error) {
+                    console.warn('Standard download failed:', error);
+                    resolve(false);
+                }
+            });
+        }
+
+        // Strategy 2: Data URL in new tab (often works in iframes)
+        async function tryDataUrlDownload(blob, fileName) {
+            return new Promise((resolve) => {
+                try {
+                    // Only try data URL for smaller files (avoid browser memory issues)
+                    if (blob.size > 50 * 1024 * 1024) { // 50MB limit
+                        console.warn('File too large for data URL strategy');
+                        resolve(false);
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = function() {
+                        try {
+                            const dataUrl = reader.result;
+                            
+                            // Try to open in new tab with download
+                            const link = document.createElement('a');
+                            link.href = dataUrl;
+                            link.download = fileName;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.style.display = 'none';
+                            
+                            document.body.appendChild(link);
+                            
+                            // Create and dispatch click event
+                            const clickEvent = new MouseEvent('click', {
+                                view: window,
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            
+                            const success = link.dispatchEvent(clickEvent);
+                            
+                            setTimeout(() => {
+                                if (link.parentNode) {
+                                    document.body.removeChild(link);
+                                }
+                                // Wait a bit longer to see if download started
+                                setTimeout(() => {
+                                    resolve(success);
+                                }, 200);
+                            }, 100);
+                            
+                        } catch (error) {
+                            console.warn('Data URL download failed:', error);
+                            resolve(false);
+                        }
+                    };
+                    
+                    reader.onerror = () => {
+                        console.warn('FileReader failed for data URL');
+                        resolve(false);
+                    };
+                    
+                    reader.readAsDataURL(blob);
+                    
+                } catch (error) {
+                    console.warn('Data URL strategy failed:', error);
+                    resolve(false);
+                }
+            });
+        }
+
+        // Strategy 3: Open in new window/tab
+        async function tryNewWindowDownload(blob, fileName) {
+            return new Promise((resolve) => {
+                try {
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Create download URL with content-disposition hint
+                    const downloadUrl = `${url}#download=${encodeURIComponent(fileName)}`;
+                    
+                    // Try to open in new window
+                    const newWindow = window.open(
+                        downloadUrl, 
+                        '_blank',
+                        'noopener,noreferrer,width=800,height=600,toolbar=yes,location=yes,directories=no,status=yes,menubar=yes,scrollbars=yes,resizable=yes'
+                    );
+                    
+                    if (newWindow) {
+                        // Set a timer to clean up the URL object
+                        setTimeout(() => {
+                            window.URL.revokeObjectURL(url);
+                        }, 10000);
+                        
+                        resolve(true);
+                    } else {
+                        window.URL.revokeObjectURL(url);
+                        resolve(false);
+                    }
+                    
+                } catch (error) {
+                    console.warn('New window download failed:', error);
+                    resolve(false);
+                }
+            });
+        }
+
+        // Strategy 4: Post message to parent window (same origin only)
+        async function tryParentWindowDownload(blob, fileName) {
+            return new Promise((resolve) => {
+                try {
+                    if (window === window.top) {
+                        resolve(false); // Not in iframe
+                        return;
+                    }
+                    
+                    // Convert blob to base64 for message passing
+                    const reader = new FileReader();
+                    
+                    reader.onload = function() {
+                        try {
+                            const base64Data = reader.result.split(',')[1];
+                            
+                            // Send message to parent
+                            window.parent.postMessage({
+                                type: 'IFRAME_DOWNLOAD_REQUEST',
+                                fileName: fileName,
+                                data: base64Data,
+                                mimeType: blob.type,
+                                timestamp: Date.now()
+                            }, '*');
+                            
+                            console.log('Download request sent to parent window');
+                            
+                            // Listen for response from parent
+                            const messageHandler = (event) => {
+                                if (event.data && event.data.type === 'IFRAME_DOWNLOAD_RESPONSE') {
+                                    window.removeEventListener('message', messageHandler);
+                                    resolve(event.data.success || false);
+                                }
+                            };
+                            
+                            window.addEventListener('message', messageHandler);
+                            
+                            // Timeout after 3 seconds
+                            setTimeout(() => {
+                                window.removeEventListener('message', messageHandler);
+                                resolve(false);
+                            }, 3000);
+                            
+                        } catch (error) {
+                            console.warn('Parent message failed:', error);
+                            resolve(false);
+                        }
+                    };
+                    
+                    reader.onerror = () => resolve(false);
+                    reader.readAsDataURL(blob);
+                    
+                } catch (error) {
+                    console.warn('Parent window strategy failed:', error);
+                    resolve(false);
+                }
+            });
+        }
+
+        // Strategy 5: Manual download fallback
+        function tryManualDownload(blob, fileName) {
+            try {
+                // Check if a download modal is already open
+                if (document.querySelector('.download-overlay')) {
+                    console.warn('Manual download modal already open');
+                    return true;
+                }
+                
+                const url = window.URL.createObjectURL(blob);
+                
+                // Create a modal-like overlay for manual download
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    backdrop-filter: blur(5px);
+                    z-index: 99999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                `;
+                
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    background: white;
+                    border-radius: 20px;
+                    padding: 40px;
+                    box-shadow: 0 20px 40px rgba(31, 38, 135, 0.4);
+                    max-width: 90%;
+                    width: 400px;
+                    text-align: center;
+                    animation: modalSlideIn 0.3s ease-out;
+                `;
+                
+                // Add CSS animation
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes modalSlideIn {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-20px) scale(0.95);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0) scale(1);
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                modal.innerHTML = `
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📥</div>
+                        <h2 style="color: #667eea; margin: 0 0 12px 0; font-size: 24px;">Download Ready!</h2>
+                        <p style="color: #6c757d; margin: 0 0 20px 0; line-height: 1.5;">
+                            Your Excel file has been prepared. Due to iframe restrictions, 
+                            please click the button below to download:
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom: 24px;">
+                        <a href="${url}" download="${fileName}" target="_blank" rel="noopener noreferrer"
+                           style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                  color: white; padding: 16px 32px; text-decoration: none; 
+                                  border-radius: 12px; font-weight: 600; font-size: 16px;
+                                  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+                                  transition: all 0.3s ease; border: none; cursor: pointer;">
+                            <span style="margin-right: 8px;">💾</span>
+                            Download ${fileName}
+                        </a>
+                    </div>
+                    
+                    <div style="border-top: 1px solid #e9ecef; padding-top: 20px; margin-top: 20px;">
+                        <p style="color: #8b949e; font-size: 14px; margin: 0 0 12px 0;">
+                            💡 <strong>Tip:</strong> If the download doesn't start, try right-clicking the button and selecting "Save link as..."
+                        </p>
+                        <button onclick="this.closest('.download-overlay').remove(); window.URL.revokeObjectURL('${url}')" 
+                                style="background: transparent; color: #6c757d; border: 1px solid #dee2e6; 
+                                       padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 14px;
+                                       transition: all 0.2s ease;">
+                            Close
+                        </button>
+                    </div>
+                `;
+                
+                overlay.className = 'download-overlay';
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+                
+                // Close on overlay click
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        overlay.remove();
+                        window.URL.revokeObjectURL(url);
+                    }
+                });
+                
+                // Auto-remove after 2 minutes
+                setTimeout(() => {
+                    if (overlay.parentElement) {
+                        overlay.remove();
+                        window.URL.revokeObjectURL(url);
+                    }
+                }, 120000);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Manual download fallback failed:', error);
+                return false;
+            }
+        }
+
+        // Listen for parent window download handler (optional)
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'IFRAME_DOWNLOAD_REQUEST') {
+                try {
+                    // If parent window has a download handler, it can process this
+                    const { fileName, data, mimeType } = event.data;
+                    
+                    // Convert base64 back to blob
+                    const byteCharacters = atob(data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: mimeType });
+                    
+                    // Try standard download in parent context
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Send success response
+                    event.source.postMessage({
+                        type: 'IFRAME_DOWNLOAD_RESPONSE',
+                        success: true
+                    }, event.origin);
+                    
+                } catch (error) {
+                    console.error('Parent download handler failed:', error);
+                    // Send failure response
+                    event.source.postMessage({
+                        type: 'IFRAME_DOWNLOAD_RESPONSE',
+                        success: false
+                    }, event.origin);
+                }
+            }
+        });
+
         function formatDateTime(textarea) {
             const value = textarea.value.trim();
             
@@ -2909,15 +3355,14 @@
                     // Update all textareas in this row to match the saved height
                     const textareas = tr.querySelectorAll('textarea.editable');
                     textareas.forEach(textarea => {
-                        textarea.style.height = `${savedHeight - 4}px`; // Account for reduced cell padding
-                        textarea.style.minHeight = `${savedHeight - 4}px`;
+                        textarea.style.height = `${savedHeight - 8}px`; // Account for cell padding
                     });
                     
                     // Update fault level inputs in this row to match the saved height
                     const faultLevelInputs = tr.querySelectorAll('.fault-level-input');
                     faultLevelInputs.forEach(input => {
-                        input.style.height = `${savedHeight - 4}px`; // Account for reduced cell padding
-                        input.style.minHeight = `${savedHeight - 4}px`;
+                        input.style.height = `${savedHeight - 8}px`; // Account for cell padding
+                        input.style.lineHeight = `${savedHeight - 8}px`; // Center text vertically
                     });
                 }
                 
@@ -2951,15 +3396,14 @@
                         // Update all textareas in this row to match the new height
                         const textareas = currentRow.querySelectorAll('textarea.editable');
                         textareas.forEach(textarea => {
-                            textarea.style.height = `${height - 4}px`; // Account for reduced cell padding
-                            textarea.style.minHeight = `${height - 4}px`;
+                            textarea.style.height = `${height - 8}px`; // Account for cell padding
                         });
                         
                         // Update fault level inputs in this row to match the new height
                         const faultLevelInputs = currentRow.querySelectorAll('.fault-level-input');
                         faultLevelInputs.forEach(input => {
-                            input.style.height = `${height - 4}px`; // Account for reduced cell padding
-                            input.style.minHeight = `${height - 4}px`;
+                            input.style.height = `${height - 8}px`; // Account for cell padding
+                            input.style.lineHeight = `${height - 8}px`; // Center text vertically
                         });
                         
                         rowHeights[sheetName][index] = `${height}px`;
@@ -3809,15 +4253,14 @@
                         // Update all textareas in this row to match the new height
                         const textareas = currentRow.querySelectorAll('textarea.editable');
                         textareas.forEach(textarea => {
-                            textarea.style.height = `${height - 4}px`; // Account for reduced cell padding
-                            textarea.style.minHeight = `${height - 4}px`;
+                            textarea.style.height = `${height - 8}px`; // Account for cell padding
                         });
                         
                         // Update fault level inputs in this row to match the new height
                         const faultLevelInputs = currentRow.querySelectorAll('.fault-level-input');
                         faultLevelInputs.forEach(input => {
-                            input.style.height = `${height - 4}px`; // Account for reduced cell padding
-                            input.style.minHeight = `${height - 4}px`;
+                            input.style.height = `${height - 8}px`; // Account for cell padding
+                            input.style.lineHeight = `${height - 8}px`; // Center text vertically
                         });
                         
                         if (!rowHeights[currentSheet]) {
