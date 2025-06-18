@@ -1125,9 +1125,7 @@
                 if (CONFIG.fallbackToken) {
                     CONFIG.githubToken = xorDecode(CONFIG.fallbackToken, CONFIG.encodingKey);
                     console.log('✅ Fallback token loaded successfully');
-                    showToast('Fallback Token', 
-                        'Using fallback token - remote sources unavailable. Consider checking network connectivity.', 
-                        'warning', 6000);
+                    // Fallback notification removed - silent fallback
                     return true;
                 } else {
                     throw new Error('No fallback token available');
