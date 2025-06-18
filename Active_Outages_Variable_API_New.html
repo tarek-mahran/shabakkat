@@ -1341,8 +1341,13 @@
                             </button>
                         </div>
                         <div class="dropdown-section">
-                            <button class="btn btn-warning" id="resetDefaultBtn" style="width: 100%;">
+                            <button class="btn btn-warning" id="resetDefaultBtn" style="width: 100%; margin-bottom: 8px;">
                                 🔄 Reset Default
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-info" id="autoRefreshSettingsBtn" style="width: 100%;">
+                                ⏱️ Auto-Refresh Settings
                             </button>
                         </div>
                     </div>
@@ -1438,6 +1443,10 @@
             repoOwner: "tarek-mahran",
             repoName: "shabakkat",
             filePath: "Active_Outages.xlsx",
+            // Auto-refresh delays after save (in milliseconds)
+            autoRefreshDelay: 3000, // Initial delay before starting refresh attempts
+            autoRefreshRetryDelay: 2000, // Delay between retry attempts
+            autoRefreshMaxAttempts: 3, // Maximum number of refresh attempts
             // Multiple download sources for main file (try in order)
             downloadSources: [
                 {
@@ -1678,6 +1687,7 @@
             autoFitHeightBtn: document.getElementById('autoFitHeightBtn'),
             saveFormatBtn: document.getElementById('saveFormatBtn'),
             resetDefaultBtn: document.getElementById('resetDefaultBtn'),
+            autoRefreshSettingsBtn: document.getElementById('autoRefreshSettingsBtn'),
             statusText: document.getElementById('statusText'),
             liveUpdateIndicator: document.getElementById('liveUpdateIndicator'),
             progressBar: document.getElementById('progressBar'),
@@ -1955,6 +1965,154 @@
             } catch (error) {
                 showToast('Error', `Reset failed: ${error.message}`, 'error', 3000);
             }
+        }
+
+        // Auto-refresh settings management
+        function loadAutoRefreshSettings() {
+            try {
+                const saved = localStorage.getItem('autoRefreshSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    CONFIG.autoRefreshDelay = settings.delay || CONFIG.autoRefreshDelay;
+                    CONFIG.autoRefreshRetryDelay = settings.retryDelay || CONFIG.autoRefreshRetryDelay;
+                    CONFIG.autoRefreshMaxAttempts = settings.maxAttempts || CONFIG.autoRefreshMaxAttempts;
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Failed to load auto-refresh settings:', e);
+            }
+            return false;
+        }
+
+        function saveAutoRefreshSettings() {
+            try {
+                const settings = {
+                    delay: CONFIG.autoRefreshDelay,
+                    retryDelay: CONFIG.autoRefreshRetryDelay,
+                    maxAttempts: CONFIG.autoRefreshMaxAttempts,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('autoRefreshSettings', JSON.stringify(settings));
+                return true;
+            } catch (e) {
+                console.warn('Failed to save auto-refresh settings:', e);
+                return false;
+            }
+        }
+
+        function showAutoRefreshSettings() {
+            // Close the dropdown first
+            closeAllDropdowns();
+            
+            // Create settings modal
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.zIndex = '10000';
+            
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <h3 style="margin-bottom: 20px; color: #667eea;">⏱️ Auto-Refresh Settings</h3>
+                    <p style="color: #6c757d; margin-bottom: 25px; line-height: 1.6;">
+                        Configure how long to wait after saving before automatically refreshing to get the saved data. 
+                        This ensures your changes have propagated through GitHub's systems.
+                    </p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #495057;">
+                            Initial Delay (seconds):
+                        </label>
+                        <input type="number" id="autoRefreshDelayInput" min="1" max="30" step="1" 
+                               value="${Math.round(CONFIG.autoRefreshDelay / 1000)}"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                        <small style="color: #6c757d;">How long to wait before the first refresh attempt (1-30 seconds)</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #495057;">
+                            Retry Delay (seconds):
+                        </label>
+                        <input type="number" id="autoRefreshRetryDelayInput" min="1" max="10" step="1" 
+                               value="${Math.round(CONFIG.autoRefreshRetryDelay / 1000)}"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                        <small style="color: #6c757d;">Delay between retry attempts if refresh fails (1-10 seconds)</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #495057;">
+                            Maximum Attempts:
+                        </label>
+                        <input type="number" id="autoRefreshMaxAttemptsInput" min="1" max="5" step="1" 
+                               value="${CONFIG.autoRefreshMaxAttempts}"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                        <small style="color: #6c757d;">Maximum number of refresh attempts before giving up (1-5 attempts)</small>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 14px;">💡 Recommended Settings:</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #6c757d; font-size: 13px;">
+                            <li><strong>Fast:</strong> 2s initial, 1s retry, 2 attempts (for immediate feedback)</li>
+                            <li><strong>Normal:</strong> 3s initial, 2s retry, 3 attempts (balanced approach)</li>
+                            <li><strong>Safe:</strong> 5s initial, 3s retry, 3 attempts (for slower connections)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button class="btn btn-secondary" id="autoRefreshCancelBtn">Cancel</button>
+                        <button class="btn btn-warning" id="autoRefreshResetBtn">Reset to Default</button>
+                        <button class="btn" id="autoRefreshSaveBtn">Save Settings</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Add event listeners
+            document.getElementById('autoRefreshCancelBtn').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            document.getElementById('autoRefreshResetBtn').addEventListener('click', () => {
+                document.getElementById('autoRefreshDelayInput').value = '3';
+                document.getElementById('autoRefreshRetryDelayInput').value = '2';
+                document.getElementById('autoRefreshMaxAttemptsInput').value = '3';
+            });
+            
+            document.getElementById('autoRefreshSaveBtn').addEventListener('click', () => {
+                const delay = parseInt(document.getElementById('autoRefreshDelayInput').value);
+                const retryDelay = parseInt(document.getElementById('autoRefreshRetryDelayInput').value);
+                const maxAttempts = parseInt(document.getElementById('autoRefreshMaxAttemptsInput').value);
+                
+                // Validate inputs
+                if (delay < 1 || delay > 30 || retryDelay < 1 || retryDelay > 10 || maxAttempts < 1 || maxAttempts > 5) {
+                    showToast('Invalid Settings', 'Please enter valid values within the specified ranges.', 'error', 4000);
+                    return;
+                }
+                
+                // Update configuration
+                CONFIG.autoRefreshDelay = delay * 1000;
+                CONFIG.autoRefreshRetryDelay = retryDelay * 1000;
+                CONFIG.autoRefreshMaxAttempts = maxAttempts;
+                
+                // Save to localStorage
+                if (saveAutoRefreshSettings()) {
+                    showToast('Settings Saved', 
+                        `Auto-refresh settings updated: ${delay}s initial delay, ${retryDelay}s retry delay, ${maxAttempts} max attempts`, 
+                        'success', 4000);
+                } else {
+                    showToast('Settings Applied', 
+                        'Auto-refresh settings updated for this session only (localStorage not available)', 
+                        'warning', 4000);
+                }
+                
+                document.body.removeChild(modal);
+            });
+            
+            // Close modal on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
         }
 
         function applyTableStyling() {
@@ -3452,6 +3610,7 @@
         elements.autoFitHeightBtn.addEventListener('click', autoFitRowHeights);
         elements.saveFormatBtn.addEventListener('click', saveFormat);
         elements.resetDefaultBtn.addEventListener('click', resetToDefault);
+        elements.autoRefreshSettingsBtn.addEventListener('click', showAutoRefreshSettings);
         
         // Dropdown controls for main buttons
         elements.tableStyleBtn.addEventListener('click', (e) => {
@@ -3866,7 +4025,13 @@
                     isModified = false;
                     document.title = "Excel Collaborator - Active Outages";
                     setLoading(false);
+                    
+                    // Show save success and start auto-refresh countdown
                     showToast('Success', 'File saved successfully', 'success', 2000);
+                    
+                    // Start auto-refresh process after delay
+                    startAutoRefreshAfterSave();
+                    
                 } else {
                     throw new Error(`HTTP ${uploadResponse.status}: ${uploadResponse.statusText}`);
                 }
@@ -3874,6 +4039,85 @@
             } catch (error) {
                 setLoading(false);
                 showToast('Save Error', `Failed to save file: ${error.message}`, 'error', 6000);
+            }
+        }
+
+        // Auto-refresh functionality after save
+        async function startAutoRefreshAfterSave() {
+            let attempt = 1;
+            
+            // Initial delay before first refresh attempt
+            const initialDelay = CONFIG.autoRefreshDelay;
+            
+            // Show countdown toast
+            const countdownToast = showToast('Auto-Refresh', 
+                `Waiting ${Math.ceil(initialDelay/1000)} seconds before refreshing to get saved data...`, 
+                'info', initialDelay + 1000);
+            
+            // Update countdown every second
+            let remainingTime = Math.ceil(initialDelay / 1000);
+            const countdownInterval = setInterval(() => {
+                remainingTime--;
+                if (remainingTime > 0) {
+                    const messageElement = countdownToast.querySelector('.toast-message');
+                    if (messageElement) {
+                        messageElement.textContent = `Waiting ${remainingTime} seconds before refreshing to get saved data...`;
+                    }
+                } else {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+            
+            // Wait for initial delay
+            await new Promise(resolve => setTimeout(resolve, initialDelay));
+            
+            // Clear countdown interval
+            clearInterval(countdownInterval);
+            
+            // Start refresh attempts
+            while (attempt <= CONFIG.autoRefreshMaxAttempts) {
+                try {
+                    setLoading(true);
+                    
+                    showToast('Auto-Refresh', 
+                        `Refreshing data (attempt ${attempt}/${CONFIG.autoRefreshMaxAttempts})...`, 
+                        'info', 2000);
+                    
+                    // Attempt to refresh data
+                    await downloadFromGitHub(false);
+                    
+                    setLoading(false);
+                    
+                    // Success - show confirmation
+                    showToast('Auto-Refresh Complete', 
+                        `Data refreshed successfully! Your saved changes are now loaded.`, 
+                        'success', 4000);
+                    
+                    // Format duration cells after refresh
+                    setTimeout(() => formatAllDurationCells(), 100);
+                    
+                    return; // Exit successfully
+                    
+                } catch (error) {
+                    console.warn(`Auto-refresh attempt ${attempt} failed:`, error.message);
+                    setLoading(false);
+                    
+                    if (attempt < CONFIG.autoRefreshMaxAttempts) {
+                        // Not the last attempt - wait and retry
+                        showToast('Auto-Refresh Retry', 
+                            `Attempt ${attempt} failed, retrying in ${CONFIG.autoRefreshRetryDelay/1000} seconds...`, 
+                            'warning', CONFIG.autoRefreshRetryDelay);
+                        
+                        await new Promise(resolve => setTimeout(resolve, CONFIG.autoRefreshRetryDelay));
+                        attempt++;
+                    } else {
+                        // Last attempt failed
+                        showToast('Auto-Refresh Failed', 
+                            `Auto-refresh failed after ${CONFIG.autoRefreshMaxAttempts} attempts. Please manually refresh to see your saved changes.`, 
+                            'error', 6000);
+                        return;
+                    }
+                }
             }
         }
 
@@ -4815,6 +5059,9 @@
             
             // Load saved format settings first
             loadSavedFormat();
+            
+            // Load saved auto-refresh settings
+            loadAutoRefreshSettings();
             
             try {
                 // Step 1: Load API token from remote JSON first
