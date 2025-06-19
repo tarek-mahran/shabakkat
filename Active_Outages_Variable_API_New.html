@@ -1291,8 +1291,13 @@
                             </button>
                         </div>
                         <div class="dropdown-section">
-                            <button class="btn btn-warning" id="autoFillBtn" style="width: 100%;">
+                            <button class="btn btn-warning" id="autoFillBtn" style="width: 100%; margin-bottom: 8px;">
                                 ⚡ Auto Fill
+                            </button>
+                        </div>
+                        <div class="dropdown-section">
+                            <button class="btn btn-info" id="collaborationSettingsBtn" style="width: 100%;">
+                                👥 Live Collaboration
                             </button>
                         </div>
                     </div>
@@ -1408,6 +1413,10 @@
                 <div id="liveUpdateIndicator" style="margin-left: 10px; color: #28a745; display: none;">
                     🔴 Live Updates Active
                 </div>
+                <div id="collaborationIndicator" style="margin-left: 15px; color: #17a2b8; display: none;">
+                    <span id="collaborationIcon">👥</span>
+                    <span id="collaborationText">Live Sync</span>
+                </div>
             </div>
         </div>
 
@@ -1447,6 +1456,15 @@
             autoRefreshDelay: 3000, // Initial delay before starting refresh attempts
             autoRefreshRetryDelay: 2000, // Delay between retry attempts
             autoRefreshMaxAttempts: 3, // Maximum number of refresh attempts
+            // Live collaboration settings
+            liveCollaboration: {
+                enabled: true, // Enable real-time collaboration
+                pollInterval: 10000, // Check for changes every 10 seconds
+                fastPollInterval: 3000, // Faster polling when activity detected
+                pauseDuringEdit: true, // Pause polling when user is actively editing
+                autoMerge: false, // Automatically merge non-conflicting changes
+                showChangeNotifications: true // Show notifications when changes detected
+            },
             // Multiple download sources for main file (try in order)
             downloadSources: [
                 {
@@ -1672,6 +1690,20 @@
         let columnWidths = {};
         let rowHeights = {};
         let headerHeight = {};
+        
+        // Live collaboration state
+        let collaborationState = {
+            isPolling: false,
+            pollInterval: null,
+            currentFileSHA: null,
+            lastCheckTime: null,
+            userIsEditing: false,
+            editTimeout: null,
+            changesPending: false,
+            conflictDetected: false,
+            lastEditTime: null,
+            pollSpeed: 'normal' // 'normal' or 'fast'
+        };
 
         // DOM elements
         const elements = {
@@ -1690,6 +1722,10 @@
             autoRefreshSettingsBtn: document.getElementById('autoRefreshSettingsBtn'),
             statusText: document.getElementById('statusText'),
             liveUpdateIndicator: document.getElementById('liveUpdateIndicator'),
+            collaborationIndicator: document.getElementById('collaborationIndicator'),
+            collaborationIcon: document.getElementById('collaborationIcon'),
+            collaborationText: document.getElementById('collaborationText'),
+            collaborationSettingsBtn: document.getElementById('collaborationSettingsBtn'),
             progressBar: document.getElementById('progressBar'),
             tabsHeader: document.getElementById('tabsHeader'),
             tabsContent: document.getElementById('tabsContent'),
@@ -2112,7 +2148,556 @@
                 if (e.target === modal) {
                     document.body.removeChild(modal);
                 }
+                         });
+         }
+
+        // Live Collaboration System
+        function startLiveCollaboration() {
+            if (!CONFIG.liveCollaboration.enabled || collaborationState.isPolling) {
+                return;
+            }
+            
+            collaborationState.isPolling = true;
+            collaborationState.lastCheckTime = new Date();
+            
+            // Show collaboration indicator
+            elements.collaborationIndicator.style.display = 'inline-flex';
+            elements.collaborationIcon.textContent = '👥';
+            elements.collaborationText.textContent = 'Live Sync';
+            elements.collaborationIndicator.style.color = '#17a2b8';
+            
+            // Start polling
+            scheduleNextPoll();
+            
+            // Track user edit activity
+            setupEditActivityTracking();
+            
+            console.log('🚀 Live collaboration started');
+            showToast('Live Collaboration', 'Real-time sync enabled - changes from other users will appear automatically', 'info', 4000);
+        }
+
+        function stopLiveCollaboration() {
+            if (!collaborationState.isPolling) {
+                return;
+            }
+            
+            collaborationState.isPolling = false;
+            
+            if (collaborationState.pollInterval) {
+                clearTimeout(collaborationState.pollInterval);
+                collaborationState.pollInterval = null;
+            }
+            
+            // Hide collaboration indicator
+            elements.collaborationIndicator.style.display = 'none';
+            
+            // Clean up edit tracking
+            cleanupEditActivityTracking();
+            
+            console.log('⏹️ Live collaboration stopped');
+        }
+
+        function scheduleNextPoll() {
+            if (!collaborationState.isPolling) {
+                return;
+            }
+            
+            // Determine poll interval based on activity and user editing
+            let interval;
+            if (collaborationState.userIsEditing && CONFIG.liveCollaboration.pauseDuringEdit) {
+                // User is actively editing - use longer interval or pause
+                interval = CONFIG.liveCollaboration.pollInterval * 2;
+            } else if (collaborationState.pollSpeed === 'fast') {
+                interval = CONFIG.liveCollaboration.fastPollInterval;
+            } else {
+                interval = CONFIG.liveCollaboration.pollInterval;
+            }
+            
+            collaborationState.pollInterval = setTimeout(async () => {
+                if (collaborationState.isPolling) {
+                    await checkForChanges();
+                    scheduleNextPoll();
+                }
+            }, interval);
+        }
+
+        async function checkForChanges() {
+            if (!collaborationState.isPolling) {
+                return;
+            }
+            
+            try {
+                // Update indicator to show checking
+                elements.collaborationIcon.textContent = '🔄';
+                elements.collaborationText.textContent = 'Checking...';
+                
+                // Get current file info from GitHub
+                const getUrl = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}/contents/${CONFIG.filePath}`;
+                const response = await fetch(getUrl, {
+                    headers: {
+                        'Authorization': `token ${CONFIG.githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    const fileData = await response.json();
+                    const newSHA = fileData.sha;
+                    const lastModified = new Date(fileData.last_modified || Date.now());
+                    
+                    // Check if file has changed
+                    if (collaborationState.currentFileSHA && collaborationState.currentFileSHA !== newSHA) {
+                        await handleFileChanged(fileData, lastModified);
+                    } else {
+                        // No changes detected
+                        elements.collaborationIcon.textContent = '👥';
+                        elements.collaborationText.textContent = 'Live Sync';
+                        elements.collaborationIndicator.style.color = '#17a2b8';
+                        
+                        // Slow down polling if no activity
+                        if (collaborationState.pollSpeed === 'fast') {
+                            const timeSinceLastEdit = Date.now() - (collaborationState.lastEditTime || 0);
+                            if (timeSinceLastEdit > 30000) { // 30 seconds without activity
+                                collaborationState.pollSpeed = 'normal';
+                            }
+                        }
+                    }
+                    
+                    // Update SHA for next comparison
+                    collaborationState.currentFileSHA = newSHA;
+                    collaborationState.lastCheckTime = new Date();
+                    
+                } else {
+                    // Error checking for changes
+                    elements.collaborationIcon.textContent = '⚠️';
+                    elements.collaborationText.textContent = 'Sync Error';
+                    elements.collaborationIndicator.style.color = '#ffc107';
+                    console.warn('Failed to check for file changes:', response.status);
+                }
+                
+            } catch (error) {
+                elements.collaborationIcon.textContent = '❌';
+                elements.collaborationText.textContent = 'Offline';
+                elements.collaborationIndicator.style.color = '#dc3545';
+                console.error('Error checking for changes:', error);
+            }
+        }
+
+        async function handleFileChanged(fileData, lastModified) {
+            console.log('📥 File changes detected from another user');
+            
+            // Show change indicator
+            elements.collaborationIcon.textContent = '🔔';
+            elements.collaborationText.textContent = 'Changes Found';
+            elements.collaborationIndicator.style.color = '#f093fb';
+            
+            // Speed up polling temporarily
+            collaborationState.pollSpeed = 'fast';
+            
+            if (CONFIG.liveCollaboration.showChangeNotifications) {
+                const action = await showChangeNotification(lastModified);
+                
+                switch (action) {
+                    case 'load':
+                        await loadChanges(false);
+                        break;
+                    case 'merge':
+                        await loadChanges(true);
+                        break;
+                    case 'ignore':
+                        // User chose to ignore - mark as known
+                        collaborationState.currentFileSHA = fileData.sha;
+                        break;
+                }
+            } else if (CONFIG.liveCollaboration.autoMerge) {
+                await loadChanges(true);
+            } else {
+                await loadChanges(false);
+            }
+        }
+
+        function showChangeNotification(lastModified) {
+            return new Promise((resolve) => {
+                const timeAgo = getTimeAgo(lastModified);
+                
+                const toast = document.createElement('div');
+                toast.className = 'toast info';
+                toast.style.minWidth = '400px';
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <div class="toast-title">
+                            <span>🔔</span>
+                            Changes Detected!
+                        </div>
+                    </div>
+                    <div class="toast-message">
+                        Another user made changes ${timeAgo}. What would you like to do?
+                        ${isModified ? '<br><strong>⚠️ You have unsaved changes that may be lost!</strong>' : ''}
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-success" data-action="load" style="flex: 1; padding: 8px 12px; font-size: 12px;">
+                            📥 Load Changes
+                        </button>
+                        ${isModified ? `
+                            <button class="btn btn-warning" data-action="merge" style="flex: 1; padding: 8px 12px; font-size: 12px;">
+                                🔄 Smart Merge
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-secondary" data-action="ignore" style="flex: 1; padding: 8px 12px; font-size: 12px;">
+                            ❌ Ignore
+                        </button>
+                    </div>
+                `;
+                
+                elements.toastContainer.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                
+                const handleClick = (e) => {
+                    const action = e.target.getAttribute('data-action');
+                    if (action) {
+                        toast.classList.remove('show');
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                toast.parentNode.removeChild(toast);
+                            }
+                        }, 300);
+                        resolve(action);
+                    }
+                };
+                
+                toast.addEventListener('click', handleClick);
+                
+                // Auto-resolve after 30 seconds
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.classList.remove('show');
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                toast.parentNode.removeChild(toast);
+                            }
+                        }, 300);
+                        resolve('ignore');
+                    }
+                }, 30000);
             });
+        }
+
+        async function loadChanges(smartMerge = false) {
+            try {
+                if (smartMerge && isModified) {
+                    // Store current state for merge
+                    const currentData = {};
+                    updateWorkbookFromTables();
+                    Object.keys(workbookData).forEach(sheet => {
+                        currentData[sheet] = JSON.parse(JSON.stringify(workbookData[sheet]));
+                    });
+                    
+                    // Load new data
+                    await downloadFromGitHub(false);
+                    
+                    // Attempt smart merge (basic implementation)
+                    performSmartMerge(currentData);
+                    
+                    showToast('Smart Merge Complete', 
+                        'Changes merged intelligently. Please review the data and save if correct.', 
+                        'success', 5000);
+                } else {
+                    // Simple load
+                    if (isModified) {
+                        const confirmed = await askConfirmation(
+                            'Load Changes', 
+                            'Loading changes will discard your unsaved edits. Continue?'
+                        );
+                        if (!confirmed) {
+                            return;
+                        }
+                    }
+                    
+                    await downloadFromGitHub(false);
+                    
+                    showToast('Changes Loaded', 
+                        'Latest changes from other users have been loaded successfully.', 
+                        'success', 4000);
+                }
+                
+                // Update collaboration state
+                elements.collaborationIcon.textContent = '✅';
+                elements.collaborationText.textContent = 'Synced';
+                elements.collaborationIndicator.style.color = '#28a745';
+                
+                // Reset to normal polling speed
+                setTimeout(() => {
+                    collaborationState.pollSpeed = 'normal';
+                    elements.collaborationIcon.textContent = '👥';
+                    elements.collaborationText.textContent = 'Live Sync';
+                    elements.collaborationIndicator.style.color = '#17a2b8';
+                }, 3000);
+                
+            } catch (error) {
+                showToast('Sync Error', `Failed to load changes: ${error.message}`, 'error', 5000);
+            }
+        }
+
+        function performSmartMerge(currentData) {
+            // Basic smart merge logic - prioritizes most recent edits
+            // This is a simplified version - in production, you'd want more sophisticated conflict resolution
+            
+            try {
+                Object.keys(currentData).forEach(sheetName => {
+                    if (workbookData[sheetName] && currentData[sheetName]) {
+                        const newData = workbookData[sheetName];
+                        const oldData = currentData[sheetName];
+                        
+                        // Simple merge: keep non-empty cells from current data where new data is empty
+                        for (let rowIndex = 1; rowIndex < Math.max(newData.length, oldData.length); rowIndex++) {
+                            const newRow = newData[rowIndex] || [];
+                            const oldRow = oldData[rowIndex] || [];
+                            
+                            for (let colIndex = 0; colIndex < Math.max(newRow.length, oldRow.length); colIndex++) {
+                                const newCell = newRow[colIndex] || '';
+                                const oldCell = oldRow[colIndex] || '';
+                                
+                                // If new data is empty but old data has content, keep old data
+                                if (!newCell.trim() && oldCell.trim()) {
+                                    if (!newData[rowIndex]) newData[rowIndex] = [];
+                                    newData[rowIndex][colIndex] = oldCell;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Reload the merged data
+                loadWorkbookData();
+                
+            } catch (error) {
+                console.error('Smart merge failed:', error);
+                showToast('Merge Warning', 'Smart merge encountered issues. Please review the data carefully.', 'warning', 5000);
+            }
+        }
+
+        function setupEditActivityTracking() {
+            // Track when user starts editing
+            document.addEventListener('focusin', handleEditStart);
+            document.addEventListener('input', handleEditActivity);
+            document.addEventListener('focusout', handleEditEnd);
+        }
+
+        function cleanupEditActivityTracking() {
+            document.removeEventListener('focusin', handleEditStart);
+            document.removeEventListener('input', handleEditActivity);
+            document.removeEventListener('focusout', handleEditEnd);
+        }
+
+        function handleEditStart(e) {
+            if (e.target.classList.contains('editable') || e.target.classList.contains('fault-level-input')) {
+                collaborationState.userIsEditing = true;
+                collaborationState.lastEditTime = Date.now();
+                
+                // Clear any existing timeout
+                if (collaborationState.editTimeout) {
+                    clearTimeout(collaborationState.editTimeout);
+                }
+                
+                // Update indicator
+                elements.collaborationIcon.textContent = '✏️';
+                elements.collaborationText.textContent = 'Editing...';
+                elements.collaborationIndicator.style.color = '#ffc107';
+            }
+        }
+
+        function handleEditActivity(e) {
+            if (e.target.classList.contains('editable') || e.target.classList.contains('fault-level-input')) {
+                collaborationState.lastEditTime = Date.now();
+                
+                // Speed up polling during active editing
+                if (collaborationState.pollSpeed !== 'fast') {
+                    collaborationState.pollSpeed = 'fast';
+                }
+            }
+        }
+
+        function handleEditEnd(e) {
+            if (e.target.classList.contains('editable') || e.target.classList.contains('fault-level-input')) {
+                // Set timeout to mark editing as finished
+                if (collaborationState.editTimeout) {
+                    clearTimeout(collaborationState.editTimeout);
+                }
+                
+                collaborationState.editTimeout = setTimeout(() => {
+                    collaborationState.userIsEditing = false;
+                    
+                    // Restore normal indicator
+                    elements.collaborationIcon.textContent = '👥';
+                    elements.collaborationText.textContent = 'Live Sync';
+                    elements.collaborationIndicator.style.color = '#17a2b8';
+                }, 2000); // 2 seconds after last edit
+            }
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+            return date.toLocaleDateString();
+        }
+
+        function showCollaborationSettings() {
+            // Close the dropdown first
+            closeAllDropdowns();
+            
+            // Create settings modal
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.zIndex = '10000';
+            
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 650px;">
+                    <h3 style="margin-bottom: 20px; color: #667eea;">👥 Live Collaboration Settings</h3>
+                    <p style="color: #6c757d; margin-bottom: 25px; line-height: 1.6;">
+                        Configure real-time collaboration to automatically detect and sync changes from other users.
+                    </p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #495057;">
+                            <input type="checkbox" id="collaborationEnabledInput" ${CONFIG.liveCollaboration.enabled ? 'checked' : ''}>
+                            Enable Live Collaboration
+                        </label>
+                        <small style="color: #6c757d; margin-left: 30px;">Automatically check for and sync changes from other users</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #495057;">
+                            Check Interval (seconds):
+                        </label>
+                        <input type="number" id="pollIntervalInput" min="5" max="60" step="1" 
+                               value="${Math.round(CONFIG.liveCollaboration.pollInterval / 1000)}"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                        <small style="color: #6c757d;">How often to check for changes (5-60 seconds)</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #495057;">
+                            <input type="checkbox" id="pauseDuringEditInput" ${CONFIG.liveCollaboration.pauseDuringEdit ? 'checked' : ''}>
+                            Pause During Active Editing
+                        </label>
+                        <small style="color: #6c757d; margin-left: 30px;">Reduce sync frequency when you're actively editing to avoid conflicts</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #495057;">
+                            <input type="checkbox" id="showNotificationsInput" ${CONFIG.liveCollaboration.showChangeNotifications ? 'checked' : ''}>
+                            Show Change Notifications
+                        </label>
+                        <small style="color: #6c757d; margin-left: 30px;">Get notified when changes from other users are detected</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #495057;">
+                            <input type="checkbox" id="autoMergeInput" ${CONFIG.liveCollaboration.autoMerge ? 'checked' : ''}>
+                            Auto-Merge Non-Conflicting Changes
+                        </label>
+                        <small style="color: #6c757d; margin-left: 30px;">Automatically merge changes that don't conflict with your edits</small>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 14px;">📊 Current Status:</h4>
+                        <div style="color: #6c757d; font-size: 13px;">
+                            <div>• Live Sync: ${collaborationState.isPolling ? '✅ Active' : '❌ Inactive'}</div>
+                            <div>• Last Check: ${collaborationState.lastCheckTime ? collaborationState.lastCheckTime.toLocaleTimeString() : 'Never'}</div>
+                            <div>• Poll Speed: ${collaborationState.pollSpeed === 'fast' ? '🚀 Fast' : '🐌 Normal'}</div>
+                            <div>• User Editing: ${collaborationState.userIsEditing ? '✏️ Yes' : '👀 No'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button class="btn btn-secondary" id="collaborationCancelBtn">Cancel</button>
+                        <button class="btn btn-warning" id="collaborationTestBtn">Test Sync</button>
+                        <button class="btn" id="collaborationSaveBtn">Save Settings</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Add event listeners
+            document.getElementById('collaborationCancelBtn').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            document.getElementById('collaborationTestBtn').addEventListener('click', async () => {
+                showToast('Testing Sync', 'Checking for changes now...', 'info', 2000);
+                await checkForChanges();
+            });
+            
+            document.getElementById('collaborationSaveBtn').addEventListener('click', () => {
+                const enabled = document.getElementById('collaborationEnabledInput').checked;
+                const pollInterval = parseInt(document.getElementById('pollIntervalInput').value) * 1000;
+                const pauseDuringEdit = document.getElementById('pauseDuringEditInput').checked;
+                const showNotifications = document.getElementById('showNotificationsInput').checked;
+                const autoMerge = document.getElementById('autoMergeInput').checked;
+                
+                // Validate inputs
+                if (pollInterval < 5000 || pollInterval > 60000) {
+                    showToast('Invalid Settings', 'Check interval must be between 5-60 seconds.', 'error', 4000);
+                    return;
+                }
+                
+                // Update configuration
+                CONFIG.liveCollaboration.enabled = enabled;
+                CONFIG.liveCollaboration.pollInterval = pollInterval;
+                CONFIG.liveCollaboration.pauseDuringEdit = pauseDuringEdit;
+                CONFIG.liveCollaboration.showChangeNotifications = showNotifications;
+                CONFIG.liveCollaboration.autoMerge = autoMerge;
+                
+                // Save to localStorage
+                try {
+                    localStorage.setItem('liveCollaborationSettings', JSON.stringify(CONFIG.liveCollaboration));
+                } catch (e) {
+                    console.warn('Failed to save collaboration settings:', e);
+                }
+                
+                // Apply settings
+                if (enabled && !collaborationState.isPolling) {
+                    startLiveCollaboration();
+                } else if (!enabled && collaborationState.isPolling) {
+                    stopLiveCollaboration();
+                }
+                
+                showToast('Settings Saved', 
+                    `Live collaboration ${enabled ? 'enabled' : 'disabled'}. Check interval: ${pollInterval/1000}s`, 
+                    'success', 4000);
+                
+                document.body.removeChild(modal);
+            });
+            
+            // Close modal on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+        }
+
+        function loadCollaborationSettings() {
+            try {
+                const saved = localStorage.getItem('liveCollaborationSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    Object.assign(CONFIG.liveCollaboration, settings);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Failed to load collaboration settings:', e);
+            }
+            return false;
         }
 
         function applyTableStyling() {
@@ -3363,6 +3948,125 @@
             columnWidths[sheetName][lastColumnIndex] = `${remainingWidth}px`;
         }
 
+        // Global resize functions for reuse across table setup and row addition
+        let resizeState = {
+            currentRow: null,
+            currentHeader: null,
+            startX: 0,
+            startY: 0,
+            startWidth: 0,
+            startHeight: 0,
+            currentSheet: null,
+            rowIndex: 0
+        };
+
+        function handleColumnResize(e) {
+            if (!resizeState.currentHeader) return;
+            
+            const width = resizeState.startWidth + (e.clientX - resizeState.startX);
+            const minWidth = 50;
+            
+            if (width >= minWidth) {
+                resizeState.currentHeader.style.width = `${width}px`;
+                resizeState.currentHeader.style.minWidth = `${width}px`;
+                const headerIndex = Array.from(resizeState.currentHeader.parentNode.children).indexOf(resizeState.currentHeader);
+                columnWidths[resizeState.currentSheet][headerIndex] = `${width}px`;
+                
+                // Auto-adjust last column to fill remaining space
+                const table = resizeState.currentHeader.closest('table');
+                redistributeTableWidth(table, resizeState.currentSheet);
+                markAsModified();
+            }
+        }
+        
+        function stopColumnResize() {
+            document.body.style.cursor = '';
+            if (resizeState.currentHeader) {
+                resizeState.currentHeader.classList.remove('resizing');
+                const resizeHandle = resizeState.currentHeader.querySelector('.resize-handle');
+                if (resizeHandle) resizeHandle.classList.remove('active');
+                
+                // Final adjustment to ensure table fills full width
+                const table = resizeState.currentHeader.closest('table');
+                redistributeTableWidth(table, resizeState.currentSheet);
+                resizeState.currentHeader = null;
+            }
+            
+            document.removeEventListener('mousemove', handleColumnResize);
+            document.removeEventListener('mouseup', stopColumnResize);
+        }
+
+        function handleHeaderResize(e) {
+            const height = resizeState.startHeight + (e.clientY - resizeState.startY);
+            const minHeight = 25;
+            
+            if (height >= minHeight) {
+                // Apply to all headers in the row
+                const headers = resizeState.currentHeader.closest('tr').querySelectorAll('th');
+                headers.forEach(header => {
+                    header.style.height = `${height}px`;
+                });
+                headerHeight[resizeState.currentSheet][0] = `${height}px`;
+                markAsModified();
+            }
+        }
+        
+        function stopHeaderResize() {
+            document.body.style.cursor = '';
+            if (resizeState.currentHeader) {
+                resizeState.currentHeader.classList.remove('resizing-header');
+                const headerResizeHandle = resizeState.currentHeader.querySelector('.header-resize-handle');
+                if (headerResizeHandle) headerResizeHandle.classList.remove('active');
+                resizeState.currentHeader = null;
+            }
+            
+            document.removeEventListener('mousemove', handleHeaderResize);
+            document.removeEventListener('mouseup', stopHeaderResize);
+        }
+
+        function handleRowResize(e) {
+            if (!resizeState.currentRow) return;
+            
+            const height = resizeState.startHeight + (e.clientY - resizeState.startY);
+            const minHeight = 28; // Match default row height
+            
+            if (height >= minHeight) {
+                resizeState.currentRow.style.height = `${height}px`;
+                
+                // Update all textareas in this row to match the new height
+                const textareas = resizeState.currentRow.querySelectorAll('textarea.editable');
+                textareas.forEach(textarea => {
+                    textarea.style.height = `${height - 8}px`; // Account for cell padding
+                });
+                
+                // Update fault level inputs in this row to match the new height
+                const faultLevelInputs = resizeState.currentRow.querySelectorAll('.fault-level-input');
+                faultLevelInputs.forEach(input => {
+                    input.style.height = `${height - 8}px`; // Account for cell padding
+                    input.style.lineHeight = `${height - 8}px`; // Center text vertically
+                });
+                
+                if (!rowHeights[resizeState.currentSheet]) {
+                    rowHeights[resizeState.currentSheet] = {};
+                }
+                rowHeights[resizeState.currentSheet][resizeState.rowIndex] = `${height}px`;
+                markAsModified();
+            }
+        }
+        
+        function stopRowResize() {
+            document.body.style.cursor = '';
+            if (resizeState.currentRow) {
+                resizeState.currentRow.classList.remove('resizing');
+                const rowResizeHandle = resizeState.currentRow.querySelector('.row-resize-handle');
+                if (rowResizeHandle) rowResizeHandle.classList.remove('active');
+                resizeState.currentRow = null;
+            }
+            
+            document.removeEventListener('mousemove', handleRowResize);
+            document.removeEventListener('mouseup', stopRowResize);
+        }
+
         // Setup table resizing functionality
         function setupTableResizing(tableContainer, sheetName) {
             const table = tableContainer.querySelector('table');
@@ -3399,15 +4103,15 @@
                     th.style.height = headerHeight[sheetName][0] || 'auto';
                 }
                 
-                // Column resize functionality
-                let startX, startWidth, currentHeader;
+                // Column resize functionality using global functions
                 resizeHandle.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    startX = e.clientX;
-                    currentHeader = th;
-                    startWidth = th.offsetWidth;
+                    resizeState.startX = e.clientX;
+                    resizeState.currentHeader = th;
+                    resizeState.startWidth = th.offsetWidth;
+                    resizeState.currentSheet = sheetName;
                     
                     document.body.style.cursor = 'col-resize';
                     th.classList.add('resizing');
@@ -3417,47 +4121,15 @@
                     document.addEventListener('mouseup', stopColumnResize);
                 });
                 
-                function handleColumnResize(e) {
-                    if (!currentHeader) return;
-                    
-                    const width = startWidth + (e.clientX - startX);
-                    const minWidth = 50;
-                    
-                    if (width >= minWidth) {
-                        currentHeader.style.width = `${width}px`;
-                        currentHeader.style.minWidth = `${width}px`;
-                        columnWidths[sheetName][index] = `${width}px`;
-                        
-                        // Auto-adjust last column to fill remaining space
-                        redistributeTableWidth(table, sheetName);
-                        markAsModified();
-                    }
-                }
-                
-                function stopColumnResize() {
-                    document.body.style.cursor = '';
-                    if (currentHeader) {
-                        currentHeader.classList.remove('resizing');
-                        resizeHandle.classList.remove('active');
-                        
-                        // Final adjustment to ensure table fills full width
-                        redistributeTableWidth(table, sheetName);
-                        currentHeader = null;
-                    }
-                    
-                    document.removeEventListener('mousemove', handleColumnResize);
-                    document.removeEventListener('mouseup', stopColumnResize);
-                }
-                
-                // Header row resize functionality
-                let startY, startHeight, isResizingHeader;
+                // Header row resize functionality using global functions
                 headerResizeHandle.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    startY = e.clientY;
-                    startHeight = th.offsetHeight;
-                    isResizingHeader = true;
+                    resizeState.startY = e.clientY;
+                    resizeState.startHeight = th.offsetHeight;
+                    resizeState.currentHeader = th;
+                    resizeState.currentSheet = sheetName;
                     
                     document.body.style.cursor = 'row-resize';
                     th.classList.add('resizing-header');
@@ -3466,34 +4138,6 @@
                     document.addEventListener('mousemove', handleHeaderResize);
                     document.addEventListener('mouseup', stopHeaderResize);
                 });
-                
-                function handleHeaderResize(e) {
-                    if (!isResizingHeader) return;
-                    
-                    const height = startHeight + (e.clientY - startY);
-                    const minHeight = 25;
-                    
-                    if (height >= minHeight) {
-                        // Apply to all headers in the row
-                        headers.forEach(header => {
-                            header.style.height = `${height}px`;
-                        });
-                        headerHeight[sheetName][0] = `${height}px`;
-                        markAsModified();
-                    }
-                }
-                
-                function stopHeaderResize() {
-                    document.body.style.cursor = '';
-                    if (isResizingHeader) {
-                        th.classList.remove('resizing-header');
-                        headerResizeHandle.classList.remove('active');
-                        isResizingHeader = false;
-                    }
-                    
-                    document.removeEventListener('mousemove', handleHeaderResize);
-                    document.removeEventListener('mouseup', stopHeaderResize);
-                }
             });
             
             // Add row resize handles to all table rows
@@ -3524,15 +4168,16 @@
                     });
                 }
                 
-                // Row resize functionality
-                let startY, startHeight, currentRow;
+                // Row resize functionality using global functions
                 rowResizeHandle.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    startY = e.clientY;
-                    currentRow = tr;
-                    startHeight = tr.offsetHeight;
+                    resizeState.startY = e.clientY;
+                    resizeState.currentRow = tr;
+                    resizeState.startHeight = tr.offsetHeight;
+                    resizeState.currentSheet = sheetName;
+                    resizeState.rowIndex = index;
                     
                     document.body.style.cursor = 'row-resize';
                     tr.classList.add('resizing');
@@ -3541,45 +4186,6 @@
                     document.addEventListener('mousemove', handleRowResize);
                     document.addEventListener('mouseup', stopRowResize);
                 });
-                
-                function handleRowResize(e) {
-                    if (!currentRow) return;
-                    
-                    const height = startHeight + (e.clientY - startY);
-                    const minHeight = 28; // Match default row height
-                    
-                    if (height >= minHeight) {
-                        currentRow.style.height = `${height}px`;
-                        
-                        // Update all textareas in this row to match the new height
-                        const textareas = currentRow.querySelectorAll('textarea.editable');
-                        textareas.forEach(textarea => {
-                            textarea.style.height = `${height - 8}px`; // Account for cell padding
-                        });
-                        
-                        // Update fault level inputs in this row to match the new height
-                        const faultLevelInputs = currentRow.querySelectorAll('.fault-level-input');
-                        faultLevelInputs.forEach(input => {
-                            input.style.height = `${height - 8}px`; // Account for cell padding
-                            input.style.lineHeight = `${height - 8}px`; // Center text vertically
-                        });
-                        
-                        rowHeights[sheetName][index] = `${height}px`;
-                        markAsModified();
-                    }
-                }
-                
-                function stopRowResize() {
-                    document.body.style.cursor = '';
-                    if (currentRow) {
-                        currentRow.classList.remove('resizing');
-                        rowResizeHandle.classList.remove('active');
-                        currentRow = null;
-                    }
-                    
-                    document.removeEventListener('mousemove', handleRowResize);
-                    document.removeEventListener('mouseup', stopRowResize);
-                }
             });
         }
 
@@ -3611,6 +4217,7 @@
         elements.saveFormatBtn.addEventListener('click', saveFormat);
         elements.resetDefaultBtn.addEventListener('click', resetToDefault);
         elements.autoRefreshSettingsBtn.addEventListener('click', showAutoRefreshSettings);
+        elements.collaborationSettingsBtn.addEventListener('click', showCollaborationSettings);
         
         // Dropdown controls for main buttons
         elements.tableStyleBtn.addEventListener('click', (e) => {
@@ -3855,6 +4462,10 @@
                         
                         if (response.ok) {
                             const data = await response.json();
+                            // Store SHA for collaboration
+                            collaborationState.currentFileSHA = data.sha;
+                            console.log('📥 File SHA updated from API:', collaborationState.currentFileSHA);
+                            
                             // GitHub API returns base64 encoded content
                             const base64Content = data.content.replace(/\n/g, '');
                             const binaryString = atob(base64Content);
@@ -3921,6 +4532,8 @@
                         
                         workbookData[sheetName] = data;
                     });
+                    
+
                     
                     loadWorkbookData();
                     isModified = false;
@@ -4024,6 +4637,14 @@
                 if (uploadResponse.ok) {
                     isModified = false;
                     document.title = "Excel Collaborator - Active Outages";
+                    
+                    // Update collaboration SHA after successful save
+                    const uploadResult = await uploadResponse.json();
+                    if (uploadResult.content && uploadResult.content.sha) {
+                        collaborationState.currentFileSHA = uploadResult.content.sha;
+                        console.log('📤 File SHA updated after save:', collaborationState.currentFileSHA);
+                    }
+                    
                     setLoading(false);
                     
                     // Show save success and start auto-refresh countdown
@@ -4467,15 +5088,16 @@
                 rowResizeHandle.title = 'Drag to resize row';
                 newRow.appendChild(rowResizeHandle);
                 
-                // Add row resize functionality
-                let startY, startHeight, currentRow;
+                // Add row resize functionality using global functions
                 rowResizeHandle.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    startY = e.clientY;
-                    currentRow = newRow;
-                    startHeight = newRow.offsetHeight;
+                    resizeState.startY = e.clientY;
+                    resizeState.currentRow = newRow;
+                    resizeState.startHeight = newRow.offsetHeight;
+                    resizeState.currentSheet = currentSheet;
+                    resizeState.rowIndex = rowIndex;
                     
                     document.body.style.cursor = 'row-resize';
                     newRow.classList.add('resizing');
@@ -4484,48 +5106,6 @@
                     document.addEventListener('mousemove', handleRowResize);
                     document.addEventListener('mouseup', stopRowResize);
                 });
-                
-                function handleRowResize(e) {
-                    if (!currentRow) return;
-                    
-                    const height = startHeight + (e.clientY - startY);
-                    const minHeight = 28; // Match default row height
-                    
-                    if (height >= minHeight) {
-                        currentRow.style.height = `${height}px`;
-                        
-                        // Update all textareas in this row to match the new height
-                        const textareas = currentRow.querySelectorAll('textarea.editable');
-                        textareas.forEach(textarea => {
-                            textarea.style.height = `${height - 8}px`; // Account for cell padding
-                        });
-                        
-                        // Update fault level inputs in this row to match the new height
-                        const faultLevelInputs = currentRow.querySelectorAll('.fault-level-input');
-                        faultLevelInputs.forEach(input => {
-                            input.style.height = `${height - 8}px`; // Account for cell padding
-                            input.style.lineHeight = `${height - 8}px`; // Center text vertically
-                        });
-                        
-                        if (!rowHeights[currentSheet]) {
-                            rowHeights[currentSheet] = {};
-                        }
-                        rowHeights[currentSheet][rowIndex] = `${height}px`;
-                        markAsModified();
-                    }
-                }
-                
-                function stopRowResize() {
-                    document.body.style.cursor = '';
-                    if (currentRow) {
-                        currentRow.classList.remove('resizing');
-                        rowResizeHandle.classList.remove('active');
-                        currentRow = null;
-                    }
-                    
-                    document.removeEventListener('mousemove', handleRowResize);
-                    document.removeEventListener('mouseup', stopRowResize);
-                }
                 
                 showToast('Success', 'New row added', 'success', 2000);
             }
@@ -5063,6 +5643,9 @@
             // Load saved auto-refresh settings
             loadAutoRefreshSettings();
             
+            // Load saved collaboration settings
+            loadCollaborationSettings();
+            
             try {
                 // Step 1: Load API token from remote JSON first
                 const tokenLoaded = await loadApiTokenFromRemote();
@@ -5088,6 +5671,11 @@
                     // Start live updates for elapsed duration
                     startLiveUpdates();
                     
+                    // Start live collaboration if enabled
+                    if (CONFIG.liveCollaboration.enabled) {
+                        startLiveCollaboration();
+                    }
+                    
                 } else {
                     // Handle partial failures
                     let errorMessages = [];
@@ -5112,6 +5700,7 @@
         // Handle page unload
         window.addEventListener('beforeunload', (e) => {
             stopLiveUpdates(); // Clean up intervals
+            stopLiveCollaboration(); // Clean up collaboration polling
             if (isModified) {
                 e.preventDefault();
                 e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
