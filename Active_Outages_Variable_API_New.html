@@ -1450,6 +1450,55 @@
     </div>
 
     <script>
+        /*
+        ==========================================
+        EXCEL COLLABORATOR - ENHANCED EXPORT
+        ==========================================
+        
+        This application now includes enhanced export functionality that works in:
+        - Google Blogger (embedded iframe)
+        - Python applications (tkinter, webview, etc.)
+        - Regular web browsers
+        - Other embedded environments
+        
+        FIXED: DOUBLE DOWNLOAD ISSUE:
+        - Added download attempt tracking and global lock
+        - Conservative strategy selection based on environment
+        - Simplified download methods to prevent conflicts
+        - Each strategy only runs if no previous strategy succeeded
+        
+        TROUBLESHOOTING EXPORT ISSUES:
+        
+        1. Open browser console (F12) and run these debug commands:
+           - testDownloadEnvironment() - Check your environment
+           - testFileDownload() - Test download with a small file
+           - testTokenAccess() - Test API connectivity
+           - getDownloadStatus() - Monitor download attempts and lock status
+        
+        2. Expected behavior by environment:
+           - Google Blogger: Shows manual download modal (normal)
+           - Python apps (PyWebView): Native save dialog, then direct/modal fallback
+           - Python apps (other): Direct download, then manual modal fallback
+           - Regular browser: Standard download works (ONE download only)
+        
+        3. If export fails, you'll see a download modal with:
+           - Large download button
+           - Alternative download methods
+           - File information
+        
+        4. Manual download alternatives:
+           - Right-click download button → "Save link as..."
+           - Copy link and paste in new tab
+           - Long-press on mobile → "Download link"
+        
+        EMBEDDING NOTES:
+        - For Google Blogger: Use <iframe> with allow="downloads"
+        - For Python: Ensure webview supports file downloads
+        - Set iframe sandbox to "allow-downloads allow-scripts"
+        
+        ==========================================
+        */
+        
         // Configuration with multiple download sources
         const CONFIG = {
             // Dynamic token loading from GitLab JSON with XOR encoding
@@ -1685,6 +1734,200 @@
             } catch (error) {
                 console.error('Fetch error:', error);
                 return { success: false, error: error.message };
+            }
+        };
+
+        // Debug function for download environment - accessible from browser console
+        window.testDownloadEnvironment = function() {
+            console.log('=== DOWNLOAD ENVIRONMENT TEST ===');
+            
+            // Environment detection
+            const isInIframe = window !== window.top;
+            const isInBlogger = window.location.hostname.includes('blogger') || 
+                              window.location.hostname.includes('blogspot') ||
+                              document.referrer.includes('blogger') ||
+                              document.referrer.includes('blogspot');
+            const isInPython = window.location.protocol === 'file:' || 
+                             window.location.hostname === 'localhost' ||
+                             window.location.hostname === '127.0.0.1' ||
+                             window.navigator.userAgent.includes('Python') ||
+                             typeof window.pywebview !== 'undefined';
+            
+            console.log('Environment Details:');
+            console.log('- In iframe:', isInIframe);
+            console.log('- Google Blogger:', isInBlogger);
+            console.log('- Python app:', isInPython);
+            console.log('- PyWebView available:', typeof window.pywebview !== 'undefined');
+            console.log('- Window location:', window.location.href);
+            console.log('- Document referrer:', document.referrer);
+            console.log('- User agent:', window.navigator.userAgent);
+            console.log('- Protocol:', window.location.protocol);
+            console.log('- Hostname:', window.location.hostname);
+            
+            // Test blob creation
+            try {
+                const testBlob = new Blob(['test content'], { type: 'text/plain' });
+                const testUrl = window.URL.createObjectURL(testBlob);
+                console.log('✅ Blob creation works');
+                console.log('- Test blob URL:', testUrl);
+                window.URL.revokeObjectURL(testUrl);
+            } catch (error) {
+                console.log('❌ Blob creation failed:', error);
+            }
+            
+            // Test link creation and click
+            try {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.download = 'test.txt';
+                console.log('✅ Link element creation works');
+                console.log('- Download attribute supported:', 'download' in link);
+            } catch (error) {
+                console.log('❌ Link creation failed:', error);
+            }
+            
+            // Security context
+            console.log('Security Context:');
+            console.log('- Document domain:', document.domain);
+            console.log('- Same origin with top:', (function() {
+                try {
+                    return window.top.location.href;
+                } catch (e) {
+                    return 'Cross-origin (restricted)';
+                }
+            })());
+            
+            // Recommended download strategy
+            console.log('\\n=== RECOMMENDED STRATEGY ===');
+            if (isInBlogger) {
+                console.log('🔒 GOOGLE BLOGGER: Use manual download modal (automatic)');
+            } else if (isInPython) {
+                if (typeof window.pywebview !== 'undefined') {
+                    console.log('🐍 PYTHON APP (PyWebView): Try native save dialog first, fallback to direct/manual');
+                } else {
+                    console.log('🐍 PYTHON APP: Try direct blob download first, fallback to manual');
+                }
+            } else if (isInIframe) {
+                console.log('🖼️ IFRAME: Try multiple strategies with manual fallback');
+            } else {
+                console.log('🌐 REGULAR PAGE: Standard download should work');
+            }
+            
+            return {
+                environment: {
+                    iframe: isInIframe,
+                    blogger: isInBlogger,
+                    python: isInPython,
+                    pywebview: typeof window.pywebview !== 'undefined',
+                    protocol: window.location.protocol,
+                    hostname: window.location.hostname
+                },
+                capabilities: {
+                    blob: typeof Blob !== 'undefined',
+                    url: typeof URL !== 'undefined' && typeof URL.createObjectURL !== 'undefined',
+                    download: (function() {
+                        const a = document.createElement('a');
+                        return 'download' in a;
+                    })(),
+                    pywebview_api: typeof window.pywebview !== 'undefined' && typeof window.pywebview.api !== 'undefined'
+                },
+                downloadStrategy: (function() {
+                    if (isInBlogger) return 'manual_modal';
+                    if (isInPython && typeof window.pywebview !== 'undefined') return 'pywebview_native';
+                    if (isInPython) return 'direct_blob_fallback';
+                    if (isInIframe) return 'multi_strategy';
+                    return 'standard';
+                })()
+            };
+        };
+
+        // Test download function - creates a small test file for download testing
+        window.testFileDownload = async function() {
+            console.log('=== TESTING FILE DOWNLOAD ===');
+            
+            try {
+                // Create a small test file
+                const testContent = `Test Download File
+Generated: ${new Date().toISOString()}
+Environment: ${window.location.href}
+User Agent: ${navigator.userAgent}
+
+This is a test file to verify download functionality.
+If you can see this content, the download worked!
+`;
+                
+                const testBlob = new Blob([testContent], { type: 'text/plain' });
+                const testFileName = `download_test_${Date.now()}.txt`;
+                
+                console.log('Test file created:', {
+                    size: testBlob.size,
+                    type: testBlob.type,
+                    name: testFileName
+                });
+                
+                // Use the same download function as the export
+                const success = await downloadFileIframe(testBlob, testFileName);
+                
+                console.log('Download result:', success ? '✅ Success' : '⚠️ Used fallback');
+                
+                return {
+                    success: true,
+                    filename: testFileName,
+                    size: testBlob.size,
+                    downloadResult: success
+                };
+                
+            } catch (error) {
+                console.error('❌ Test download failed:', error);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        };
+
+        // Add global download lock to prevent multiple simultaneous downloads
+        let globalDownloadLock = false;
+        let downloadAttemptCount = 0;
+        
+        // Debug function to monitor downloads
+        window.getDownloadStatus = function() {
+            return {
+                isLocked: globalDownloadLock,
+                attemptCount: downloadAttemptCount,
+                lastAttempt: window.lastDownloadAttempt || 'Never'
+            };
+        };
+        
+        // Override the download function to add global locking
+        const originalDownloadFileIframe = downloadFileIframe;
+        downloadFileIframe = async function(blob, fileName) {
+            downloadAttemptCount++;
+            window.lastDownloadAttempt = new Date().toISOString();
+            
+            console.log(`📥 Download attempt #${downloadAttemptCount} for: ${fileName}`);
+            
+            if (globalDownloadLock) {
+                console.warn('🔒 Download already in progress, ignoring duplicate request');
+                showToast('Download In Progress', 
+                    'Please wait for the current download to complete', 
+                    'warning', 3000);
+                return false;
+            }
+            
+            globalDownloadLock = true;
+            console.log('🔒 Download lock acquired');
+            
+            try {
+                const result = await originalDownloadFileIframe(blob, fileName);
+                console.log(`📥 Download attempt #${downloadAttemptCount} result:`, result ? 'Success' : 'Failed/Fallback');
+                return result;
+            } finally {
+                // Always release the lock
+                setTimeout(() => {
+                    globalDownloadLock = false;
+                    console.log('🔓 Download lock released');
+                }, 1000); // Keep lock for 1 second to prevent rapid successive calls
             }
         };
 
@@ -2863,6 +3106,11 @@
                 return;
             }
             
+            // Show immediate feedback to user
+            const exportToast = showToast('Preparing Export', 
+                'Generating Excel file with latest data...', 
+                'info', 0); // Don't auto-close
+            
             isExporting = true;
             lastExportTime = currentTime;
             setLoading(true);
@@ -3038,18 +3286,39 @@
                 
                 setLoading(false);
                 
+                // Close the preparation toast
+                if (exportToast && exportToast.parentNode) {
+                    exportToast.classList.remove('show');
+                    setTimeout(() => {
+                        if (exportToast.parentNode) {
+                            exportToast.parentNode.removeChild(exportToast);
+                        }
+                    }, 300);
+                }
+                
                 if (downloadSuccess) {
                     showToast('Export Complete', 
                         `Excel file exported with latest data and formatting`, 
                         'success', 4000);
                 } else {
-                    showToast('Export Notice', 
-                        `File prepared. If download didn't start automatically, please check for a manual download option.`, 
+                    showToast('Download Ready', 
+                        `Excel file prepared successfully. Please use the download button in the popup window.`, 
                         'info', 6000);
                 }
                 
             } catch (error) {
                 setLoading(false);
+                
+                // Close the preparation toast
+                if (exportToast && exportToast.parentNode) {
+                    exportToast.classList.remove('show');
+                    setTimeout(() => {
+                        if (exportToast.parentNode) {
+                            exportToast.parentNode.removeChild(exportToast);
+                        }
+                    }, 300);
+                }
+                
                 showToast('Export Error', `Failed to export Excel file: ${error.message}`, 'error', 6000);
                 console.error('Export error:', error);
             } finally {
@@ -3063,60 +3332,145 @@
             try {
                 console.log('Attempting download in iframe-safe mode...');
                 
-                // Check if we're in an iframe first
+                // Detect environment type
                 const isInIframe = window !== window.top;
-                console.log(`Environment: ${isInIframe ? 'iframe' : 'regular page'}`);
+                const isInBlogger = window.location.hostname.includes('blogger') || 
+                                  window.location.hostname.includes('blogspot') ||
+                                  document.referrer.includes('blogger') ||
+                                  document.referrer.includes('blogspot');
+                const isInPythonApp = window.location.protocol === 'file:' || 
+                                     window.location.hostname === 'localhost' ||
+                                     window.location.hostname === '127.0.0.1' ||
+                                     window.navigator.userAgent.includes('Python') ||
+                                     typeof window.pywebview !== 'undefined';
+                
+                console.log(`Environment: iframe=${isInIframe}, blogger=${isInBlogger}, python=${isInPythonApp}`);
+                
+                // For Google Blogger or highly restricted environments, go directly to manual download
+                if (isInBlogger || (isInIframe && window.location.hostname.includes('googleusercontent'))) {
+                    console.log('🔒 Blogger environment detected - using direct manual download');
+                    tryManualDownload(blob, fileName);
+                    return true; // Always return true for Blogger since manual download is reliable
+                }
+                
+                // For Python applications - check PyWebView first, then fallback to direct approaches
+                if (isInPythonApp) {
+                    // Try PyWebView native save dialog first if available
+                    if (typeof window.pywebview !== 'undefined') {
+                        console.log('🐍 PyWebView detected - using native Python save dialog');
+                        const success = await tryPythonNativeSave(blob, fileName);
+                        if (success) {
+                            console.log('✅ Python native save successful');
+                            return true;
+                        }
+                        console.log('❌ Python native save failed, falling back to direct approaches...');
+                    }
+                    
+                    // PyWebView not available or failed - try direct approaches
+                    console.log('🐍 Python environment detected - trying direct approaches');
+                    
+                    // Try direct blob download first
+                    if (await tryDirectBlobDownload(blob, fileName)) {
+                        console.log('✅ Direct blob download successful');
+                        return true;
+                    }
+                    
+                    // If that fails, use manual download
+                    console.log('🐍 Direct download failed, using manual download for Python app');
+                    tryManualDownload(blob, fileName);
+                    return true;
+                }
+                
+                // Add a flag to prevent multiple downloads
+                let downloadAttempted = false;
                 
                 // Strategy 1: Try the standard download approach first (only if not in iframe)
-                if (!isInIframe) {
+                if (!isInIframe && !downloadAttempted) {
                     console.log('Trying standard download...');
+                    downloadAttempted = true; // Set flag before attempt
+                    
                     if (await tryStandardDownload(blob, fileName)) {
                         console.log('✅ Standard download successful');
                         return true;
                     }
                     console.log('❌ Standard download failed');
-                    // Small delay before next strategy
+                    downloadAttempted = false; // Reset flag on failure
                     await new Promise(resolve => setTimeout(resolve, 300));
                 }
                 
-                // Strategy 2: Try using data URL in new tab (works in most iframes)
-                console.log('Trying data URL download...');
-                if (await tryDataUrlDownload(blob, fileName)) {
-                    console.log('✅ Data URL download successful');
-                    return true;
+                // Strategy 2: Try direct blob download (only for specific cases)
+                if (!downloadAttempted && (isInIframe || isInPython)) {
+                    console.log('Trying direct blob download...');
+                    downloadAttempted = true; // Set flag before attempt
+                    
+                    if (await tryDirectBlobDownload(blob, fileName)) {
+                        console.log('✅ Direct blob download successful');
+                        return true;
+                    }
+                    console.log('❌ Direct blob download failed');
+                    downloadAttempted = false; // Reset flag on failure
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
-                console.log('❌ Data URL download failed');
-                // Small delay before next strategy
-                await new Promise(resolve => setTimeout(resolve, 300));
                 
-                // Strategy 3: Try opening in new window/tab with target="_blank"
-                console.log('Trying new window download...');
-                if (await tryNewWindowDownload(blob, fileName)) {
-                    console.log('✅ New window download successful');
-                    return true;
+                // Strategy 3: Try using data URL in new tab (works in most iframes)
+                if (!downloadAttempted && isInIframe) {
+                    console.log('Trying data URL download...');
+                    downloadAttempted = true; // Set flag before attempt
+                    
+                    if (await tryDataUrlDownload(blob, fileName)) {
+                        console.log('✅ Data URL download successful');
+                        return true;
+                    }
+                    console.log('❌ Data URL download failed');
+                    downloadAttempted = false; // Reset flag on failure
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
-                console.log('❌ New window download failed');
                 
-                // Strategy 4: Try posting message to parent (if same origin and in iframe)
-                if (isInIframe) {
+                // Strategy 4: Try opening in new window/tab with target="_blank"
+                if (!downloadAttempted) {
+                    console.log('Trying new window download...');
+                    downloadAttempted = true; // Set flag before attempt
+                    
+                    if (await tryNewWindowDownload(blob, fileName)) {
+                        console.log('✅ New window download successful');
+                        return true;
+                    }
+                    console.log('❌ New window download failed');
+                    downloadAttempted = false; // Reset flag on failure
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+                
+                // Strategy 5: Try posting message to parent (if same origin and in iframe)
+                if (!downloadAttempted && isInIframe) {
                     console.log('Trying parent window message...');
+                    downloadAttempted = true; // Set flag before attempt
+                    
                     if (await tryParentWindowDownload(blob, fileName)) {
                         console.log('✅ Parent window download successful');
                         return true;
                     }
                     console.log('❌ Parent window message failed');
+                    downloadAttempted = false; // Reset flag on failure
                 }
                 
-                // Strategy 5: Last resort - show manual download link
-                console.log('⚠️ Using manual download fallback');
-                tryManualDownload(blob, fileName);
-                return false;
+                // Strategy 6: Last resort - show manual download link
+                if (!downloadAttempted) {
+                    console.log('⚠️ Using manual download fallback');
+                    tryManualDownload(blob, fileName);
+                    return false;
+                } else {
+                    console.log('⚠️ All strategies failed, using manual download fallback');
+                    tryManualDownload(blob, fileName);
+                    return false;
+                }
                 
             } catch (error) {
                 console.error('All download strategies failed:', error);
-                showToast('Download Error', 
-                    `Unable to download file: ${error.message}`, 
-                    'error', 8000);
+                // Even on error, try manual download as last resort
+                tryManualDownload(blob, fileName);
+                showToast('Download Ready', 
+                    `Download prepared manually due to browser restrictions. Please use the download button in the popup.`, 
+                    'info', 6000);
                 return false;
             }
         }
@@ -3125,35 +3479,59 @@
         async function tryStandardDownload(blob, fileName) {
             return new Promise((resolve) => {
                 try {
+                    // Check if we're in a context where standard download should work
+                    const isRegularBrowser = !window.frameElement && 
+                                           window.location.protocol.startsWith('http') &&
+                                           typeof window.URL !== 'undefined' &&
+                                           typeof window.URL.createObjectURL !== 'undefined';
+                    
+                    if (!isRegularBrowser) {
+                        console.log('Standard download not suitable for this environment');
+                        resolve(false);
+                        return;
+                    }
+                    
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
                     link.download = fileName;
                     link.style.display = 'none';
                     
-                    // Simple download attempt for non-iframe environments
+                    // Add to DOM
                     document.body.appendChild(link);
                     
-                    // Create and dispatch click event
-                    const event = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true
-                    });
+                    // Try the download with a single click
+                    try {
+                        link.click(); // Primary method
+                    } catch (clickError) {
+                        console.warn('Direct click failed, trying event dispatch:', clickError);
+                        // Fallback: dispatch event
+                        const event = new MouseEvent('click', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        link.dispatchEvent(event);
+                    }
                     
-                    const clicked = link.dispatchEvent(event);
-                    
-                    // Clean up immediately
+                    // Clean up and resolve conservatively
                     setTimeout(() => {
-                        if (link.parentNode) {
-                            document.body.removeChild(link);
+                        try {
+                            if (link.parentNode) {
+                                document.body.removeChild(link);
+                            }
+                            window.URL.revokeObjectURL(url);
+                        } catch (cleanupError) {
+                            console.warn('Cleanup error:', cleanupError);
                         }
-                        window.URL.revokeObjectURL(url);
                         
-                        // In regular pages, if click was dispatched successfully, 
-                        // assume download worked
-                        resolve(clicked);
-                    }, 50);
+                        // Be conservative - only claim success in ideal conditions
+                        const likely_success = isRegularBrowser && 
+                                             !window.frameElement && 
+                                             navigator.userAgent.indexOf('Chrome') > -1; // Chrome generally handles downloads well
+                        
+                        resolve(likely_success);
+                    }, 100);
                     
                 } catch (error) {
                     console.warn('Standard download failed:', error);
@@ -3162,7 +3540,83 @@
             });
         }
 
-        // Strategy 2: Data URL in new tab (often works in iframes)
+        // Strategy 2: Direct blob download (works well in Python apps and some embedded environments)
+        async function tryDirectBlobDownload(blob, fileName) {
+            return new Promise((resolve) => {
+                try {
+                    // Only use this method in specific environments to avoid conflicts
+                    const isPythonContext = window.location.protocol === 'file:' || 
+                                          window.location.hostname === 'localhost' ||
+                                          window.location.hostname === '127.0.0.1' ||
+                                          typeof window.pywebview !== 'undefined';
+                    
+                    const isIframeContext = window !== window.top;
+                    
+                    if (!isPythonContext && !isIframeContext) {
+                        console.log('Direct blob download not suitable for this environment');
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Create object URL
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Create temporary link element
+                    const link = document.createElement('a');
+                    link.style.display = 'none';
+                    link.href = url;
+                    link.download = fileName;
+                    
+                    // Add to DOM temporarily
+                    document.body.appendChild(link);
+                    
+                    // Use single download method to avoid multiple triggers
+                    try {
+                        // Only use direct click - avoid multiple methods that could cause double downloads
+                        link.click();
+                        
+                    } catch (clickError) {
+                        console.warn('Direct blob click failed:', clickError);
+                        // Clean up and fail
+                        setTimeout(() => {
+                            try {
+                                if (link.parentNode) {
+                                    document.body.removeChild(link);
+                                }
+                                window.URL.revokeObjectURL(url);
+                            } catch (cleanupError) {
+                                console.warn('Cleanup error:', cleanupError);
+                            }
+                        }, 50);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Clean up after a delay
+                    setTimeout(() => {
+                        try {
+                            if (link.parentNode) {
+                                document.body.removeChild(link);
+                            }
+                            window.URL.revokeObjectURL(url);
+                        } catch (cleanupError) {
+                            console.warn('Cleanup error:', cleanupError);
+                        }
+                        
+                        // Be more conservative about claiming success
+                        // Only claim success in Python contexts where this is more reliable
+                        const likely_success = isPythonContext;
+                        resolve(likely_success);
+                    }, 150);
+                    
+                } catch (error) {
+                    console.warn('Direct blob download failed:', error);
+                    resolve(false);
+                }
+            });
+        }
+
+        // Strategy 3: Data URL in new tab (often works in iframes)
         async function tryDataUrlDownload(blob, fileName) {
             return new Promise((resolve) => {
                 try {
@@ -3228,7 +3682,7 @@
             });
         }
 
-        // Strategy 3: Open in new window/tab
+        // Strategy 4: Open in new window/tab
         async function tryNewWindowDownload(blob, fileName) {
             return new Promise((resolve) => {
                 try {
@@ -3263,7 +3717,7 @@
             });
         }
 
-        // Strategy 4: Post message to parent window (same origin only)
+        // Strategy 5: Post message to parent window (same origin only)
         async function tryParentWindowDownload(blob, fileName) {
             return new Promise((resolve) => {
                 try {
@@ -3322,7 +3776,93 @@
             });
         }
 
-        // Strategy 5: Manual download fallback
+        // Strategy 6: Python native save dialog (PyWebView)
+        async function tryPythonNativeSave(blob, fileName) {
+            return new Promise(async (resolve) => {
+                try {
+                    console.log('🐍 Starting Python native save process...');
+                    
+                    // Check if pywebview API is available
+                    if (typeof window.pywebview === 'undefined' || !window.pywebview.api) {
+                        console.warn('PyWebView API not available');
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Convert blob to base64 for transfer to Python
+                    const reader = new FileReader();
+                    
+                    reader.onload = async function() {
+                        try {
+                            const base64Data = reader.result.split(',')[1]; // Remove data:mime;base64, prefix
+                            
+                            console.log(`Converted blob to base64 (${base64Data.length} characters)`);
+                            
+                            // Prepare file info for Python
+                            const fileInfo = {
+                                fileName: fileName,
+                                data: base64Data,
+                                mimeType: blob.type,
+                                size: blob.size
+                            };
+                            
+                            // Show loading indicator for save process
+                            showToast('Preparing Download', 
+                                'Opening save dialog...', 
+                                'info', 2000);
+                            
+                            // Call Python function to save file with native dialog
+                            // This assumes you have a Python function exposed via pywebview
+                            const result = await window.pywebview.api.save_excel_file(fileInfo);
+                            
+                            if (result && result.success) {
+                                console.log('✅ File saved successfully to:', result.path);
+                                showToast('Download Complete', 
+                                    `Excel file saved to: ${result.path}`, 
+                                    'success', 5000);
+                                resolve(true);
+                            } else if (result && result.cancelled) {
+                                console.log('ℹ️ Save dialog cancelled by user');
+                                showToast('Download Cancelled', 
+                                    'File save was cancelled by user', 
+                                    'info', 3000);
+                                resolve(true); // Consider cancellation as handled
+                            } else {
+                                console.warn('❌ Save failed:', result ? result.error : 'Unknown error');
+                                showToast('Save Error', 
+                                    `Failed to save file: ${result ? result.error : 'Unknown error'}`, 
+                                    'error', 5000);
+                                resolve(false);
+                            }
+                            
+                        } catch (error) {
+                            console.error('❌ Error in Python save process:', error);
+                            showToast('Save Error', 
+                                `Error saving file: ${error.message}`, 
+                                'error', 5000);
+                            resolve(false);
+                        }
+                    };
+                    
+                    reader.onerror = () => {
+                        console.error('❌ Failed to read blob for Python save');
+                        showToast('Save Error', 
+                            'Failed to prepare file for saving', 
+                            'error', 4000);
+                        resolve(false);
+                    };
+                    
+                    // Start reading the blob as base64
+                    reader.readAsDataURL(blob);
+                    
+                } catch (error) {
+                    console.error('❌ Python native save failed:', error);
+                    resolve(false);
+                }
+            });
+        }
+
+        // Strategy 7: Manual download fallback
         function tryManualDownload(blob, fileName) {
             try {
                 // Check if a download modal is already open
@@ -3378,37 +3918,90 @@
                 `;
                 document.head.appendChild(style);
                 
+                // Detect environment for better messaging
+                const isInBlogger = window.location.hostname.includes('blogger') || 
+                                  window.location.hostname.includes('blogspot') ||
+                                  document.referrer.includes('blogger') ||
+                                  document.referrer.includes('blogspot');
+                const isInPython = window.location.protocol === 'file:' || 
+                                 window.location.hostname === 'localhost' ||
+                                 window.location.hostname === '127.0.0.1';
+                
+                let environmentMessage = '';
+                if (isInBlogger) {
+                    environmentMessage = `
+                        <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #2196f3;">
+                            <p style="margin: 0; color: #1565c0; font-size: 14px;">
+                                <strong>📱 Google Blogger Detected:</strong> Due to security restrictions in embedded content, 
+                                manual download is required. This is normal and safe.
+                            </p>
+                        </div>
+                    `;
+                } else if (isInPython) {
+                    environmentMessage = `
+                        <div style="background: #fff3e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #ff9800;">
+                            <p style="margin: 0; color: #f57c00; font-size: 14px;">
+                                <strong>🐍 Python Application Detected:</strong> File download prepared. 
+                                Click the button below to save your Excel file.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    environmentMessage = `
+                        <div style="background: #fff3e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #ff9800;">
+                            <p style="margin: 0; color: #f57c00; font-size: 14px;">
+                                <strong>🔒 Restricted Environment:</strong> Due to security restrictions, 
+                                manual download is required. This is normal and safe.
+                            </p>
+                        </div>
+                    `;
+                }
+
                 modal.innerHTML = `
                     <div style="margin-bottom: 20px;">
                         <div style="font-size: 48px; margin-bottom: 16px;">📥</div>
-                        <h2 style="color: #667eea; margin: 0 0 12px 0; font-size: 24px;">Download Ready!</h2>
-                        <p style="color: #6c757d; margin: 0 0 20px 0; line-height: 1.5;">
-                            Your Excel file has been prepared. Due to iframe restrictions, 
-                            please click the button below to download:
+                        <h2 style="color: #667eea; margin: 0 0 12px 0; font-size: 24px;">Excel File Ready!</h2>
+                        <p style="color: #6c757d; margin: 0 0 16px 0; line-height: 1.5;">
+                            Your Excel file has been successfully generated and is ready for download.
                         </p>
+                        ${environmentMessage}
                     </div>
                     
-                    <div style="margin-bottom: 24px;">
+                    <div style="margin-bottom: 24px; text-align: center;">
                         <a href="${url}" download="${fileName}" target="_blank" rel="noopener noreferrer"
-                           style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                  color: white; padding: 16px 32px; text-decoration: none; 
-                                  border-radius: 12px; font-weight: 600; font-size: 16px;
-                                  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-                                  transition: all 0.3s ease; border: none; cursor: pointer;">
-                            <span style="margin-right: 8px;">💾</span>
-                            Download ${fileName}
+                           onclick="this.style.transform='scale(0.95)'; setTimeout(() => this.style.transform='scale(1)', 150);"
+                           style="display: inline-block; background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); 
+                                  color: white; padding: 18px 36px; text-decoration: none; 
+                                  border-radius: 12px; font-weight: 700; font-size: 18px;
+                                  box-shadow: 0 6px 25px rgba(76, 175, 80, 0.4);
+                                  transition: all 0.3s ease; border: none; cursor: pointer;
+                                  text-transform: uppercase; letter-spacing: 1px;">
+                            <span style="margin-right: 12px;">💾</span>
+                            Download Excel File
                         </a>
+                        <div style="margin-top: 12px; font-size: 14px; color: #666;">
+                            <strong>File:</strong> ${fileName}
+                        </div>
                     </div>
                     
-                    <div style="border-top: 1px solid #e9ecef; padding-top: 20px; margin-top: 20px;">
-                        <p style="color: #8b949e; font-size: 14px; margin: 0 0 12px 0;">
-                            💡 <strong>Tip:</strong> If the download doesn't start, try right-clicking the button and selecting "Save link as..."
+                    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 14px;">📋 Alternative Download Methods:</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #6c757d; font-size: 13px; line-height: 1.6;">
+                            <li><strong>Right-click</strong> the download button and select "Save link as..."</li>
+                            <li><strong>Copy link</strong> and paste it in a new browser tab</li>
+                            <li><strong>Long-press</strong> on mobile devices and select "Download link"</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="border-top: 1px solid #e9ecef; padding-top: 20px; margin-top: 20px; text-align: center;">
+                        <p style="color: #8b949e; font-size: 13px; margin: 0 0 12px 0;">
+                            File size: ${(blob.size / 1024).toFixed(1)} KB • Generated: ${new Date().toLocaleTimeString()}
                         </p>
                         <button onclick="this.closest('.download-overlay').remove(); window.URL.revokeObjectURL('${url}')" 
-                                style="background: transparent; color: #6c757d; border: 1px solid #dee2e6; 
-                                       padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 14px;
-                                       transition: all 0.2s ease;">
-                            Close
+                                style="background: #6c757d; color: white; border: none; 
+                                       padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px;
+                                       transition: all 0.2s ease; font-weight: 600;">
+                            Close Window
                         </button>
                     </div>
                 `;
