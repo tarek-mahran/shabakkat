@@ -496,10 +496,7 @@
             display: table-cell;
         }
 
-        /* Special styling for EM Field Feedback column */
-        td.em-field-feedback {
-            text-align: left !important;
-        }
+
 
         tr {
             position: relative; /* For row resize */
@@ -542,17 +539,20 @@
             background: transparent;
             width: 100%;
             height: 100%;
-            padding: 8px 4px;
+            padding: 0;
             font-size: 14px;
             text-align: center;
             resize: none;
-            line-height: 1.4;
             word-wrap: break-word;
             word-break: break-word;
             white-space: normal;
             overflow-wrap: break-word;
             box-sizing: border-box;
             vertical-align: middle;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .editable:focus {
@@ -583,7 +583,14 @@
             word-break: break-word !important;
             white-space: normal !important;
             overflow-wrap: break-word !important;
-            padding-left: 8px !important;
+            padding: 8px !important;
+            display: block !important;
+            align-items: flex-start !important;
+            justify-content: flex-start !important;
+            vertical-align: top !important;
+            line-height: 1.4 !important;
+            min-height: 40px !important;
+            resize: vertical !important;
         }
 
         /* Custom scrollbar for edit boxes - Cross-browser */
@@ -1094,6 +1101,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            line-height: 1.2;
+            vertical-align: middle;
         }
 
         .fault-level-input:focus {
@@ -2727,8 +2736,8 @@
                     const durationCell = row.querySelectorAll('td')[elapsedDurationColIndex];
                     
                     if (pcmCell && durationCell) {
-                        const pcmInput = pcmCell.querySelector('textarea');
-                        const durationInput = durationCell.querySelector('textarea');
+                        const pcmInput = pcmCell.querySelector('textarea') || pcmCell.querySelector('input.editable');
+                        const durationInput = durationCell.querySelector('textarea') || durationCell.querySelector('input.editable');
                         
                         if (pcmInput && durationInput && pcmInput.value.trim()) {
                             try {
@@ -2821,13 +2830,13 @@
                         const durationCell = row.querySelectorAll('td')[elapsedDurationColIndex];
                         
                         if (pcmCell && durationCell) {
-                            const pcmTextarea = pcmCell.querySelector('textarea');
-                            const durationTextarea = durationCell.querySelector('textarea');
+                            const pcmElement = pcmCell.querySelector('textarea') || pcmCell.querySelector('input.editable');
+                            const durationElement = durationCell.querySelector('textarea') || durationCell.querySelector('input.editable');
                             
                             // If PCM Created At is empty, clear the elapsed duration
-                            if (pcmTextarea && durationTextarea && !pcmTextarea.value.trim()) {
-                                durationTextarea.value = '';
-                                durationTextarea.classList.remove('elapsed-duration-live');
+                            if (pcmElement && durationElement && !pcmElement.value.trim()) {
+                                durationElement.value = '';
+                                durationElement.classList.remove('elapsed-duration-live');
                             }
                         }
                     });
@@ -3493,11 +3502,11 @@
                     if (pcmCreatedCol >= 0 && elapsedDurationCol >= 0 && 
                         textarea.closest('td').cellIndex === pcmCreatedCol) {
                         // Clear the duration field
-                        const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
-                        if (durationTextarea) {
-                            durationTextarea.value = '';
-                            durationTextarea.dataset.rawHours = '';
-                            durationTextarea.classList.remove('elapsed-duration-live');
+                        const durationElement = cells[elapsedDurationCol].querySelector('textarea') || cells[elapsedDurationCol].querySelector('input.editable');
+                        if (durationElement) {
+                            durationElement.value = '';
+                            durationElement.dataset.rawHours = '';
+                            durationElement.classList.remove('elapsed-duration-live');
                             markAsModified();
                         }
                     }
@@ -3737,8 +3746,8 @@
                         if (pcmCreatedCol >= 0 && elapsedDurationCol >= 0 && 
                             textarea.closest('td').cellIndex === pcmCreatedCol) {
                             // Calculate and update duration - Excel style
-                            const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
-                            if (durationTextarea) {
+                            const durationElement = cells[elapsedDurationCol].querySelector('textarea') || cells[elapsedDurationCol].querySelector('input.editable');
+                            if (durationElement) {
                                 const now = new Date();
                                 
                                 // Calculate time difference exactly like Excel
@@ -3755,9 +3764,9 @@
                                 
                                 const durationHours = totalHours + (totalMinutes / 60) + (totalSeconds / 3600);
                                 
-                                durationTextarea.dataset.rawHours = durationHours;
-                                durationTextarea.value = durationHours.toString();
-                                formatDuration(durationTextarea);
+                                durationElement.dataset.rawHours = durationHours;
+                                durationElement.value = durationHours.toString();
+                                formatDuration(durationElement);
                                 markAsModified();
                             }
                         }
@@ -3866,13 +3875,13 @@
                         const durationCell = row.querySelectorAll('td')[durationColIndex];
                         
                         if (pcmCell && durationCell) {
-                            const pcmTextarea = pcmCell.querySelector('textarea');
-                            const durationTextarea = durationCell.querySelector('textarea');
+                            const pcmElement = pcmCell.querySelector('textarea') || pcmCell.querySelector('input.editable');
+                            const durationElement = durationCell.querySelector('textarea') || durationCell.querySelector('input.editable');
                             
-                            if (pcmTextarea && durationTextarea && pcmTextarea.value) {
+                            if (pcmElement && durationElement && pcmElement.value) {
                                 // Recalculate duration from PCM date for accuracy
                                 try {
-                                    const pcmDate = new Date(pcmTextarea.value);
+                                    const pcmDate = new Date(pcmElement.value);
                                     if (!isNaN(pcmDate.getTime())) {
                                         const now = new Date();
                                         
@@ -3892,31 +3901,31 @@
                                         
                                         // Store exact values for formatting
                                         const durationHours = totalHours + (totalMinutes / 60) + (totalSeconds / 3600);
-                                        durationTextarea.dataset.rawHours = durationHours;
+                                        durationElement.dataset.rawHours = durationHours;
                                         
                                         // Format directly rather than setting raw value first
                                         const formattedHours = totalHours;
                                         const formattedMinutes = String(totalMinutes).padStart(2, '0');
                                         const formattedSeconds = String(totalSeconds).padStart(2, '0');
-                                        durationTextarea.value = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-                                    } else if (durationTextarea.value) {
+                                        durationElement.value = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+                                    } else if (durationElement.value) {
                                         // If date is invalid but duration has a value, just format it
-                                        formatDuration(durationTextarea);
+                                        formatDuration(durationElement);
                                     }
                                 } catch (e) {
                                     console.error('Error calculating duration:', e);
                                     // Fallback to simple formatting
-                                    if (durationTextarea.value) {
-                                        formatDuration(durationTextarea);
+                                    if (durationElement.value) {
+                                        formatDuration(durationElement);
                                     }
                                 }
-                            } else if (durationTextarea && !pcmTextarea.value) {
+                            } else if (durationElement && !pcmElement.value) {
                                 // Clear duration if PCM Created At is empty
-                                durationTextarea.value = '';
-                                durationTextarea.classList.remove('elapsed-duration-live');
-                            } else if (durationTextarea && durationTextarea.value) {
+                                durationElement.value = '';
+                                durationElement.classList.remove('elapsed-duration-live');
+                            } else if (durationElement && durationElement.value) {
                                 // Just format existing duration values
-                                formatDuration(durationTextarea);
+                                formatDuration(durationElement);
                             }
                         }
                     });
@@ -4033,15 +4042,15 @@
             if (height >= minHeight) {
                 resizeState.currentRow.style.height = `${height}px`;
                 
-                // Update all textareas in this row to match the new height
+                // Update all textareas in this row to match the new height (EM Field Feedback)
                 const textareas = resizeState.currentRow.querySelectorAll('textarea.editable');
                 textareas.forEach(textarea => {
-                    textarea.style.height = `${height - 8}px`; // Account for cell padding
+                    textarea.style.height = `${height - 16}px`; // Account for padding in EM Field Feedback
                 });
                 
-                // Update fault level inputs in this row to match the new height
-                const faultLevelInputs = resizeState.currentRow.querySelectorAll('.fault-level-input');
-                faultLevelInputs.forEach(input => {
+                // Update all input elements in this row to match the new height
+                const inputs = resizeState.currentRow.querySelectorAll('input.editable, .fault-level-input');
+                inputs.forEach(input => {
                     input.style.height = `${height - 8}px`; // Account for cell padding
                     input.style.lineHeight = `${height - 8}px`; // Center text vertically
                 });
@@ -4154,15 +4163,15 @@
                     const savedHeight = parseInt(rowHeights[sheetName][index]);
                     tr.style.height = `${savedHeight}px`;
                     
-                    // Update all textareas in this row to match the saved height
+                    // Update all textareas in this row to match the saved height (EM Field Feedback)
                     const textareas = tr.querySelectorAll('textarea.editable');
                     textareas.forEach(textarea => {
-                        textarea.style.height = `${savedHeight - 8}px`; // Account for cell padding
+                        textarea.style.height = `${savedHeight - 16}px`; // Account for padding in EM Field Feedback
                     });
                     
-                    // Update fault level inputs in this row to match the saved height
-                    const faultLevelInputs = tr.querySelectorAll('.fault-level-input');
-                    faultLevelInputs.forEach(input => {
+                    // Update all input elements in this row to match the saved height
+                    const inputs = tr.querySelectorAll('input.editable, .fault-level-input');
+                    inputs.forEach(input => {
                         input.style.height = `${savedHeight - 8}px`; // Account for cell padding
                         input.style.lineHeight = `${savedHeight - 8}px`; // Center text vertically
                     });
@@ -4939,14 +4948,14 @@
                     // Get Hub Site ID for lookup
                     let hubSiteId = null;
                     if (hubSiteCol >= 0 && cells[hubSiteCol]) {
-                        const textarea = cells[hubSiteCol].querySelector('textarea');
-                        hubSiteId = textarea ? textarea.value.trim() : cells[hubSiteCol].textContent.trim();
+                        const element = cells[hubSiteCol].querySelector('textarea') || cells[hubSiteCol].querySelector('input.editable');
+                        hubSiteId = element ? element.value.trim() : cells[hubSiteCol].textContent.trim();
                     }
                     
                     // Calculate Elapsed Duration - only if PCM Created At has a value
                     if (elapsedDurationCol >= 0 && pcmCreatedCol >= 0 && cells[pcmCreatedCol] && cells[elapsedDurationCol]) {
-                        const pcmTextarea = cells[pcmCreatedCol].querySelector('textarea');
-                        const pcmText = pcmTextarea ? pcmTextarea.value.trim() : cells[pcmCreatedCol].textContent.trim();
+                        const pcmElement = cells[pcmCreatedCol].querySelector('textarea') || cells[pcmCreatedCol].querySelector('input.editable');
+                        const pcmText = pcmElement ? pcmElement.value.trim() : cells[pcmCreatedCol].textContent.trim();
                         
                         if (pcmText) {
                             try {
@@ -4971,12 +4980,12 @@
                                     // Store exact values for formatting
                                     const durationHours = totalHours + (totalMinutes / 60) + (totalSeconds / 3600);
                                     
-                                    const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
-                                    if (durationTextarea) {
+                                    const durationElement = cells[elapsedDurationCol].querySelector('textarea') || cells[elapsedDurationCol].querySelector('input.editable');
+                                    if (durationElement) {
                                         // Store raw hours for precise calculations
-                                        durationTextarea.dataset.rawHours = durationHours;
-                                        durationTextarea.value = durationHours.toString();
-                                        formatDuration(durationTextarea);
+                                        durationElement.dataset.rawHours = durationHours;
+                                        durationElement.value = durationHours.toString();
+                                        formatDuration(durationElement);
                                         filledCount++;
                                     }
                                 }
@@ -4985,10 +4994,10 @@
                             }
                         } else {
                             // Clear duration if PCM Created At is empty
-                            const durationTextarea = cells[elapsedDurationCol].querySelector('textarea');
-                            if (durationTextarea && durationTextarea.value) {
-                                durationTextarea.value = '';
-                                durationTextarea.classList.remove('elapsed-duration-live');
+                            const durationElement = cells[elapsedDurationCol].querySelector('textarea') || cells[elapsedDurationCol].querySelector('input.editable');
+                            if (durationElement && durationElement.value) {
+                                durationElement.value = '';
+                                durationElement.classList.remove('elapsed-duration-live');
                                 filledCount++;
                             }
                         }
@@ -5000,36 +5009,36 @@
                         
                         // Fill Region
                         if (regionCol >= 0 && cells[regionCol] && lookupRecord.Region) {
-                            const regionTextarea = cells[regionCol].querySelector('textarea');
-                            if (regionTextarea) {
-                                regionTextarea.value = lookupRecord.Region;
+                            const regionElement = cells[regionCol].querySelector('textarea') || cells[regionCol].querySelector('input.editable');
+                            if (regionElement) {
+                                regionElement.value = lookupRecord.Region;
                                 filledCount++;
                             }
                         }
                         
                         // Fill Power Source
                         if (powerSourceCol >= 0 && cells[powerSourceCol] && lookupRecord['Power Type']) {
-                            const powerTextarea = cells[powerSourceCol].querySelector('textarea');
-                            if (powerTextarea) {
-                                powerTextarea.value = lookupRecord['Power Type'];
+                            const powerElement = cells[powerSourceCol].querySelector('textarea') || cells[powerSourceCol].querySelector('input.editable');
+                            if (powerElement) {
+                                powerElement.value = lookupRecord['Power Type'];
                                 filledCount++;
                             }
                         }
                         
                         // Fill Battery Backup Status
                         if (bbStatusCol >= 0 && cells[bbStatusCol] && lookupRecord['BB Status']) {
-                            const bbTextarea = cells[bbStatusCol].querySelector('textarea');
-                            if (bbTextarea) {
-                                bbTextarea.value = lookupRecord['BB Status'];
+                            const bbElement = cells[bbStatusCol].querySelector('textarea') || cells[bbStatusCol].querySelector('input.editable');
+                            if (bbElement) {
+                                bbElement.value = lookupRecord['BB Status'];
                                 filledCount++;
                             }
                         }
                         
                         // Fill Site Owner
                         if (siteOwnerCol >= 0 && cells[siteOwnerCol] && lookupRecord['Site Owner']) {
-                            const ownerTextarea = cells[siteOwnerCol].querySelector('textarea');
-                            if (ownerTextarea) {
-                                ownerTextarea.value = lookupRecord['Site Owner'];
+                            const ownerElement = cells[siteOwnerCol].querySelector('textarea') || cells[siteOwnerCol].querySelector('input.editable');
+                            if (ownerElement) {
+                                ownerElement.value = lookupRecord['Site Owner'];
                                 filledCount++;
                             }
                         }
@@ -5193,44 +5202,44 @@
                 
                 // Fill Region
                 if (regionCol >= 0 && cells[regionCol] && lookupRecord.Region) {
-                    const regionTextarea = cells[regionCol].querySelector('textarea');
-                    if (regionTextarea && regionTextarea.value !== lookupRecord.Region) {
-                        regionTextarea.value = lookupRecord.Region;
-                        regionTextarea.classList.add('auto-filled');
-                        setTimeout(() => regionTextarea.classList.remove('auto-filled'), 3000);
+                    const regionElement = cells[regionCol].querySelector('textarea') || cells[regionCol].querySelector('input.editable');
+                    if (regionElement && regionElement.value !== lookupRecord.Region) {
+                        regionElement.value = lookupRecord.Region;
+                        regionElement.classList.add('auto-filled');
+                        setTimeout(() => regionElement.classList.remove('auto-filled'), 3000);
                         filledCount++;
                     }
                 }
                 
                 // Fill Power Source
                 if (powerSourceCol >= 0 && cells[powerSourceCol] && lookupRecord['Power Type']) {
-                    const powerTextarea = cells[powerSourceCol].querySelector('textarea');
-                    if (powerTextarea && powerTextarea.value !== lookupRecord['Power Type']) {
-                        powerTextarea.value = lookupRecord['Power Type'];
-                        powerTextarea.classList.add('auto-filled');
-                        setTimeout(() => powerTextarea.classList.remove('auto-filled'), 3000);
+                    const powerElement = cells[powerSourceCol].querySelector('textarea') || cells[powerSourceCol].querySelector('input.editable');
+                    if (powerElement && powerElement.value !== lookupRecord['Power Type']) {
+                        powerElement.value = lookupRecord['Power Type'];
+                        powerElement.classList.add('auto-filled');
+                        setTimeout(() => powerElement.classList.remove('auto-filled'), 3000);
                         filledCount++;
                     }
                 }
                 
                 // Fill Battery Backup Status
                 if (bbStatusCol >= 0 && cells[bbStatusCol] && lookupRecord['BB Status']) {
-                    const bbTextarea = cells[bbStatusCol].querySelector('textarea');
-                    if (bbTextarea && bbTextarea.value !== lookupRecord['BB Status']) {
-                        bbTextarea.value = lookupRecord['BB Status'];
-                        bbTextarea.classList.add('auto-filled');
-                        setTimeout(() => bbTextarea.classList.remove('auto-filled'), 3000);
+                    const bbElement = cells[bbStatusCol].querySelector('textarea') || cells[bbStatusCol].querySelector('input.editable');
+                    if (bbElement && bbElement.value !== lookupRecord['BB Status']) {
+                        bbElement.value = lookupRecord['BB Status'];
+                        bbElement.classList.add('auto-filled');
+                        setTimeout(() => bbElement.classList.remove('auto-filled'), 3000);
                         filledCount++;
                     }
                 }
                 
                 // Fill Site Owner
                 if (siteOwnerCol >= 0 && cells[siteOwnerCol] && lookupRecord['Site Owner']) {
-                    const ownerTextarea = cells[siteOwnerCol].querySelector('textarea');
-                    if (ownerTextarea && ownerTextarea.value !== lookupRecord['Site Owner']) {
-                        ownerTextarea.value = lookupRecord['Site Owner'];
-                        ownerTextarea.classList.add('auto-filled');
-                        setTimeout(() => ownerTextarea.classList.remove('auto-filled'), 3000);
+                    const ownerElement = cells[siteOwnerCol].querySelector('textarea') || cells[siteOwnerCol].querySelector('input.editable');
+                    if (ownerElement && ownerElement.value !== lookupRecord['Site Owner']) {
+                        ownerElement.value = lookupRecord['Site Owner'];
+                        ownerElement.classList.add('auto-filled');
+                        setTimeout(() => ownerElement.classList.remove('auto-filled'), 3000);
                         filledCount++;
                     }
                 }
@@ -5264,10 +5273,10 @@
                 // Clear related fields when Hub Site is empty or invalid
                 [regionCol, powerSourceCol, bbStatusCol, siteOwnerCol].forEach(colIndex => {
                     if (colIndex >= 0 && cells[colIndex]) {
-                        const textarea = cells[colIndex].querySelector('textarea');
-                        if (textarea && textarea.value) {
-                            textarea.value = '';
-                            textarea.classList.remove('auto-filled');
+                        const element = cells[colIndex].querySelector('textarea') || cells[colIndex].querySelector('input.editable');
+                        if (element && element.value) {
+                            element.value = '';
+                            element.classList.remove('auto-filled');
                         }
                     }
                 });
@@ -5381,76 +5390,96 @@
                 
                 return container;
             } else {
-                // Create regular textarea for all other columns
-                            const textarea = document.createElement('textarea');
-                            textarea.className = 'editable';
-                            
-                // Find Hub Site column index for real-time lookup
-                const hubSiteColIndex = headers.findIndex(h => h && h.toLowerCase().includes('hub site'));
+                // Check if this is EM Field Feedback column - use textarea for text wrapping
+                const emFieldFeedbackColIndex = headers.findIndex(h => h && h.toLowerCase().includes('em field feedback'));
                 
-                // Set value with special handling for Hub Site
-                            if (colIndex === hubSiteColIndex && cellValue) {
-                                textarea.value = String(cellValue).trim().toUpperCase();
-                            } else {
-                                textarea.value = cellValue || '';
+                if (colIndex === emFieldFeedbackColIndex) {
+                    // Create textarea for EM Field Feedback column (needs text wrapping)
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'editable';
+                    textarea.value = cellValue || '';
+                    
+                    // Add input event listener
+                    textarea.addEventListener('input', (e) => {
+                        e.target.classList.add('editing');
+                        setTimeout(() => e.target.classList.remove('editing'), 500);
+                        debouncedMarkModified();
+                    });
+                    
+                    return textarea;
+                } else {
+                    // Create input element for all other columns (like Fault Level)
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'editable fault-level-input';
+                    
+                    // Find Hub Site column index for real-time lookup
+                    const hubSiteColIndex = headers.findIndex(h => h && h.toLowerCase().includes('hub site'));
+                    
+                    // Set value with special handling for Hub Site
+                    if (colIndex === hubSiteColIndex && cellValue) {
+                        input.value = String(cellValue).trim().toUpperCase();
+                    } else {
+                        input.value = cellValue || '';
+                    }
+                    
+                    // Add input event listener
+                    input.addEventListener('input', (e) => {
+                        e.target.classList.add('editing');
+                        setTimeout(() => e.target.classList.remove('editing'), 500);
+                        debouncedMarkModified();
+                    });
+                    
+                    // Add real-time lookup for Hub Site column
+                    if (colIndex === hubSiteColIndex) {
+                        input.addEventListener('input', (e) => {
+                            e.target.classList.add('editing');
+                            setTimeout(() => e.target.classList.remove('editing'), 500);
+                            debouncedLookup(e.target, sheetName);
+                        });
+                        input.addEventListener('paste', (e) => {
+                            setTimeout(() => {
+                                debouncedLookup(e.target, sheetName);
+                            }, 10);
+                        });
+                        input.classList.add('hub-site-field');
+                    }
+                    
+                    // Format date/time columns in yyyy-mm-dd hh:mm:ss
+                    if (colName.includes('creat fault first time') || 
+                        colName.includes('pcm created') || 
+                        colName.includes('created at') ||
+                        colName.includes('fault first time') ||
+                        colName.includes('first time occured')) {
+                        
+                        // Add multiple event listeners for comprehensive date formatting
+                        input.addEventListener('blur', (e) => formatDateTime(e.target));
+                        input.addEventListener('change', (e) => formatDateTime(e.target));
+                        input.addEventListener('paste', (e) => setTimeout(() => formatDateTime(e.target), 10));
+                        input.addEventListener('focus', (e) => showDateFormatHelp(e.target));
+                        input.addEventListener('input', (e) => {
+                            // Immediate clearing of duration when PCM field is emptied
+                            if (e.target.value.trim() === '') {
+                                formatDateTime(e.target); // Handle clearing immediately
                             }
-                            
-                // Add input event listener
-                            textarea.addEventListener('input', (e) => {
-                                e.target.classList.add('editing');
-                                setTimeout(() => e.target.classList.remove('editing'), 500);
-                                debouncedMarkModified();
-                            });
-                            
-                            // Add real-time lookup for Hub Site column
-                            if (colIndex === hubSiteColIndex) {
-                                textarea.addEventListener('input', (e) => {
-                                    e.target.classList.add('editing');
-                                    setTimeout(() => e.target.classList.remove('editing'), 500);
-                                    debouncedLookup(e.target, sheetName);
-                                });
-                                textarea.addEventListener('paste', (e) => {
-                                    setTimeout(() => {
-                                        debouncedLookup(e.target, sheetName);
-                                    }, 10);
-                                });
-                                textarea.classList.add('hub-site-field');
-                            }
-                            
-                            // Format date/time columns in yyyy-mm-dd hh:mm:ss
-                            if (colName.includes('creat fault first time') || 
-                                colName.includes('pcm created') || 
-                                colName.includes('created at') ||
-                                colName.includes('fault first time') ||
-                                colName.includes('first time occured')) {
-                                
-                                // Add multiple event listeners for comprehensive date formatting
-                                textarea.addEventListener('blur', (e) => formatDateTime(e.target));
-                                textarea.addEventListener('change', (e) => formatDateTime(e.target));
-                                textarea.addEventListener('paste', (e) => setTimeout(() => formatDateTime(e.target), 10));
-                                textarea.addEventListener('focus', (e) => showDateFormatHelp(e.target));
-                                textarea.addEventListener('input', (e) => {
-                                    // Immediate clearing of duration when PCM field is emptied
-                                    if (e.target.value.trim() === '') {
-                                        formatDateTime(e.target); // Handle clearing immediately
-                                    }
-                                    // Debounced formatting to avoid excessive calls while typing
-                                    clearTimeout(e.target.formatTimeout);
-                                    e.target.formatTimeout = setTimeout(() => formatDateTime(e.target), 1000);
-                                });
-                                
-                                textarea.classList.add('date-time-field');
-                            }
-                            
-                            // Format elapsed duration column
-                            if (colName.includes('elapsed duration')) {
-                                textarea.addEventListener('blur', (e) => formatDuration(e.target));
-                                textarea.addEventListener('paste', (e) => setTimeout(() => formatDuration(e.target), 10));
-                                textarea.readOnly = true;
-                                textarea.classList.add('elapsed-duration-live');
+                            // Debounced formatting to avoid excessive calls while typing
+                            clearTimeout(e.target.formatTimeout);
+                            e.target.formatTimeout = setTimeout(() => formatDateTime(e.target), 1000);
+                        });
+                        
+                        input.classList.add('date-time-field');
+                    }
+                    
+                    // Format elapsed duration column
+                    if (colName.includes('elapsed duration')) {
+                        input.addEventListener('blur', (e) => formatDuration(e.target));
+                        input.addEventListener('paste', (e) => setTimeout(() => formatDuration(e.target), 10));
+                        input.readOnly = true;
+                        input.classList.add('elapsed-duration-live');
+                    }
+                    
+                    return input;
                 }
-                
-                return textarea;
             }
         }
 
@@ -5606,13 +5635,14 @@
                         const rowData = [];
                         const cells = row.querySelectorAll('td');
                         cells.forEach(cell => {
-                            // Check if cell contains a fault level container or regular input
+                            // Check if cell contains a fault level container
                             const container = cell.querySelector('.fault-level-container');
                             if (container) {
                                 const input = container.querySelector('.fault-level-input');
                                 rowData.push(input ? input.value : '');
                             } else {
-                                const input = cell.querySelector('.editable');
+                                // Check for both input and textarea elements
+                                const input = cell.querySelector('input.editable') || cell.querySelector('textarea.editable');
                                 rowData.push(input ? input.value : '');
                             }
                         });
