@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TMS Site Information</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- XLSX Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --secondary: #3730a3;
+      --accent: #06b6d4;
+      --accent-hover: #0891b2;
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-light: #f8fafc;
+      --text-muted: #94a3b8;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f1f5f9;
+      --bg-overlay: rgba(255, 255, 255, 0.9);
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-primary);
+    }
+    
+    .container {
+      position: relative;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+      color: var(--primary);
+      position: relative;
+    }
+    
+    h2::after {
+      content: "";
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--primary));
+      border-radius: 2px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+    
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      background: var(--bg-primary);
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+      transform: translateY(-1px);
+    }
+    
+    .info-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(10px);
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    
+    .info-row:hover {
+      background: rgba(248, 250, 252, 0.8);
+      margin: 0 -6px;
+      padding: 6px 6px;
+      border-radius: 6px;
+    }
+    
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    
+    .info-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+    
+    .info-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: right;
+      word-break: break-word;
+    }
+    
+    .loading {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 20px;
+    }
+    
+    .error {
+      text-align: center;
+      color: #dc2626;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    
+    .no-data {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 20px;
+    }
+    
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-light);
+      background: linear-gradient(135deg, var(--accent), var(--primary));
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    #copiedMessage {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #10b981;
+      margin-top: 12px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      display: none;
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 24px;
+        max-width: 100%;
+        border-radius: 16px;
+      }
+      
+      h2 {
+        font-size: 24px;
+      }
+      
+      .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 10px 0;
+      }
+      
+      .info-row:hover {
+        margin: 0 -6px;
+        padding: 10px 6px;
+      }
+      
+      .info-label {
+        min-width: auto;
+      }
+      
+      .info-value {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>TMS Site Information</h2>
+    
+    <div class="form-group">
+      <label for="siteId">Site ID</label>
+      <input type="text" id="siteId" placeholder="Enter Site ID..." oninput="searchSite()">
+    </div>
+    
+    <div id="loadingMessage" class="loading">Loading database...</div>
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    
+    <div id="siteInfo" style="display: none;">
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">Site ID:</span>
+          <span class="info-value" id="siteIdCode">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">2G Site ID:</span>
+          <span class="info-value" id="siteId2G">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">3G Site ID:</span>
+          <span class="info-value" id="siteId3G">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">4G Site ID:</span>
+          <span class="info-value" id="siteId4G">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Power Type:</span>
+          <span class="info-value" id="powerType">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">BB Status:</span>
+          <span class="info-value" id="bbStatus">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">EOL Gen:</span>
+          <span class="info-value" id="eolGen">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Site Owner:</span>
+          <span class="info-value" id="siteOwner">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Connectivity Level:</span>
+          <span class="info-value" id="connectivityLevel">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Regions:</span>
+          <span class="info-value" id="regions">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Obsolete AC:</span>
+          <span class="info-value" id="obsoleteAC">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Obsolete Rectifier:</span>
+          <span class="info-value" id="obsoleteRectifier">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Obsolete Fire:</span>
+          <span class="info-value" id="obsoleteFire">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">White List:</span>
+          <span class="info-value" id="whiteList">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">MC Name:</span>
+          <span class="info-value" id="mcName">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Suffix:</span>
+          <span class="info-value" id="suffix">-</span>
+        </div>
+      </div>
+    </div>
+    
+    <div id="noData" class="no-data" style="display: none;">
+      No site found with the entered Site ID
+    </div>
+    
+    <div id="copySection" style="display: none;">
+      <div class="form-group" style="margin-top: 24px;">
+        <button onclick="copyFullFormat()">Copy Site Information</button>
+        <div id="copiedMessage">✓ Copied to clipboard!</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let siteData = [];
+    let isLoading = true;
+    
+    // Define functions
+    function fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.top = 0;
+      textArea.style.left = 0;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        const successful = document.execCommand('copy');
+        return successful ? Promise.resolve() : Promise.reject(new Error('Fallback: Copy command unsuccessful'));
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+    
+    function showCopiedMessage() {
+      const copiedMessage = document.getElementById('copiedMessage');
+      copiedMessage.style.display = 'block';
+      setTimeout(() => { copiedMessage.style.opacity = 1; }, 50);
+      setTimeout(() => {
+        copiedMessage.style.opacity = 0;
+        setTimeout(() => { copiedMessage.style.display = 'none'; }, 500);
+      }, 2000);
+    }
+    
+    function copyFullFormat() {
+      const siteIdCode = document.getElementById('siteIdCode').innerText || 'N/A';
+      const siteId2G = document.getElementById('siteId2G').innerText || 'N/A';
+      const siteId3G = document.getElementById('siteId3G').innerText || 'N/A';
+      const siteId4G = document.getElementById('siteId4G').innerText || 'N/A';
+      const powerType = document.getElementById('powerType').innerText || 'N/A';
+      const bbStatus = document.getElementById('bbStatus').innerText || 'N/A';
+      const eolGen = document.getElementById('eolGen').innerText || 'N/A';
+      const siteOwner = document.getElementById('siteOwner').innerText || 'N/A';
+      const connectivityLevel = document.getElementById('connectivityLevel').innerText || 'N/A';
+      const regions = document.getElementById('regions').innerText || 'N/A';
+      const obsoleteAC = document.getElementById('obsoleteAC').innerText || 'N/A';
+      const obsoleteRectifier = document.getElementById('obsoleteRectifier').innerText || 'N/A';
+      const obsoleteFire = document.getElementById('obsoleteFire').innerText || 'N/A';
+      const whiteList = document.getElementById('whiteList').innerText || 'N/A';
+      const mcName = document.getElementById('mcName').innerText || 'N/A';
+      const suffix = document.getElementById('suffix').innerText || 'N/A';
+      
+      const text = `*Site ID*: ${siteIdCode}
+*2G Site ID*: ${siteId2G}
+*3G Site ID*: ${siteId3G}
+*4G Site ID*: ${siteId4G}
+*Power Type*: ${powerType}
+*BB Status*: ${bbStatus}
+*EOL Gen*: ${eolGen}
+*Site Owner*: ${siteOwner}
+*Connectivity Level*: ${connectivityLevel}
+*Regions*: ${regions}
+*Obsolete AC*: ${obsoleteAC}
+*Obsolete Rectifier*: ${obsoleteRectifier}
+*Obsolete Fire*: ${obsoleteFire}
+*White List*: ${whiteList}
+*MC Name*: ${mcName}
+*Suffix*: ${suffix}`;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCopiedMessage)
+        .catch(err => {
+          fallbackCopyTextToClipboard(text).then(showCopiedMessage)
+          .catch(err => {
+            alert('Failed to copy text');
+            console.error('Clipboard error:', err);
+          });
+        });
+      } else {
+        fallbackCopyTextToClipboard(text).then(showCopiedMessage)
+        .catch(err => {
+          alert('Failed to copy text');
+          console.error('Clipboard error:', err);
+        });
+      }
+    }
+    
+    function searchSite() {
+      if (isLoading) {
+        return;
+      }
+      
+      const siteId = document.getElementById('siteId').value.trim().toUpperCase();
+      
+      // Hide previous results
+      document.getElementById('noData').style.display = 'none';
+      document.getElementById('siteInfo').style.display = 'none';
+      document.getElementById('copySection').style.display = 'none';
+      
+      if (!siteId) {
+        document.getElementById('siteInfo').style.display = 'block';
+        clearSiteInfo();
+        return;
+      }
+      
+      const site = siteData.find(s => s['Site ID Code'] && s['Site ID Code'].toUpperCase() === siteId);
+      
+      if (site) {
+        document.getElementById('siteInfo').style.display = 'block';
+        document.getElementById('copySection').style.display = 'block';
+        updateSiteInfo(site);
+      } else {
+        document.getElementById('noData').style.display = 'block';
+      }
+    }
+    
+    function updateSiteInfo(site) {
+      document.getElementById('siteIdCode').innerText = site['Site ID Code'] || '-';
+      document.getElementById('siteId2G').innerText = site['2G Site ID'] || '-';
+      document.getElementById('siteId3G').innerText = site['3G Site ID'] || '-';
+      document.getElementById('siteId4G').innerText = site['4G Site ID'] || '-';
+      document.getElementById('powerType').innerText = site['Power Type'] || '-';
+      document.getElementById('bbStatus').innerText = site['BB Status'] || '-';
+      document.getElementById('eolGen').innerText = site['EOL Gen'] || '-';
+      document.getElementById('siteOwner').innerText = site['Site Owner'] || '-';
+      document.getElementById('connectivityLevel').innerText = site['Connectivity Level'] || '-';
+      document.getElementById('regions').innerText = site['Regions'] || '-';
+      document.getElementById('obsoleteAC').innerText = site['Obsolete AC'] || '-';
+      document.getElementById('obsoleteRectifier').innerText = site['Obsolete Rectifier'] || '-';
+      document.getElementById('obsoleteFire').innerText = site['Obsolete Fire'] || '-';
+      document.getElementById('whiteList').innerText = site['White List'] || '-';
+      document.getElementById('mcName').innerText = site['MC Name'] || '-';
+      document.getElementById('suffix').innerText = site['Suffix'] || '-';
+    }
+    
+    function clearSiteInfo() {
+      document.getElementById('siteIdCode').innerText = '-';
+      document.getElementById('siteId2G').innerText = '-';
+      document.getElementById('siteId3G').innerText = '-';
+      document.getElementById('siteId4G').innerText = '-';
+      document.getElementById('powerType').innerText = '-';
+      document.getElementById('bbStatus').innerText = '-';
+      document.getElementById('eolGen').innerText = '-';
+      document.getElementById('siteOwner').innerText = '-';
+      document.getElementById('connectivityLevel').innerText = '-';
+      document.getElementById('regions').innerText = '-';
+      document.getElementById('obsoleteAC').innerText = '-';
+      document.getElementById('obsoleteRectifier').innerText = '-';
+      document.getElementById('obsoleteFire').innerText = '-';
+      document.getElementById('whiteList').innerText = '-';
+      document.getElementById('mcName').innerText = '-';
+      document.getElementById('suffix').innerText = '-';
+      
+      // Hide copied message
+      const copiedMessage = document.getElementById('copiedMessage');
+      copiedMessage.style.opacity = 0;
+      copiedMessage.style.display = 'none';
+    }
+    
+    async function loadExcel() {
+      try {
+        const url = 'https://tarek-mahran.github.io/shabakkat/TMS%20data%20base.xlsx';
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        
+        siteData = json.map(row => ({
+          'Site ID Code': row['Site ID Code'],
+          '2G Site ID': row['2G Site ID'],
+          '3G Site ID': row['3G Site ID'],
+          '4G Site ID': row['4G Site ID'],
+          'Power Type': row['Power Type'],
+          'BB Status': row['BB Status'],
+          'EOL Gen': row['EOL Gen'],
+          'Site Owner': row['Site Owner'],
+          'Connectivity Level': row['Connectivity Level'],
+          'Regions': row['Regions'],
+          'Obsolete AC': row['Obsolete AC'],
+          'Obsolete Rectifier': row['Obsolete Rectifier'],
+          'Obsolete Fire': row['Obsolete Fire'],
+          'White List': row['White List'],
+          'MC Name': row['MC Name'],
+          'Suffix': row['Suffix']
+        }));
+        
+        isLoading = false;
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('siteInfo').style.display = 'block';
+        
+        console.log(`Loaded ${siteData.length} sites from TMS database`);
+        
+      } catch (error) {
+        console.error('Error loading Excel file:', error);
+        isLoading = false;
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('errorMessage').textContent = 'Error loading database. Please try again later.';
+        document.getElementById('errorMessage').style.display = 'block';
+      }
+    }
+    
+    // Initialize the application
+    loadExcel();
+  </script>
+</body>
+</html>
