@@ -295,7 +295,7 @@
           <span class="info-value" id="connectivityLevel">-</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Regions:</span>
+          <span class="info-label">Region:</span>
           <span class="info-value" id="regions">-</span>
         </div>
         <div class="info-row">
@@ -398,7 +398,7 @@
 *EOL Gen*: ${eolGen}
 *Site Owner*: ${siteOwner}
 *Connectivity Level*: ${connectivityLevel}
-*Regions*: ${regions}
+*Region*: ${regions}
 *Obsolete AC*: ${obsoleteAC}
 *Obsolete Rectifier*: ${obsoleteRectifier}
 *Obsolete Fire*: ${obsoleteFire}
@@ -463,7 +463,7 @@
       document.getElementById('eolGen').innerText = site['EOL Gen'] || '-';
       document.getElementById('siteOwner').innerText = site['Site Owner'] || '-';
       document.getElementById('connectivityLevel').innerText = site['Connectivity Level'] || '-';
-      document.getElementById('regions').innerText = site['Regions'] || '-';
+      document.getElementById('regions').innerText = site['Region'] || '-';
       document.getElementById('obsoleteAC').innerText = site['Obsolete AC'] || '-';
       document.getElementById('obsoleteRectifier').innerText = site['Obsolete Rectifier'] || '-';
       document.getElementById('obsoleteFire').innerText = site['Obsolete Fire'] || '-';
@@ -520,7 +520,7 @@
           'EOL Gen': row['EOL Gen'],
           'Site Owner': row['Site Owner'],
           'Connectivity Level': row['Connectivity Level'],
-          'Regions': row['Regions'],
+          'Region': row['Region'],
           'Obsolete AC': row['Obsolete AC'],
           'Obsolete Rectifier': row['Obsolete Rectifier'],
           'Obsolete Fire': row['Obsolete Fire'],
