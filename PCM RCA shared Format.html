@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -30,14 +31,14 @@
       --shadow: rgba(0, 0, 0, 0.25);
       --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     /* Modern Reset */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Inter', sans-serif;
       /*background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));*/
@@ -50,7 +51,7 @@
       line-height: 1.6;
       font-size: 16px;
     }
-    
+
     /* Modern Container with Subtle Glass Effect */
     .container {
       display: grid;
@@ -66,18 +67,33 @@
       box-shadow: 0 10px 30px var(--shadow);
       animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-15px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(-15px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    
+
     @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+
+      100% {
+        transform: scale(1);
+      }
     }
-    
+
     /* Header with modern typography */
     .header {
       grid-column: 1 / -1;
@@ -85,7 +101,7 @@
       margin-bottom: 24px;
       position: relative;
     }
-    
+
     .header h2 {
       font-size: 2.25rem;
       font-weight: 700;
@@ -96,9 +112,10 @@
       color: transparent;
       margin-bottom: 8px;
     }
-    
+
     /* Card Sections */
-    .input-section, .output-section {
+    .input-section,
+    .output-section {
       background: var(--card-bg);
       padding: 28px;
       border-radius: 12px;
@@ -109,12 +126,13 @@
       transition: transform var(--transition), box-shadow var(--transition);
       position: relative;
     }
-    
-    .input-section:hover, .output-section:hover {
+
+    .input-section:hover,
+    .output-section:hover {
       transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
     }
-    
+
     .section-title {
       font-size: 1.25rem;
       font-weight: 600;
@@ -123,25 +141,26 @@
       align-items: center;
       gap: 8px;
     }
-    
+
     .section-title i {
       color: var(--primary);
     }
-    
+
     /* Modern Form Elements */
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
-    
+
     .form-group label {
       font-size: 0.875rem;
       font-weight: 500;
       color: var(--text-muted);
     }
-    
-    textarea, input {
+
+    textarea,
+    input {
       width: 100%;
       padding: 14px 16px;
       border: 1px solid var(--border-color);
@@ -153,22 +172,23 @@
       resize: vertical;
       transition: border var(--transition), box-shadow var(--transition);
     }
-    
-    textarea:focus, input:focus {
+
+    textarea:focus,
+    input:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
       outline: none;
     }
-    
+
     /* Increased textarea height */
     textarea {
       min-height: 300px;
     }
-    
+
     .timestamp-input {
       position: relative;
     }
-    
+
     .timestamp-input i {
       position: absolute;
       right: 16px;
@@ -177,7 +197,7 @@
       color: var(--text-muted);
       pointer-events: none;
     }
-    
+
     /* Modern Button Styling */
     button {
       padding: 12px 18px;
@@ -192,37 +212,37 @@
       cursor: pointer;
       transition: all var(--transition);
     }
-    
+
     .btn-primary {
       background: var(--primary);
       color: white;
     }
-    
+
     .btn-primary:hover {
       background: var(--primary-dark);
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
     }
-    
+
     .btn-outline {
       background: transparent;
       border: 1px solid var(--border-color);
       color: var(--text-color);
     }
-    
+
     .btn-outline:hover {
       border-color: var(--primary);
       color: var(--primary);
       transform: translateY(-2px);
     }
-    
+
     /* Button group */
     .button-group {
       display: flex;
       gap: 12px;
       margin-top: 8px;
     }
-    
+
     /* Modern Output styling */
     .output-container {
       position: relative;
@@ -230,7 +250,7 @@
       display: flex;
       flex-direction: column;
     }
-    
+
     .output {
       background: var(--input-bg);
       padding: 24px;
@@ -244,7 +264,7 @@
       overflow-y: auto;
       flex-grow: 1;
     }
-    
+
     /* Enhanced Priority Badge */
     .priority-badge {
       background: linear-gradient(90deg, var(--primary-light), var(--primary));
@@ -253,19 +273,19 @@
       border-radius: 10px;
       font-weight: 600;
       font-size: 0.9rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
-    
+
     /* Timeline indicator for duration */
     .timeline {
       height: 6px;
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 3px;
       overflow: hidden;
       margin: 4px 0 12px 0;
       position: relative;
     }
-    
+
     .timeline-progress {
       height: 100%;
       background: linear-gradient(90deg, var(--primary), var(--primary-light));
@@ -273,7 +293,7 @@
       width: 0;
       transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     /* Copy functionality */
     .action-bar {
       display: flex;
@@ -281,7 +301,7 @@
       align-items: center;
       margin-top: 16px;
     }
-    
+
     .copy-message {
       font-size: 14px;
       color: var(--success);
@@ -291,12 +311,12 @@
       align-items: center;
       gap: 6px;
     }
-    
+
     .copy-message.show {
       opacity: 1;
       animation: pulse 1s ease;
     }
-    
+
     /* Status indicator */
     .status-indicator {
       display: flex;
@@ -305,25 +325,25 @@
       font-size: 0.875rem;
       padding: 6px 12px;
       border-radius: 100px;
-      background: rgba(0,0,0,0.2);
+      background: rgba(0, 0, 0, 0.2);
     }
-    
+
     .status-indicator.loading {
       color: var(--warning);
     }
-    
+
     .status-indicator.success {
       color: var(--success);
     }
-    
+
     .status-indicator.error {
       color: var(--accent);
     }
-    
+
     .status-indicator i {
       font-size: 0.75rem;
     }
-    
+
     /* Info tooltip */
     .info-tooltip {
       position: relative;
@@ -331,13 +351,13 @@
       margin-left: 6px;
       color: var(--text-muted);
     }
-    
+
     .info-tooltip:hover .tooltip-text {
       visibility: visible;
       opacity: 1;
       transform: translateY(0);
     }
-    
+
     .tooltip-text {
       visibility: hidden;
       width: 200px;
@@ -355,10 +375,10 @@
       transition: opacity 0.3s, transform 0.3s;
       transform: translateY(10px);
       font-size: 0.75rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       pointer-events: none;
     }
-    
+
     /* Responsive Design */
     @media (max-width: 900px) {
       .container {
@@ -367,12 +387,12 @@
         padding: 24px;
       }
     }
-    
+
     @media (max-width: 500px) {
       .button-group {
         flex-direction: column;
       }
-      
+
       .action-bar {
         flex-direction: column;
         align-items: flex-start;
@@ -381,30 +401,32 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
       <h2>PCM RCA Shared Format</h2>
     </div>
-    
+
     <div class="input-section">
       <div class="section-title">
         <i class="fas fa-file-import"></i> Input Data
       </div>
-      
+
       <div class="form-group">
         <label for="input">Original Ticket Format</label>
         <textarea id="input" placeholder="Paste original ticket format here..."></textarea>
       </div>
-      
+
       <div class="form-group">
         <label for="restoredTime">Restored Time</label>
         <div class="timestamp-input">
-          <input type="text" id="restoredTime" placeholder="Enter Restored Time (yyyy-mm-dd hh:mm:ss)" oninput="updateDuration()" />
+          <input type="text" id="restoredTime" placeholder="Enter Restored Time (yyyy-mm-dd hh:mm:ss)"
+            oninput="updateDuration()" />
           <i class="far fa-clock"></i>
         </div>
       </div>
-      
+
       <div class="button-group">
         <button class="btn-primary" onclick="convertTicket()">
           <i class="fas fa-sync-alt"></i> Convert Format
@@ -413,21 +435,21 @@
           <i class="fas fa-undo"></i> Reset
         </button>
       </div>
-      
+
       <div id="dataStatus" class="status-indicator loading" style="display:none;">
         <i class="fas fa-spinner fa-spin"></i> Loading site data...
       </div>
     </div>
-    
+
     <div class="output-section">
       <div class="section-title">
         <i class="fas fa-file-export"></i> Formatted Output
       </div>
-      
+
       <div class="output-container">
         <div id="output" class="output"></div>
       </div>
-      
+
       <div class="action-bar">
         <button class="btn-primary" onclick="copyOutput()">
           <i class="far fa-copy"></i> Copy to Clipboard
@@ -440,38 +462,43 @@
   </div>
   <!-- Hidden textarea for copying -->
   <textarea id="hiddenCopy" style="position: absolute; left: -9999px;"></textarea>
-  
+
   <script>
-    // Data storage for all three Excel files
+    // Data storage for all Excel files
     let zainLatisData = {};
+    let onAirSummaryData = {};
     let shlData = [];
     let siteDbData = [];
     let subProjectsData = [];
     let globalFaultLevel = "";
     let alarmTime = '';
     let dataLoaded = false;
-    
+
     async function loadAllSiteData() {
       const dataStatus = document.getElementById('dataStatus');
       dataStatus.style.display = 'flex';
       dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading site databases...';
-      
+
       try {
         // Load Zain & LATIS Database
         await loadZainLatisData();
+        dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading OnAir Summary database...';
+
+        // Load OnAir Summary Database
+        await loadOnAirSummaryData();
         dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading SHL database...';
-        
+
         // Load SHL Database
         await loadShlData();
         dataStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Site DB Management & Sub Projects...';
-        
+
         // Load Site DB Management
         await loadSiteDbData();
-        
+
         dataLoaded = true;
         dataStatus.style.display = 'none';
         console.log('All databases loaded successfully');
-        
+
       } catch (error) {
         console.error("Error loading site data:", error);
         dataStatus.classList.remove('loading');
@@ -479,7 +506,7 @@
         dataStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error loading databases`;
       }
     }
-    
+
     async function loadZainLatisData() {
       const url = 'https://tarek-mahran.github.io/shabakkat/Zain%20%26%20LATIS%20Data%20Base.xlsx';
       const response = await fetch(url);
@@ -487,7 +514,7 @@
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(sheet);
-      
+
       // Store data for both lookup and additional info
       jsonData.forEach(row => {
         // Store for HUB Site ID lookup
@@ -498,7 +525,7 @@
           if (row['4G Site ID']) zainLatisData[row['4G Site ID']] = siteIdCode;
           if (row['3G Site ID']) zainLatisData[row['3G Site ID']] = siteIdCode;
           if (row['2G Site ID']) zainLatisData[row['2G Site ID']] = siteIdCode;
-          
+
           // Also store additional site info by Site ID Code for later use
           zainLatisData[`info_${siteIdCode}`] = {
             powerSource: row['Power Type'] || 'N/A',
@@ -508,7 +535,28 @@
         }
       });
     }
-    
+
+    async function loadOnAirSummaryData() {
+      const url = 'https://tarek-mahran.github.io/shabakkat/OnAir_Summary.xlsx';
+      const response = await fetch(url);
+      const data = await response.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+      // Store data for HUB Site ID lookup
+      jsonData.forEach(row => {
+        const zainId = row['ZainID'];
+        if (zainId) {
+          // Store for 5G, 4G, 3G, 2G lookups
+          if (row['5G Site ID']) onAirSummaryData[row['5G Site ID']] = zainId;
+          if (row['4G Site ID']) onAirSummaryData[row['4G Site ID']] = zainId;
+          if (row['3G Site ID']) onAirSummaryData[row['3G Site ID']] = zainId;
+          if (row['2G Site ID']) onAirSummaryData[row['2G Site ID']] = zainId;
+        }
+      });
+    }
+
     async function loadShlData() {
       const url = 'https://tarek-mahran.github.io/shabakkat/SHL%20DB.xlsx';
       const response = await fetch(url);
@@ -517,26 +565,26 @@
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       shlData = XLSX.utils.sheet_to_json(sheet);
     }
-    
+
     async function loadSiteDbData() {
       const url = 'https://tarek-mahran.github.io/shabakkat/Site_DB_Management.xlsx';
       const response = await fetch(url);
       const data = await response.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
-      
+
       // Look for "Site DB Management" sheet
-      const siteDbSheetName = workbook.SheetNames.find(name => 
+      const siteDbSheetName = workbook.SheetNames.find(name =>
         name.toLowerCase().includes('site db management')
       ) || workbook.SheetNames[0];
-      
+
       const siteDbSheet = workbook.Sheets[siteDbSheetName];
       siteDbData = XLSX.utils.sheet_to_json(siteDbSheet);
-      
+
       // Look for "Sub Projects And Skills" sheet
-      const subProjectsSheetName = workbook.SheetNames.find(name => 
+      const subProjectsSheetName = workbook.SheetNames.find(name =>
         name.toLowerCase().includes('sub projects and skills')
       );
-      
+
       if (subProjectsSheetName) {
         const subProjectsSheet = workbook.Sheets[subProjectsSheetName];
         subProjectsData = XLSX.utils.sheet_to_json(subProjectsSheet);
@@ -545,10 +593,10 @@
         subProjectsData = [];
       }
     }
-    
+
     function findHubSiteId(originalSiteId) {
       if (!originalSiteId) return 'N/A';
-      
+
       // Step 1: Check Zain & LATIS Database
       // Check in order: 5G Site ID, 4G Site ID, 3G Site ID, 2G Site ID
       const hubSiteId = zainLatisData[originalSiteId];
@@ -556,29 +604,37 @@
         console.log(`Found in Zain/LATIS DB: ${originalSiteId} -> ${hubSiteId}`);
         return hubSiteId;
       }
-      
-      // Step 2: Check SHL Database
-      const shlRecord = shlData.find(row => 
+
+      // Step 2: Check OnAir Summary Database
+      // Check in order: 5G Site ID, 4G Site ID, 3G Site ID, 2G Site ID
+      const onAirHubSiteId = onAirSummaryData[originalSiteId];
+      if (onAirHubSiteId) {
+        console.log(`Found in OnAir Summary DB: ${originalSiteId} -> ${onAirHubSiteId}`);
+        return onAirHubSiteId;
+      }
+
+      // Step 3: Check SHL Database
+      const shlRecord = shlData.find(row =>
         row['Keyword'] && row['Keyword'].toString().toLowerCase() === originalSiteId.toLowerCase()
       );
       if (shlRecord && shlRecord['Site Name']) {
         console.log(`Found in SHL DB: ${originalSiteId} -> ${shlRecord['Site Name']}`);
         return shlRecord['Site Name'];
       }
-      
-      // Step 3: Check Site DB Management
-      const siteDbRecord = siteDbData.find(row => 
+
+      // Step 4: Check Site DB Management
+      const siteDbRecord = siteDbData.find(row =>
         row['Site Name'] && row['Site Name'].toString().toLowerCase() === originalSiteId.toLowerCase()
       );
       if (siteDbRecord && siteDbRecord['Site ID']) {
         console.log(`Found in Site DB Management: ${originalSiteId} -> ${siteDbRecord['Site ID']}`);
         return siteDbRecord['Site ID'];
       }
-      
+
       console.log(`Site ID not found in any database: ${originalSiteId}`);
       return originalSiteId; // Return original if not found
     }
-    
+
     function getSiteInfo(hubSiteId) {
       const info = zainLatisData[`info_${hubSiteId}`];
       return info || {
@@ -587,41 +643,43 @@
         eol: 'N/A'
       };
     }
-    
+
     function getSitePriority(hubSiteId) {
       if (!hubSiteId || hubSiteId === 'N/A') return '';
-      
+
       // Look up the HUB Site ID in the Site DB Management data
-      const siteRecord = siteDbData.find(row => 
+      const siteRecord = siteDbData.find(row =>
         row['Site ID'] && row['Site ID'].toString().toLowerCase() === hubSiteId.toLowerCase()
       );
-      
+
       if (siteRecord && siteRecord['Site Priority']) {
         console.log(`Found priority for ${hubSiteId}: ${siteRecord['Site Priority']}`);
         return siteRecord['Site Priority'];
       }
-      
+
       console.log(`Priority not found for HUB Site ID: ${hubSiteId}`);
       return '';
     }
-    
+
     function getSiteOwner(hubSiteId) {
       if (!hubSiteId || hubSiteId === 'N/A') return 'N/A';
-      
+
       // Look up the HUB Site ID in the Sub Projects And Skills data
-      const subProjectRecord = subProjectsData.find(row => 
+      // Filter by Skill = "EM" first, then find matching Site ID
+      const subProjectRecord = subProjectsData.find(row =>
+        row['Skill'] && row['Skill'].toString().toLowerCase() === 'em' &&
         row['Site ID'] && row['Site ID'].toString().toLowerCase() === hubSiteId.toLowerCase()
       );
-      
+
       if (subProjectRecord && subProjectRecord['Sub Project']) {
-        console.log(`Found site owner for ${hubSiteId}: ${subProjectRecord['Sub Project']}`);
+        console.log(`Found site owner for ${hubSiteId} with EM skill: ${subProjectRecord['Sub Project']}`);
         return subProjectRecord['Sub Project'];
       }
-      
-      console.log(`Site owner not found for HUB Site ID: ${hubSiteId}`);
+
+      console.log(`Site owner not found for HUB Site ID: ${hubSiteId} with EM skill`);
       return 'N/A';
     }
-    
+
     function copyOutput() {
       const outputText = document.getElementById('output').innerText;
       const hiddenCopy = document.getElementById('hiddenCopy');
@@ -634,13 +692,13 @@
         alert("Copying failed. Please copy manually.");
       }
     }
-    
+
     function showCopyMessage() {
       const copyMessage = document.getElementById('copyMessage');
       copyMessage.classList.add('show');
       setTimeout(() => { copyMessage.classList.remove('show'); }, 2000);
     }
-    
+
     function convertTicket() {
       // Ensure all site data is loaded
       if (!dataLoaded) {
@@ -649,90 +707,90 @@
         });
         return;
       }
-      
+
       const input = document.getElementById('input').value;
       const pcmId = input.match(/PCM ID:\s*(.*)/)?.[1] || '';
       const ttId = input.match(/TT ID:\s*(.*)/)?.[1] || '';
-      
+
       const titleRaw = input.match(/Title:\s*(.*)/)?.[1] || '';
       const title = titleRaw.split("Alarm Name:")[0].trim();
-      
+
       const faultLevelRaw = input.match(/Fault Level:\s*(.*)/)?.[1] || '';
       const faultLevel = faultLevelRaw.split("Fault First Occur Time:")[0].trim();
       globalFaultLevel = faultLevel;
-      
+
       alarmTime = input.match(/Fault First Occur Time:\s*(.*)/)?.[1] || '';
-      
+
       const originalSiteId = input.match(/Site ID:\s*(.*)/)?.[1] || '';
       const region = input.match(/Region:\s*(.*)/)?.[1] || '';
       const impactedSites = input.match(/Impacted Site List:\s*(.*)/)?.[1] || '';
-      
+
       // Use the new lookup function to find HUB Site ID
       const hubSiteId = findHubSiteId(originalSiteId);
-      
+
       const physicalSites = impactedSites ? impactedSites.split(',').length : 0;
-      
+
       // Get priority from Site DB Management using HUB Site ID
       const priority = getSitePriority(hubSiteId);
-      
+
       // Get site owner from Sub Projects And Skills using HUB Site ID
       const siteOwner = getSiteOwner(hubSiteId);
-      
+
       // Get site info using the found HUB Site ID
       const siteInfo = getSiteInfo(hubSiteId);
-      
+
       // Build header with asterisks and generate a separator line matching header text length (excluding asterisks)
       let headerLine = `*Escalation - ${faultLevel} - ${region}*`;
       let separatorLine = '='.repeat(headerLine.slice(1, -1).length);
-      
-      let outputText = 
-          headerLine + "<br>" +
-          separatorLine + "<br>" +
-          `PCM ID: ${pcmId}<br>` +
-          `TT ID.: ${ttId}<br>` +
-          `Title: ${title}<br>` +
-          `Alarm Time: ${alarmTime}<br>` +
-          `Restored Time: <span id="restoredTimeDisplay"></span><br>` +
-          `Duration: <span id="durationDisplay"></span><br>` +
-          `Region: ${region}<br>` +
-          `HUB Site ID: ${hubSiteId}<br>` +
-          `Severity: ${faultLevel}<br>` +
-          `Affected Physical Sites: ${physicalSites}<br>` +
-          `Priority: ${priority ? `<span class="priority-badge">${priority}</span>` : 'N/A'}<br>` +
-          `Power Source: ${siteInfo.powerSource}<br>` +
-          `BB Status: ${siteInfo.bbStatus}<br>` +
-          `Site Owner: ${siteOwner}<br>` +
-          `EOL: ${siteInfo.eol}`;
-      
+
+      let outputText =
+        headerLine + "<br>" +
+        separatorLine + "<br>" +
+        `PCM ID: ${pcmId}<br>` +
+        `TT ID.: ${ttId}<br>` +
+        `Title: ${title}<br>` +
+        `Alarm Time: ${alarmTime}<br>` +
+        `Restored Time: <span id="restoredTimeDisplay"></span><br>` +
+        `Duration: <span id="durationDisplay"></span><br>` +
+        `Region: ${region}<br>` +
+        `HUB Site ID: ${hubSiteId}<br>` +
+        `Severity: ${faultLevel}<br>` +
+        `Affected Physical Sites: ${physicalSites}<br>` +
+        `Priority: ${priority ? `<span class="priority-badge">${priority}</span>` : 'N/A'}<br>` +
+        `Power Source: ${siteInfo.powerSource}<br>` +
+        `BB Status: ${siteInfo.bbStatus}<br>` +
+        `Site Owner: ${siteOwner}<br>` +
+        `EOL: ${siteInfo.eol}`;
+
       document.getElementById('output').innerHTML = outputText;
-      
+
       // Update duration if restored time is already filled
       updateDuration();
     }
-    
+
     function updateDuration() {
       const restoredTime = document.getElementById('restoredTime').value;
       document.getElementById('restoredTimeDisplay').innerText = restoredTime;
-      
+
       if (alarmTime && restoredTime) {
         const start = new Date(alarmTime);
         const end = new Date(restoredTime);
         let diffMs = end - start;
         const isNegative = diffMs < 0;
         if (isNegative) diffMs = Math.abs(diffMs);
-        
+
         const hours = String(Math.floor(diffMs / (1000 * 60 * 60))).padStart(2, '0');
         const minutes = String(Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
         const seconds = String(Math.floor((diffMs % (1000 * 60)) / 1000)).padStart(2, '0');
         const durationText = `${isNegative ? '-' : ''}${hours}:${minutes}:${seconds}`;
-        
+
         const thresholds = {
           emergency: 7199000,
           critical: 14399000,
           major: 28799000,
           minor: 43199000
         };
-        
+
         let exceedsThreshold = false;
         const level = globalFaultLevel.toLowerCase();
         let thresholdMs = 0;
@@ -751,13 +809,13 @@
             if (diffMs > thresholds.minor) exceedsThreshold = true;
           }
         }
-        
+
         const durationElement = document.getElementById('durationDisplay');
         durationElement.innerText = durationText;
         durationElement.className = (isNegative || exceedsThreshold) ? 'negative' : '';
       }
     }
-    
+
     function resetForm() {
       document.getElementById('input').value = "";
       document.getElementById('restoredTime').value = "";
@@ -767,9 +825,10 @@
       alarmTime = '';
       globalFaultLevel = '';
     }
-    
+
     // Load all site data on page load
     window.addEventListener('load', loadAllSiteData);
   </script>
 </body>
+
 </html>
